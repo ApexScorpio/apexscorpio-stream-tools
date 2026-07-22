@@ -8,7 +8,6 @@
   <title>ApexScorpio - Unified Chat Overlay</title>
   <link rel="stylesheet" href="css/style.css?v=6.2">
   <script src="https://cdn.jsdelivr.net/npm/mqtt@5.3.4/dist/mqtt.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/tmi.js@1.8.5/dist/tmi.min.js"></script>
 </head>
 <body class="chat-page">
   <div class="chat-container has-bg" id="chat-container"></div>
@@ -195,34 +194,90 @@
       }
     });
 
-    // Real Twitch IRC Client via TMI.js (Client-Side) for channel apexscorpio
-    if (typeof tmi !== 'undefined') {
-      try {
-        const tmiClient = new tmi.Client({
-          connection: { secure: true, reconnect: true },
-          channels: ['apexscorpio']
-        });
-        tmiClient.connect().catch(() => {});
-        tmiClient.on('message', (channel, tags, message, self) => {
-          if (self) return;
-          const realMsg = {
-            id: tags.id || `tw-${Date.now()}`,
-            platform: 'twitch',
-            username: tags['display-name'] || tags.username || 'User',
-            userColor: tags.color || '#9146FF',
-            message: message,
-            badges: {
-              broadcaster: !!tags.badges?.broadcaster,
-              mod: !!tags.mod,
-              subscriber: !!tags.subscriber
-            },
-            isTest: false,
-            timestamp: new Date().toISOString()
+    // Real Twitch IRC via direct WebSocket (no tmi.js dependency)
+    (function connectTwitchChat() {
+      const TWITCH_CHANNEL = 'apexscorpio';
+      let twitchWs = null;
+      let twitchReconnectTimer = null;
+      let twitchConnected = false;
+
+      function twitchConnect() {
+        try {
+          if (twitchWs) { try { twitchWs.close(); } catch(e) {} }
+          twitchWs = new WebSocket('wss://irc-ws.chat.twitch.tv:443');
+
+          twitchWs.onopen = () => {
+            twitchConnected = true;
+            twitchWs.send('CAP REQ :twitch.tv/tags twitch.tv/commands');
+            twitchWs.send('PASS SCHMOOPIIE');
+            twitchWs.send('NICK justinfan' + Math.floor(Math.random() * 99999));
+            twitchWs.send('JOIN #' + TWITCH_CHANNEL);
           };
-          addMsg(realMsg, 'twitch');
-        });
-      } catch(e) {}
-    }
+
+          twitchWs.onmessage = (event) => {
+            const lines = event.data.split('\r\n').filter(Boolean);
+            lines.forEach(line => {
+              if (line.startsWith('PING')) {
+                twitchWs.send('PONG :tmi.twitch.tv');
+                return;
+              }
+              if (!line.includes('PRIVMSG')) return;
+
+              // Parse IRC tags
+              let tagStr = '', rest = line;
+              if (line.startsWith('@')) {
+                const spaceIdx = line.indexOf(' ');
+                tagStr = line.substring(1, spaceIdx);
+                rest = line.substring(spaceIdx + 1);
+              }
+              const tags = {};
+              tagStr.split(';').forEach(pair => {
+                const [k, v] = pair.split('=');
+                if (k) tags[k] = v || '';
+              });
+
+              // Extract username and message
+              const nickMatch = rest.match(/^:([^!]+)!/);
+              const msgMatch = rest.match(/PRIVMSG #[^ ]+ :(.*)$/);
+              if (!nickMatch || !msgMatch) return;
+
+              const username = tags['display-name'] || nickMatch[1];
+              const message  = msgMatch[1];
+              const color    = tags['color'] || '#9146FF';
+              const isBroadcaster = (tags['badges'] || '').includes('broadcaster');
+              const isMod         = tags['mod'] === '1';
+              const isSub         = (tags['badges'] || '').includes('subscriber');
+
+              if (!cfg.showTwitch) return;
+
+              addMsg({
+                id: tags['id'] || `tw-${Date.now()}`,
+                platform: 'twitch',
+                username,
+                userColor: color,
+                message,
+                badges: { broadcaster: isBroadcaster, mod: isMod, subscriber: isSub },
+                isTest: false,
+                timestamp: new Date().toISOString()
+              }, 'twitch');
+            });
+          };
+
+          twitchWs.onclose = () => {
+            twitchConnected = false;
+            // Reconnect after 5 seconds
+            if (twitchReconnectTimer) clearTimeout(twitchReconnectTimer);
+            twitchReconnectTimer = setTimeout(twitchConnect, 5000);
+          };
+
+          twitchWs.onerror = () => {
+            twitchConnected = false;
+          };
+        } catch(e) {}
+      }
+
+      twitchConnect();
+    })();
 
     function applyConfig() {
       cfg.fadeSeconds = normalizeFadeSeconds(cfg.fadeSeconds);
