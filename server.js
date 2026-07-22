@@ -3,6 +3,7 @@ const http = require('http');
 const { Server } = require('socket.io');
 const path = require('path');
 const cors = require('cors');
+const fs = require('fs');
 
 const TwitchService = require('./services/twitch');
 const YoutubeService = require('./services/youtube');
@@ -19,32 +20,32 @@ app.use(cors());
 app.use(express.json());
 app.use(express.static(path.join(__dirname, 'public')));
 
-// Global state for stream status
+const CONFIG_FILE = path.join(__dirname, 'config.json');
+
+// Global state for multi-platform stream status (Twitch, YouTube, Facebook)
 const streamState = {
   twitch: { isLive: false, viewers: 0 },
   youtube: { isLive: false, viewers: 0, videoId: null },
+  facebook: { isLive: false, viewers: 0 },
   totalViewers: 0
 };
-
-const fs = require('fs');
-
-const CONFIG_FILE = path.join(__dirname, 'config.json');
 
 // Global state for overlay customization
 let overlayConfig = {
   chat: {
-    fadeSeconds: 0,        // 0 = permanent, >0 = fade out after X seconds
-    showBg: true,          // dark glass background
-    fontSize: 14,          // px font size
-    showBadges: true,      // Twitch/YouTube badges
-    maxMessages: 30
+    fadeSeconds: 0,        // 0 = permanent
+    showBg: true,
+    fontSize: 14,
+    showBadges: true,
+    maxMessages: 50
   },
   viewers: {
-    showTwitch: true,      // toggle Twitch badge
-    showYoutube: true,     // toggle YouTube badge
-    showTotal: true,       // toggle Total badge
-    showBg: true,          // dark glass background
-    layout: 'horizontal'   // 'horizontal' or 'vertical'
+    showTwitch: true,
+    showYoutube: true,
+    showFacebook: true,
+    showTotal: true,
+    showBg: true,
+    layout: 'horizontal'
   }
 };
 
@@ -69,7 +70,7 @@ function saveConfigToFile() {
 
 // Calculate and broadcast status update
 function broadcastStatus() {
-  streamState.totalViewers = streamState.twitch.viewers + streamState.youtube.viewers;
+  streamState.totalViewers = streamState.twitch.viewers + streamState.youtube.viewers + streamState.facebook.viewers;
   io.emit('status_update', streamState);
 }
 
@@ -81,9 +82,9 @@ function broadcastConfig() {
 
 // Global state for recent events ticker
 const recentEvents = {
-  lastFollower: 'GamerGurl_99 (Twitch)',
-  lastSubscriber: 'ApexFanatic (YouTube)',
-  lastRaid: 'StreamMaster (25 viewers)'
+  lastFollower: '@GamerGurl_99 (Twitch)',
+  lastSubscriber: '@ApexFanatic (YouTube)',
+  lastRaid: '@StreamMaster (25 espectadores)'
 };
 
 // Handle chat message ingestion
@@ -101,6 +102,9 @@ function handleStatusUpdate(update) {
     streamState.youtube.isLive = update.isLive;
     streamState.youtube.viewers = update.viewers;
     streamState.youtube.videoId = update.videoId || null;
+  } else if (update.platform === 'facebook') {
+    streamState.facebook.isLive = update.isLive;
+    streamState.facebook.viewers = update.viewers;
   }
   broadcastStatus();
 }
@@ -158,42 +162,50 @@ app.post('/api/trigger-alert', (req, res) => {
     timestamp: new Date().toISOString()
   };
 
+  const platName = eventPayload.platform.toUpperCase();
   if (eventPayload.type === 'follower') {
-    recentEvents.lastFollower = `@${eventPayload.username} (${eventPayload.platform})`;
+    recentEvents.lastFollower = `@${eventPayload.username} (${platName})`;
   } else if (eventPayload.type === 'subscriber') {
-    recentEvents.lastSubscriber = `@${eventPayload.username} (${eventPayload.platform})`;
+    recentEvents.lastSubscriber = `@${eventPayload.username} (${platName})`;
   } else if (eventPayload.type === 'raid') {
-    recentEvents.lastRaid = `@${eventPayload.username} (${eventPayload.viewers} viewers)`;
+    recentEvents.lastRaid = `@${eventPayload.username} (${eventPayload.viewers} espectadores)`;
   }
 
   io.emit('new_event', eventPayload);
   io.emit('events_update', recentEvents);
-  res.json({ success: true, eventPayload });
+  res.json({ success: true, eventPayload, recentEvents });
 });
 
 // Test endpoint to trigger fake chat messages for testing in Streamlabs
 app.post('/api/test-message', (req, res) => {
   const { platform, username, message } = req.body;
+  const plat = platform || 'twitch';
+  const colors = { twitch: '#9146FF', youtube: '#E8181F', facebook: '#1877F2' };
+  
   const testMsg = {
     id: `test-${Date.now()}`,
-    platform: platform || 'twitch',
-    username: username || (platform === 'youtube' ? 'YouTubeFan_99' : 'TwitchGamer_42'),
-    userColor: platform === 'youtube' ? '#FF0000' : '#9146FF',
-    message: message || `Olá @apexscorpio! A testar o chat unificado vindo do ${platform || 'twitch'}! 🔥`,
+    platform: plat,
+    username: username || (plat === 'youtube' ? 'YouTubeFan_99' : (plat === 'facebook' ? 'FacebookGamer_77' : 'TwitchGamer_42')),
+    userColor: colors[plat] || '#E8181F',
+    message: message || `Olá @apexscorpio! Mensagem de teste em direto do ${plat.toUpperCase()}! 🔥`,
     badges: { broadcaster: false, mod: Math.random() > 0.5, subscriber: true },
     timestamp: new Date().toISOString()
   };
+  
   handleChatMessage(testMsg);
   res.json({ success: true, messageSent: testMsg });
 });
 
 // Endpoint to simulate viewer counts for testing overlay visual effects
 app.post('/api/simulate-counts', (req, res) => {
-  const { twitchViewers, youtubeViewers, twitchLive, youtubeLive } = req.body;
+  const { twitchViewers, youtubeViewers, facebookViewers, twitchLive, youtubeLive, facebookLive } = req.body;
   if (twitchViewers !== undefined) streamState.twitch.viewers = Number(twitchViewers);
   if (youtubeViewers !== undefined) streamState.youtube.viewers = Number(youtubeViewers);
+  if (facebookViewers !== undefined) streamState.facebook.viewers = Number(facebookViewers);
+  
   if (twitchLive !== undefined) streamState.twitch.isLive = Boolean(twitchLive);
   if (youtubeLive !== undefined) streamState.youtube.isLive = Boolean(youtubeLive);
+  if (facebookLive !== undefined) streamState.facebook.isLive = Boolean(facebookLive);
 
   broadcastStatus();
   res.json({ success: true, streamState });
@@ -203,7 +215,5 @@ server.listen(PORT, () => {
   console.log(`=======================================================`);
   console.log(`🚀 ApexScorpio Streamlabs Overlay Suite is LIVE!`);
   console.log(`👉 Dashboard / Config:  http://localhost:${PORT}`);
-  console.log(`👉 Viewer Counter URL: http://localhost:${PORT}/viewers.html`);
-  console.log(`👉 Unified Chat URL:   http://localhost:${PORT}/chat.html`);
   console.log(`=======================================================`);
 });

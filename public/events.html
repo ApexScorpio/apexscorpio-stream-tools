@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>ApexScorpio - Recent Events Ticker</title>
+  <title>ApexScorpio - Activity Feed Ticker (Event List)</title>
   <link rel="stylesheet" href="/css/style.css">
   <script src="/socket.io/socket.io.js"></script>
   <style>
@@ -12,111 +12,98 @@
       overflow: hidden;
       display: flex;
       align-items: center;
-      padding: 10px;
+      justify-content: flex-start;
+      width: 100vw;
+      height: 100vh;
+      padding: 12px;
     }
-    .ticker-bar {
+    .ticker-container {
       display: inline-flex;
       align-items: center;
       gap: 16px;
-      padding: 8px 18px;
-      background: rgba(11, 15, 25, 0.92);
+      padding: 10px 24px;
+      background: rgba(8, 8, 12, 0.94);
       backdrop-filter: blur(16px);
       -webkit-backdrop-filter: blur(16px);
-      border: 1px solid rgba(255, 255, 255, 0.12);
+      border: 1px solid rgba(232, 24, 31, 0.35);
       border-radius: 50px;
-      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.6), 0 0 15px rgba(56, 189, 248, 0.15);
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.8), 0 0 20px rgba(232, 24, 31, 0.25);
+      animation: fadeIn 0.5s ease-out;
       position: relative;
-      overflow: hidden;
     }
-    .ticker-bar::before {
+    .ticker-container::before {
       content: '';
       position: absolute;
       top: 0; left: 0; right: 0;
-      height: 2px;
-      background: linear-gradient(90deg, #38BDF8, #8B5CF6, #EF4444);
+      height: 3px;
+      background: linear-gradient(90deg, #E8181F, #9146FF, #E8181F);
     }
     .ticker-item {
       display: flex;
       align-items: center;
       gap: 8px;
       font-family: 'Outfit', sans-serif;
-      font-size: 13px;
+      font-size: 14px;
       font-weight: 700;
-      color: #F8FAFC;
-      white-space: nowrap;
+      color: #F1F5F9;
     }
     .ticker-label {
-      color: #94A3B8;
+      font-family: 'Orbitron', sans-serif;
       font-size: 11px;
+      font-weight: 800;
+      color: #E8181F;
       text-transform: uppercase;
-      letter-spacing: 0.5px;
+      letter-spacing: 1px;
     }
     .ticker-value {
-      color: #38BDF8;
+      color: #FFFFFF;
       font-weight: 800;
-      display: inline-flex;
-      align-items: center;
-      gap: 4px;
     }
-    .ticker-divider {
-      width: 4px;
-      height: 4px;
-      border-radius: 50%;
+    .divider {
+      width: 1px;
+      height: 18px;
       background: rgba(255, 255, 255, 0.2);
-    }
-    .platform-icon-sm {
-      width: 14px;
-      height: 14px;
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
     }
   </style>
 </head>
 <body>
-  <div class="ticker-bar" id="ticker-bar">
+  <div class="ticker-container">
     <div class="ticker-item">
-      <span class="ticker-label">Último Follow:</span>
-      <span class="ticker-value" id="last-follower">--</span>
+      <span class="ticker-label">🔔 ÚLTIMO FOLLOWER:</span>
+      <span class="ticker-value" id="last-follower">@GamerGurl_99</span>
     </div>
-    <div class="ticker-divider"></div>
+    <div class="divider"></div>
     <div class="ticker-item">
-      <span class="ticker-label">Último Sub:</span>
-      <span class="ticker-value" style="color: #F59E0B;" id="last-subscriber">--</span>
+      <span class="ticker-label">⭐ ÚLTIMO SUB:</span>
+      <span class="ticker-value" id="last-subscriber">@ApexFanatic</span>
     </div>
-    <div class="ticker-divider"></div>
+    <div class="divider"></div>
     <div class="ticker-item">
-      <span class="ticker-label">Último Raid:</span>
-      <span class="ticker-value" style="color: #A855F7;" id="last-raid">--</span>
+      <span class="ticker-label">🚀 ÚLTIMA RAID:</span>
+      <span class="ticker-value" id="last-raid">@StreamMaster (25)</span>
     </div>
   </div>
 
   <script>
     const socket = io();
-
-    const twitchIcon = `<svg width="14" height="14" viewBox="0 0 24 24" fill="#A855F7"><path d="M11.571 4.714h1.715v5.143H11.571V4.714zm4.715 0H18v5.143h-1.714V4.714zM6 0L1.714 4.286v15.428h5.143V24l4.286-4.286h3.428L22.286 12V0H6zm14.571 11.143l-3.428 3.428h-3.429l-3 3v-3H6.857V1.714h13.714v9.429z"/></svg>`;
-    const youtubeIcon = `<svg width="16" height="16" viewBox="0 0 24 24" fill="#EF4444"><path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/></svg>`;
+    const elFollower = document.getElementById('last-follower');
+    const elSub = document.getElementById('last-subscriber');
+    const elRaid = document.getElementById('last-raid');
 
     socket.on('events_update', (events) => {
-      if (events.lastFollower) {
-        document.getElementById('last-follower').innerHTML = `${events.lastFollower.includes('YouTube') ? youtubeIcon : twitchIcon} ${events.lastFollower}`;
-      }
-      if (events.lastSubscriber) {
-        document.getElementById('last-subscriber').innerHTML = `${events.lastSubscriber.includes('YouTube') ? youtubeIcon : twitchIcon} ${events.lastSubscriber}`;
-      }
-      if (events.lastRaid) {
-        document.getElementById('last-raid').innerHTML = `${twitchIcon} ${events.lastRaid}`;
-      }
+      if (events.lastFollower) elFollower.innerText = events.lastFollower;
+      if (events.lastSubscriber) elSub.innerText = events.lastSubscriber;
+      if (events.lastRaid) elRaid.innerText = events.lastRaid;
     });
 
     socket.on('new_event', (event) => {
-      const icon = event.platform === 'youtube' ? youtubeIcon : twitchIcon;
+      const platName = event.platform.toUpperCase();
       if (event.type === 'follower') {
-        document.getElementById('last-follower').innerHTML = `${icon} @${event.username}`;
+        elFollower.innerText = `@${event.username} (${platName})`;
       } else if (event.type === 'subscriber') {
-        document.getElementById('last-subscriber').innerHTML = `${icon} @${event.username}`;
+        elSub.innerText = `@${event.username} (${platName})`;
       } else if (event.type === 'raid') {
-        document.getElementById('last-raid').innerHTML = `${twitchIcon} @${event.username} (${event.viewers || 10} viewers)`;
+        elRaid.innerText = `@${event.username} (${event.viewers || 15} espectadores)`;
       }
     });
   </script>
