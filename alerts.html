@@ -338,6 +338,8 @@
 
       if (activeAlertTimer) clearTimeout(activeAlertTimer);
       activeAlertTimer = setTimeout(() => {
+        alertBox.className = 'alert-box';
+        void alertBox.offsetWidth; // Force DOM reflow
         alertBox.className = 'alert-box exiting';
         setTimeout(() => {
           alertBox.className = 'alert-box';
