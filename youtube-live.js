@@ -1,8 +1,8 @@
 /**
- * ApexScorpio YouTube Live Module v2.3
+ * ApexScorpio YouTube Live Module v2.4
  *
  * Uses the official YouTube Data / Live Streaming API only.
- * - oEmbed / uploads playlist discover the active video without search.list
+ * - search.list discovers the active live once and cached IDs survive updates
  * - videos.list reads the official live state, concurrent viewers and chat ID
  * - a confirmed live stays online until actualEndTime is returned twice
  * - liveChatMessages.list reads chat, memberships and paid messages
@@ -18,27 +18,37 @@
   const CHANNEL_HANDLE = '@apexscorpio';
   const UPLOADS_PLAYLIST_ID = CHANNEL_ID.replace(/^UC/, 'UU');
 
-  const STATE_KEY = 'apex_yt_live_state_v5';
-  const VIDEO_KEY = 'apex_yt_live_video_id_v5';
-  const LEADER_KEY = 'apex_yt_live_leader_v5';
-  const BUS_KEY = 'apex_yt_live_bus_v5';
-  const LAST_SEARCH_KEY = 'apex_yt_last_search_v5';
+  // Stable keys: never version these again. Versioned keys caused a confirmed
+  // broadcast ID to be forgotten every time the module was updated.
+  const STATE_KEY = 'apex_yt_live_state';
+  const VIDEO_KEY = 'apex_yt_live_video_id';
+  const LEADER_KEY = 'apex_yt_live_leader';
+  const BUS_KEY = 'apex_yt_live_bus';
+  const LAST_SEARCH_KEY = 'apex_yt_last_search';
+  const LEGACY_STATE_KEYS = [
+    'apex_yt_live_state_v5', 'apex_yt_live_state_v4',
+    'apex_yt_live_state_v3', 'apex_yt_live_state_v2'
+  ];
+  const LEGACY_VIDEO_KEYS = [
+    'apex_yt_live_video_id_v5', 'apex_yt_live_video_id_v4',
+    'apex_yt_live_video_id_v3', 'apex_yt_live_video_id_v2'
+  ];
 
   const LEADER_TTL_MS = 30000;
   const LEADER_HEARTBEAT_MS = 5000;
   const VIDEO_POLL_MS = 5000;
   const OFFLINE_RETRY_MS = 5000;
   const END_CONFIRMATIONS_REQUIRED = 2;
-  // Offline discovery uses the channel uploads playlist instead of search.list.
-  // This avoids the small daily search.list bucket and notices a new live quickly.
-  const OFFLINE_DISCOVERY_MS = 30 * 1000;
-  const MIN_SEARCH_GAP_MS = 10000;
+  // search.list has a separate 100-call daily allowance. One search every
+  // 15 minutes stays within that limit even if the dashboard remains open 24/7.
+  const OFFLINE_DISCOVERY_MS = 15 * 60 * 1000;
+  const MIN_SEARCH_GAP_MS = 60 * 1000;
   const MIN_CHAT_POLL_MS = 1000;
   const MAX_CHAT_POLL_MS = 15000;
 
   const instanceId = `yt-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
   const channel = typeof BroadcastChannel !== 'undefined'
-    ? new BroadcastChannel('apex_youtube_live_v5')
+    ? new BroadcastChannel('apex_youtube_live')
     : null;
 
   const messageHandlers = new Set();
@@ -56,8 +66,8 @@
   let chatTimer = null;
   let liveChatPageToken = null;
   let activeChatId = null;
-  let activeVideoId = safeGet(VIDEO_KEY) || null;
   let state = loadState();
+  let activeVideoId = safeGet(VIDEO_KEY) || state.videoId || loadLegacyVideoId() || null;
   let consecutiveEndChecks = 0;
 
   function safeGet(key) {
@@ -72,30 +82,56 @@
     try { localStorage.removeItem(key); } catch (_) {}
   }
 
-  function loadState() {
-    try {
-      const parsed = JSON.parse(safeGet(STATE_KEY) || 'null');
-      if (parsed && typeof parsed === 'object') {
-        return {
-          isLive: Boolean(parsed.isLive),
-          viewers: Number(parsed.viewers || 0),
-          videoId: parsed.videoId || null,
-          liveChatId: parsed.liveChatId || null,
-          title: parsed.title || '',
-          updatedAt: Number(parsed.updatedAt || 0),
-          error: parsed.error || null
-        };
-      }
-    } catch (_) {}
+  function normalizeStoredState(parsed) {
+    if (!parsed || typeof parsed !== 'object') return null;
     return {
-      isLive: false,
-      viewers: 0,
-      videoId: null,
-      liveChatId: null,
-      title: '',
-      updatedAt: 0,
-      error: null
+      isLive: Boolean(parsed.isLive),
+      viewers: Number(parsed.viewers || 0),
+      videoId: parsed.videoId || null,
+      liveChatId: parsed.liveChatId || null,
+      title: parsed.title || '',
+      updatedAt: Number(parsed.updatedAt || 0),
+      error: parsed.error || null
     };
+  }
+
+  function loadLegacyVideoId() {
+    for (const key of LEGACY_VIDEO_KEYS) {
+      const value = safeGet(key);
+      if (value) return value;
+    }
+    return null;
+  }
+
+  function loadState() {
+    const candidates = [];
+    for (const key of [STATE_KEY, ...LEGACY_STATE_KEYS]) {
+      try {
+        const normalized = normalizeStoredState(JSON.parse(safeGet(key) || 'null'));
+        if (normalized) candidates.push(normalized);
+      } catch (_) {}
+    }
+
+    candidates.sort((a, b) => b.updatedAt - a.updatedAt);
+    // Prefer a positively confirmed live with a video ID, even when a newer
+    // broken version wrote an offline state afterwards. The ID is validated
+    // against videos.list before it is shown as online.
+    const chosen = candidates.find(item => item.isLive && item.videoId)
+      || candidates.find(item => item.videoId)
+      || candidates[0]
+      || {
+        isLive: false, viewers: 0, videoId: null, liveChatId: null,
+        title: '', updatedAt: 0, error: null
+      };
+
+    const migratedVideoId = chosen.videoId || loadLegacyVideoId();
+    const migrated = { ...chosen, videoId: migratedVideoId || null };
+    safeSet(STATE_KEY, JSON.stringify(migrated));
+    if (migrated.videoId) safeSet(VIDEO_KEY, migrated.videoId);
+    // Migration is one-time. Keeping the old keys would allow a stale live
+    // state to win again on a future page load.
+    for (const key of [...LEGACY_STATE_KEYS, ...LEGACY_VIDEO_KEYS]) safeRemove(key);
+    return migrated;
   }
 
   function publicState() {
@@ -295,7 +331,7 @@
       if (hasExplicitEnd) {
         consecutiveEndChecks += 1;
         if (consecutiveEndChecks < END_CONFIRMATIONS_REQUIRED && holdKnownLive(null)) return;
-        publishConfirmedOffline(OFFLINE_RETRY_MS);
+        publishConfirmedOffline(OFFLINE_DISCOVERY_MS);
         return;
       }
 
@@ -331,6 +367,17 @@
         scheduleDiscovery(OFFLINE_DISCOVERY_MS);
       }
     }
+  }
+
+  async function discoverFromSearch() {
+    const data = await apiGet('search', {
+      part: 'snippet',
+      channelId: CHANNEL_ID,
+      eventType: 'live',
+      type: 'video',
+      maxResults: '1'
+    });
+    return data?.items?.[0]?.id?.videoId || null;
   }
 
   async function discoverFromUploadsPlaylist() {
@@ -395,17 +442,33 @@
     }
 
     safeSet(LAST_SEARCH_KEY, String(now));
+    let searchError = null;
     try {
-      let videoId = await discoverFromOEmbed();
+      // Official and authoritative discovery path. It is called sparingly;
+      // once a video is found, only the cheap videos.list poll is used.
+      let videoId = null;
+      try {
+        videoId = await discoverFromSearch();
+      } catch (error) {
+        searchError = error;
+      }
+
+      // Best-effort fallbacks are retained, but they are not authoritative.
+      if (!videoId) videoId = await discoverFromOEmbed();
       if (!videoId) videoId = await discoverFromUploadsPlaylist();
       if (!hasActiveLeadership()) return;
 
       if (videoId) {
         activeVideoId = videoId;
+        safeSet(VIDEO_KEY, videoId);
         liveChatPageToken = null;
         await refreshVideoDetails();
       } else {
-        publishConfirmedOffline(OFFLINE_DISCOVERY_MS);
+        publishState({
+          isLive: false, viewers: 0, videoId: null, liveChatId: null,
+          title: '', error: searchError?.message || null
+        });
+        scheduleDiscovery(OFFLINE_DISCOVERY_MS);
       }
     } catch (error) {
       if (!hasActiveLeadership()) return;
@@ -595,9 +658,13 @@
   function beginLeaderWork() {
     if (isLeader) return;
     isLeader = true;
-    activeVideoId = safeGet(VIDEO_KEY) || state.videoId || null;
-    if (activeVideoId) refreshVideoDetails();
-    else discoverLive(false);
+    activeVideoId = safeGet(VIDEO_KEY) || state.videoId || loadLegacyVideoId() || null;
+    if (activeVideoId) {
+      safeSet(VIDEO_KEY, activeVideoId);
+      refreshVideoDetails();
+    } else {
+      discoverLive(false);
+    }
   }
 
   function electLeader() {
@@ -672,7 +739,8 @@
       eventHandlers.clear();
     },
     channelId: CHANNEL_ID,
-    channelHandle: CHANNEL_HANDLE
+    channelHandle: CHANNEL_HANDLE,
+    version: '2.4'
   };
 
   start();
