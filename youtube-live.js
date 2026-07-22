@@ -1,11 +1,12 @@
 /**
- * ApexScorpio YouTube Live Module v2.8
+ * ApexScorpio YouTube Live Module v2.9
  *
  * Sticky live detection:
  * - the official YouTube iframe player is authoritative for online/offline;
  * - API errors, 429s and stale cached sources can never cancel a detected live;
- * - offline requires three continuous minutes without a real player video ID;
- * - the live_stream iframe placeholder is never treated as a YouTube video ID.
+ * - offline requires three continuous minutes without a player live signal;
+ * - live_stream is accepted only as an online signal, never as an API video ID;
+ * - real video discovery avoids search.list and preserves daily quota.
  */
 (function (global) {
   'use strict';
@@ -14,22 +15,25 @@
   const CHANNEL_ID = 'UCF3aydfOlV88XVqW8vpdKEw';
   const CHANNEL_HANDLE = '@apexscorpio';
 
-  // v2.7 uses isolated keys so an older cached source cannot overwrite its state.
-  const STATE_KEY = 'apex_yt_live_state_v7_sticky';
-  const VIDEO_KEY = 'apex_yt_live_video_id_v7_sticky';
-  const PLAYER_LOCK_KEY = 'apex_yt_player_lock_v7_sticky';
-  const API_BLOCKED_UNTIL_KEY = 'apex_yt_api_blocked_until_v7';
-  const API_BACKOFF_KEY = 'apex_yt_api_backoff_v7';
-  const STATE_LEADER_KEY = 'apex_yt_state_leader_v7';
-  const CHAT_LEADER_KEY = 'apex_yt_chat_leader_v7';
-  const BUS_KEY = 'apex_yt_bus_v7';
-  const CHANNEL_NAME = 'apex_youtube_live_bus_v7';
+  // v2.9 uses isolated keys so an older cached source cannot overwrite its state.
+  const STATE_KEY = 'apex_yt_live_state_v9_sticky';
+  const VIDEO_KEY = 'apex_yt_live_video_id_v9_sticky';
+  const PLAYER_LOCK_KEY = 'apex_yt_player_lock_v9_sticky';
+  const PLAYER_SIGNAL_KEY = 'apex_yt_player_signal_v9';
+  const API_BLOCKED_UNTIL_KEY = 'apex_yt_api_blocked_until_v9';
+  const API_BACKOFF_KEY = 'apex_yt_api_backoff_v9';
+  const STATE_LEADER_KEY = 'apex_yt_state_leader_v9';
+  const CHAT_LEADER_KEY = 'apex_yt_chat_leader_v9';
+  const BUS_KEY = 'apex_yt_bus_v9';
+  const CHANNEL_NAME = 'apex_youtube_live_bus_v9';
 
   const LEADER_TTL_MS = 20000;
   const LEADER_HEARTBEAT_MS = 5000;
   const PLAYER_PROBE_MS = 5000;
-  const OEMBED_PROBE_MS = 30000;
+  const OEMBED_PROBE_MS = 5 * 60 * 1000;
   const DETAILS_POLL_MS = 15000;
+  const DISCOVERY_POLL_MS = 5 * 60 * 1000;
+  const QUOTA_RETRY_MS = 10 * 60 * 1000;
   const PLAYER_OFFLINE_AFTER_MS = 3 * 60 * 1000;
   const PLAYER_MISS_LIMIT = 36;
   const PLAYER_LOCK_MAX_AGE_MS = 10 * 60 * 1000;
@@ -63,7 +67,12 @@
   let playerReady = false;
   let playerInitStarted = false;
   let detailsInFlight = false;
+  let discoveryInFlight = false;
+  let discoveryTimer = null;
   let lastApiError = null;
+  let lastPlayerErrorCode = null;
+  let lastPlayerErrorAt = 0;
+  let lastPlayerSignalAt = Number(safeGet(PLAYER_SIGNAL_KEY) || 0);
   let activeVideoId = safeGet(VIDEO_KEY) || null;
   let activeChatId = null;
   let liveChatPageToken = null;
@@ -74,9 +83,8 @@
 
   activeVideoId = normalizeVideoId(activeVideoId || state.videoId);
   if (!activeVideoId) safeRemove(VIDEO_KEY);
-  if (!state.videoId && state.isLive) {
-    state = { ...state, isLive: false, viewers: 0, videoId: null, liveChatId: null };
-    safeSet(STATE_KEY, JSON.stringify(state));
+  if (state.isLive && !state.videoId) {
+    lastPlayerSignalAt = Math.max(lastPlayerSignalAt, Number(state.updatedAt || 0));
   }
   if (playerLock && Date.now() - playerLock.seenAt < PLAYER_LOCK_MAX_AGE_MS) {
     activeVideoId = playerLock.videoId;
@@ -115,6 +123,24 @@
     const id = String(value || '').trim();
     if (!id || id === 'live_stream') return null;
     return /^[a-zA-Z0-9_-]{11}$/.test(id) ? id : null;
+  }
+
+  function savePlayerSignal() {
+    lastPlayerSignalAt = Date.now();
+    safeSet(PLAYER_SIGNAL_KEY, String(lastPlayerSignalAt));
+  }
+
+  function clearPlayerSignal() {
+    lastPlayerSignalAt = 0;
+    safeRemove(PLAYER_SIGNAL_KEY);
+  }
+
+  function hasRecentPlayerSignal() {
+    const storedAt = Math.max(
+      lastPlayerSignalAt,
+      Number(safeGet(PLAYER_SIGNAL_KEY) || 0)
+    );
+    return storedAt > 0 && Date.now() - storedAt < PLAYER_OFFLINE_AFTER_MS;
   }
 
   function loadPlayerLock() {
@@ -157,8 +183,8 @@
       if (parsed && typeof parsed === 'object') {
         const videoId = normalizeVideoId(parsed.videoId);
         return {
-          isLive: Boolean(parsed.isLive && videoId),
-          viewers: videoId ? Math.max(0, Number(parsed.viewers || 0)) : 0,
+          isLive: Boolean(parsed.isLive),
+          viewers: Math.max(0, Number(parsed.viewers || 0)),
           videoId,
           liveChatId: parsed.liveChatId || null,
           title: parsed.title || '',
@@ -224,7 +250,7 @@
 
       // A positive player detection is authoritative. Ignore any offline packet
       // while the sticky player lock is still recent.
-      if (!incoming.isLive && hasRecentPlayerLock()) return;
+      if (!incoming.isLive && (hasRecentPlayerLock() || hasRecentPlayerSignal())) return;
 
       state = {
         isLive: Boolean(incoming.isLive),
@@ -282,8 +308,8 @@
   function publishState(next) {
     const videoId = normalizeVideoId(next.videoId);
     state = {
-      isLive: Boolean(next.isLive && videoId),
-      viewers: videoId ? Math.max(0, Number(next.viewers || 0)) : 0,
+      isLive: Boolean(next.isLive),
+      viewers: Math.max(0, Number(next.viewers || 0)),
       videoId,
       liveChatId: next.liveChatId || null,
       title: next.title || '',
@@ -328,6 +354,28 @@
     ensureChatElection();
   }
 
+  function publishPlayerSignalLive() {
+    savePlayerSignal();
+    consecutivePlayerMisses = 0;
+
+    if (!state.isLive || (!state.videoId && state.source !== 'iframe-player-signal')) {
+      publishState({
+        isLive: true,
+        viewers: Number(state.viewers || 0),
+        videoId: state.videoId || null,
+        liveChatId: state.liveChatId || null,
+        title: state.title || '',
+        error: lastApiError?.reason === 'quotaExceeded'
+          ? 'YouTube API quota exhausted; live confirmed by player'
+          : state.error,
+        source: state.videoId ? state.source : 'iframe-player-signal'
+      });
+    }
+
+    if (state.videoId) scheduleDetails(0);
+    else scheduleDiscovery(0);
+  }
+
   function publishConfirmedLive(video, source) {
     const details = video?.liveStreamingDetails || {};
     savePlayerLock(video.id);
@@ -352,10 +400,11 @@
   function publishOfflineFromPlayer(error = null) {
     // No API response can call this. Offline is accepted only after the player
     // has continuously failed to return a video ID for the configured window.
-    if (hasRecentPlayerLock()) return false;
+    if (hasRecentPlayerLock() || hasRecentPlayerSignal()) return false;
     if (consecutivePlayerMisses < PLAYER_MISS_LIMIT) return false;
 
     clearPlayerLock();
+    clearPlayerSignal();
     consecutivePlayerMisses = 0;
     publishState({
       isLive: false,
@@ -425,7 +474,10 @@
         at: Date.now()
       };
 
-      if (response.status === 429 || response.status === 403 || error.reason === 'rateLimitExceeded') {
+      if (error.reason === 'quotaExceeded') {
+        safeSet(API_BACKOFF_KEY, String(QUOTA_RETRY_MS));
+        safeSet(API_BLOCKED_UNTIL_KEY, String(Date.now() + QUOTA_RETRY_MS));
+      } else if (response.status === 429 || response.status === 403 || error.reason === 'rateLimitExceeded') {
         registerApiRateLimit();
       }
 
@@ -512,6 +564,41 @@
     }
   }
 
+  function readPlayerSignal() {
+    if (!playerReady || !player) {
+      return {
+        rawVideoId: null,
+        playerState: null,
+        placeholderLive: false
+      };
+    }
+
+    let rawVideoId = null;
+    let playerState = null;
+
+    try {
+      const data = player.getVideoData ? player.getVideoData() : null;
+      rawVideoId = String(data?.video_id || '').trim() || null;
+    } catch (_) {}
+
+    try {
+      playerState = Number(player.getPlayerState ? player.getPlayerState() : NaN);
+      if (!Number.isFinite(playerState)) playerState = null;
+    } catch (_) {}
+
+    const recentError = lastPlayerErrorAt > 0 &&
+      Date.now() - lastPlayerErrorAt < 60000;
+
+    return {
+      rawVideoId,
+      playerState,
+      placeholderLive:
+        rawVideoId === 'live_stream' &&
+        !recentError &&
+        playerState !== 0
+    };
+  }
+
   function extractPlayerVideoId() {
     if (!playerReady || !player) return null;
 
@@ -548,11 +635,14 @@
   function probePlayer() {
     if (!stateLeader) return;
 
+    const signal = readPlayerSignal();
     const videoId = extractPlayerVideoId();
+
     if (videoId) {
       consecutivePlayerMisses = 0;
       activeVideoId = videoId;
       savePlayerLock(videoId);
+      savePlayerSignal();
 
       // Avoid rebroadcasting the same live every five seconds. A state update is
       // only needed when the video changes, the state was offline, or the prior
@@ -562,12 +652,21 @@
       } else {
         scheduleDetails(0);
       }
+    } else if (signal.placeholderLive) {
+      publishPlayerSignalLive();
     } else if (playerReady) {
       consecutivePlayerMisses += 1;
-      const age = Date.now() - Number(lastPlayerVideoAt || playerLock?.seenAt || 0);
+      const lastPositiveSignal = Math.max(
+        Number(lastPlayerVideoAt || 0),
+        Number(playerLock?.seenAt || 0),
+        Number(lastPlayerSignalAt || 0)
+      );
+      const age = Date.now() - lastPositiveSignal;
 
       if (state.isLive && age >= PLAYER_OFFLINE_AFTER_MS) {
-        publishOfflineFromPlayer(null);
+        publishOfflineFromPlayer(lastPlayerErrorCode
+          ? `YouTube player error ${lastPlayerErrorCode}`
+          : null);
       }
     }
 
@@ -616,6 +715,8 @@
         events: {
           onReady() {
             playerReady = true;
+            lastPlayerErrorCode = null;
+            lastPlayerErrorAt = 0;
             try {
               if (player.mute) player.mute();
               if (player.playVideo) player.playVideo();
@@ -623,11 +724,17 @@
             probePlayer();
             setTimeout(probePlayer, 1000);
           },
-          onStateChange() {
+          onStateChange(event) {
+            if ([1, 2, 3, 5].includes(Number(event?.data))) {
+              lastPlayerErrorCode = null;
+              lastPlayerErrorAt = 0;
+            }
             probePlayer();
           },
-          onError() {
+          onError(event) {
             playerReady = true;
+            lastPlayerErrorCode = Number(event?.data || 0) || null;
+            lastPlayerErrorAt = Date.now();
             schedulePlayerProbe(PLAYER_PROBE_MS);
           }
         }
@@ -665,6 +772,112 @@
     createHiddenPlayerIframe();
   }
 
+  function scheduleDiscovery(delay) {
+    if (discoveryTimer) clearTimeout(discoveryTimer);
+    if (!stateLeader || !state.isLive || state.videoId) return;
+    discoveryTimer = setTimeout(discoverLiveFromChannel, Math.max(0, delay));
+  }
+
+  async function discoverLiveFromChannel() {
+    if (!stateLeader || discoveryInFlight || !state.isLive || state.videoId) return;
+
+    if (!apiAvailable()) {
+      scheduleDiscovery(Math.max(
+        DISCOVERY_POLL_MS,
+        currentApiBlock() - Date.now()
+      ));
+      return;
+    }
+
+    discoveryInFlight = true;
+
+    try {
+      const candidateIds = new Set();
+
+      const activities = await apiGet('activities', {
+        part: 'snippet,contentDetails',
+        channelId: CHANNEL_ID,
+        maxResults: '20'
+      });
+
+      for (const item of activities.items || []) {
+        const id =
+          item?.contentDetails?.upload?.videoId ||
+          item?.contentDetails?.playlistItem?.resourceId?.videoId;
+        const normalized = normalizeVideoId(id);
+        if (normalized) candidateIds.add(normalized);
+      }
+
+      const channel = await apiGet('channels', {
+        part: 'contentDetails',
+        id: CHANNEL_ID,
+        maxResults: '1'
+      });
+
+      const uploadsPlaylist =
+        channel?.items?.[0]?.contentDetails?.relatedPlaylists?.uploads;
+
+      if (uploadsPlaylist) {
+        const uploads = await apiGet('playlistItems', {
+          part: 'snippet,contentDetails',
+          playlistId: uploadsPlaylist,
+          maxResults: '30'
+        });
+
+        for (const item of uploads.items || []) {
+          const id =
+            item?.contentDetails?.videoId ||
+            item?.snippet?.resourceId?.videoId;
+          const normalized = normalizeVideoId(id);
+          if (normalized) candidateIds.add(normalized);
+        }
+      }
+
+      const ids = [...candidateIds].slice(0, 50);
+      if (!ids.length) {
+        scheduleDiscovery(DISCOVERY_POLL_MS);
+        return;
+      }
+
+      const videos = await apiGet('videos', {
+        part: 'snippet,liveStreamingDetails',
+        id: ids.join(','),
+        maxResults: String(ids.length)
+      });
+
+      const live = (videos.items || []).find(isLiveVideo) || null;
+
+      if (live) {
+        publishConfirmedLive(live, 'channel-uploads');
+        return;
+      }
+
+      publishState({
+        ...state,
+        isLive: true,
+        error: null,
+        source: state.source || 'iframe-player-signal'
+      });
+      scheduleDiscovery(DISCOVERY_POLL_MS);
+    } catch (error) {
+      if (!stateLeader) return;
+
+      publishState({
+        ...state,
+        isLive: true,
+        error: error.message,
+        source: state.source || 'iframe-player-signal'
+      });
+
+      const retry = error.reason === 'quotaExceeded'
+        ? QUOTA_RETRY_MS
+        : Math.max(DISCOVERY_POLL_MS, currentApiBlock() - Date.now());
+      scheduleDiscovery(retry);
+    } finally {
+      discoveryInFlight = false;
+    }
+  }
+
   async function discoverFromOEmbed() {
     const liveUrls = [
       `https://www.youtube.com/channel/${CHANNEL_ID}/live`,
@@ -699,6 +912,8 @@
     if (videoId) {
       activeVideoId = videoId;
       publishProvisionalLive(videoId, 'oembed');
+    } else if (state.isLive && !state.videoId) {
+      scheduleDiscovery(0);
     }
 
     scheduleOEmbedProbe(OEMBED_PROBE_MS);
@@ -714,6 +929,7 @@
     if (!stateLeader) return;
     probePlayer();
     if (state.videoId) scheduleDetails(0);
+    else if (state.isLive) scheduleDiscovery(0);
   }
 
   function readLock(key) {
@@ -736,10 +952,10 @@
 
   function stopStateLeaderWork() {
     stateLeader = false;
-    for (const timer of [playerProbeTimer, oembedTimer, detailsTimer]) {
+    for (const timer of [playerProbeTimer, oembedTimer, detailsTimer, discoveryTimer]) {
       if (timer) clearTimeout(timer);
     }
-    playerProbeTimer = oembedTimer = detailsTimer = null;
+    playerProbeTimer = oembedTimer = detailsTimer = discoveryTimer = null;
   }
 
   function becomeStateLeader() {
@@ -750,6 +966,7 @@
     loadIframeApi();
     schedulePlayerProbe(1000);
     if (activeVideoId) scheduleDetails(0);
+    else if (state.isLive) scheduleDiscovery(1000);
   }
 
   function electStateLeader() {
@@ -1060,12 +1277,17 @@
 
     debug() {
       return {
-        version: '2.8',
+        version: '2.9',
         instanceId,
         stateLeader,
         chatLeader,
         playerReady,
+        playerSignal: readPlayerSignal(),
         playerVideoId: extractPlayerVideoId(),
+        lastPlayerErrorCode,
+        lastPlayerErrorAt,
+        lastPlayerSignalAt,
+        discoveryInFlight,
         consecutivePlayerMisses,
         lastPlayerVideoAt,
         playerLock,
@@ -1086,7 +1308,7 @@
 
     channelId: CHANNEL_ID,
     channelHandle: CHANNEL_HANDLE,
-    version: '2.8'
+    version: '2.9'
   };
 
   start();

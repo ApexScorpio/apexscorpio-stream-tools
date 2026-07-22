@@ -1,3 +1,4 @@
+/* MQTT one-shot v2.9: sem reconexão automática */
 (function () {
   'use strict';
 
@@ -252,7 +253,7 @@
     MQTT_BROKERS.slice(0, 1).forEach(url => {
       try {
         const client = mqtt.connect(url, {
-          reconnectPeriod: 30000,
+          reconnectPeriod: 0,
           clientId: `scorpio_events_${Math.random().toString(16).slice(2, 8)}`,
           connectTimeout: 4000,
           keepalive: 30

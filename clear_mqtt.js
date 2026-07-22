@@ -1,3 +1,4 @@
+/* MQTT one-shot v2.9: sem reconexão automática */
 const mqtt = require('mqtt');
 
 const brokers = [
@@ -17,9 +18,9 @@ const topicsToClear = [
   'apexscorpio/streamtools/v1/cfg/trigger_alert'
 ];
 
-brokers.forEach(url => {
+brokers.slice(0,1).forEach(url => {
   console.log(`Connecting to ${url}...`);
-  const client = mqtt.connect(url, {
+  const client = mqtt.connect(url,{reconnectPeriod:0,
     clientId: 'scorpio_cleaner_' + Math.random().toString(16).substring(2, 8),
     connectTimeout: 4000
   });
