@@ -187,12 +187,14 @@ body.viewers-page {
   -webkit-backdrop-filter: blur(14px);
   border: 1px solid var(--glass-border);
   border-left: 4px solid var(--apex-red);
-  border-radius: 12px;
+  border-radius: 0 12px 12px 0;
   padding: 10px 14px;
   box-shadow: 0 4px 20px rgba(0, 0, 0, 0.6);
-  animation: slideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1);
   word-wrap: break-word;
   opacity: 1;
+  transform-origin: left center;
+  animation: lineGrowAndSlideOut 0.45s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  position: relative;
 }
 
 .chat-message.twitch {
@@ -203,6 +205,11 @@ body.viewers-page {
 .chat-message.youtube {
   border-left-color: var(--youtube-color);
   box-shadow: -3px 0 14px rgba(232, 24, 31, 0.3);
+}
+
+.chat-message.facebook {
+  border-left-color: #1877F2;
+  box-shadow: -3px 0 14px rgba(24, 119, 242, 0.3);
 }
 
 .chat-header {
@@ -232,6 +239,11 @@ body.viewers-page {
   color: #FFF;
 }
 
+.platform-badge.facebook {
+  background: #1877F2;
+  color: #FFF;
+}
+
 .role-badge {
   font-size: 9px;
   font-weight: 800;
@@ -255,15 +267,22 @@ body.viewers-page {
   color: #F1F5F9;
 }
 
-/* Animations */
-@keyframes slideUp {
-  from {
+/* Cyberpunk Animation: Vertical line grows, text emerges outwards from line */
+@keyframes lineGrowAndSlideOut {
+  0% {
     opacity: 0;
-    transform: translateY(12px) scale(0.98);
+    transform: scaleX(0.02) scaleY(0);
+    clip-path: inset(0 100% 0 0);
   }
-  to {
+  40% {
     opacity: 1;
-    transform: translateY(0) scale(1);
+    transform: scaleX(0.05) scaleY(1);
+    clip-path: inset(0 95% 0 0);
+  }
+  100% {
+    opacity: 1;
+    transform: scaleX(1) scaleY(1);
+    clip-path: inset(0 0 0 0);
   }
 }
 
