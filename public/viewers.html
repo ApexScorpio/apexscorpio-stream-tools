@@ -93,6 +93,12 @@
 
     const bc = typeof BroadcastChannel !== 'undefined' ? new BroadcastChannel('apex_scorpio_stream_tools') : null;
 
+    function doResetToRealState() {
+      isTestActive = false;
+      if (testTimer) clearTimeout(testTimer);
+      checkPublicTwitchLive();
+    }
+
     function handleIncomingData(type, payload) {
       if (!type || !payload) return;
       if (type === 'config_update') {
@@ -102,11 +108,8 @@
           applyConfig();
         }
       }
-      if (type === 'clear_viewers' || type === 'reset_viewers') {
-        isTestActive = false;
-        if (testTimer) clearTimeout(testTimer);
-        realState = { twitch: { isLive: false, viewers: 0 }, youtube: { isLive: false, viewers: 0 }, facebook: { isLive: false, viewers: 0 }, totalViewers: 0 };
-        renderStatus(realState);
+      if (type === 'clear_viewers' || type === 'reset_viewers' || type === 'clear') {
+        doResetToRealState();
         return;
       }
       if (type === 'status_update') {
@@ -118,14 +121,10 @@
 
           const dur = (state.testDuration || 8) * 1000;
           testTimer = setTimeout(() => {
-            isTestActive = false;
-            renderStatus(realState);
+            doResetToRealState();
           }, dur);
         } else {
-          isTestActive = false;
-          if (testTimer) clearTimeout(testTimer);
-          realState = state;
-          renderStatus(realState);
+          doResetToRealState();
         }
       }
     }
@@ -141,13 +140,13 @@
         mqttClient.on('message', (topic, message) => {
           try {
             const data = JSON.parse(message.toString());
-            if (topic.includes('/cfg/clear_viewers')) {
-              handleIncomingData('clear_viewers', {});
+            if (topic.includes('clear')) {
+              doResetToRealState();
             } else if (topic.includes('/cfg/viewers')) {
               cfg = { ...cfg, ...data };
               applyConfig();
-            } else if (data && data.type) {
-              handleIncomingData(data.type, data.payload);
+            } else if (data && (data.type || data.payload)) {
+              handleIncomingData(data.type || data.payload?.type, data.payload || data);
             }
           } catch(err) {}
         });
@@ -245,7 +244,9 @@
 
         realState.totalViewers = (realState.twitch.viewers || 0) + (realState.youtube.viewers || 0) + (realState.facebook.viewers || 0);
         if (!isTestActive) renderStatus(realState);
-      } catch (err) {}
+      } catch (err) {
+        if (!isTestActive) renderStatus(realState);
+      }
     }
 
     loadSavedConfig();

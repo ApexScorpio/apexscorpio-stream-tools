@@ -5,6 +5,7 @@
   <title>ApexScorpio - Unified Chat Overlay</title>
   <link rel="stylesheet" href="css/style.css">
   <script src="https://cdn.jsdelivr.net/npm/mqtt@5.3.4/dist/mqtt.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/tmi.js@1.8.5/dist/tmi.min.js"></script>
 </head>
 <body class="chat-page">
   <div class="chat-container has-bg" id="chat-container"></div>
@@ -57,15 +58,17 @@
       return false;
     }
 
-    function doClearChat() {
+    function doClearChat(onlyTests = false) {
       const container = document.getElementById('chat-container') || chatContainer;
       if (container) {
         Array.from(container.children).forEach(child => {
-          child.style.animation = 'none';
-          child.style.transition = 'none';
-          child.remove();
+          if (!onlyTests || child.classList.contains('is-test-msg')) {
+            child.style.animation = 'none';
+            child.style.transition = 'none';
+            child.remove();
+          }
         });
-        container.innerHTML = '';
+        if (!onlyTests) container.innerHTML = '';
       }
       _seenIds.clear();
     }
@@ -80,7 +83,7 @@
         }
       }
       if (type === 'clear_chat' || type === 'clear' || (payload && payload.type === 'clear_chat')) {
-        doClearChat();
+        doClearChat(false);
         return;
       }
       if (type === 'chat_message' && payload) {
@@ -106,7 +109,7 @@
           try {
             const data = JSON.parse(message.toString());
             if (topic.includes('clear')) {
-              doClearChat();
+              doClearChat(false);
             } else if (topic.includes('/cfg/chat')) {
               cfg = { ...cfg, ...data };
               applyConfig();
@@ -138,6 +141,35 @@
       }
     });
 
+    // Real Twitch IRC Client via TMI.js (Client-Side) for channel apexscorpio
+    if (typeof tmi !== 'undefined') {
+      try {
+        const tmiClient = new tmi.Client({
+          connection: { secure: true, reconnect: true },
+          channels: ['apexscorpio']
+        });
+        tmiClient.connect().catch(() => {});
+        tmiClient.on('message', (channel, tags, message, self) => {
+          if (self) return;
+          const realMsg = {
+            id: tags.id || `tw-${Date.now()}`,
+            platform: 'twitch',
+            username: tags['display-name'] || tags.username || 'User',
+            userColor: tags.color || '#9146FF',
+            message: message,
+            badges: {
+              broadcaster: !!tags.badges?.broadcaster,
+              mod: !!tags.mod,
+              subscriber: !!tags.subscriber
+            },
+            isTest: false,
+            timestamp: new Date().toISOString()
+          };
+          addMsg(realMsg, 'twitch');
+        });
+      } catch(e) {}
+    }
+
     function applyConfig() {
       if (cfg.showBg) {
         chatContainer.classList.add('has-bg');
@@ -160,7 +192,8 @@
     function addMsg(msg, platform) {
       const el = document.createElement('div');
       const mode = cfg.displayMode === 'compact' ? 'mode-compact' : 'mode-pill';
-      el.className = `chat-message ${platform} ${mode}`;
+      const isTestClass = msg.isTest ? 'is-test-msg' : 'is-real-msg';
+      el.className = `chat-message ${platform} ${mode} ${isTestClass}`;
       el.style.fontSize = (cfg.fontSize || 14) + 'px';
 
       let badgesHtml = '';
