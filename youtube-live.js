@@ -1,14 +1,11 @@
 /**
- * ApexScorpio YouTube Live Module v2.4
+ * ApexScorpio YouTube Live Module v2.5
  *
- * Uses the official YouTube Data / Live Streaming API only.
- * - search.list discovers the active live once and cached IDs survive updates
- * - videos.list reads the official live state, concurrent viewers and chat ID
- * - a confirmed live stays online until actualEndTime is returned twice
- * - liveChatMessages.list reads chat, memberships and paid messages
- *
- * Multiple overlays coordinate through BroadcastChannel/localStorage so that,
- * in the normal OBS browser profile, only one tab spends API quota.
+ * Goals:
+ * - Detect a new live immediately, including when YouTube changes the video ID.
+ * - Keep a confirmed live online through temporary API/network failures.
+ * - Use separate state and chat leaders to reduce duplicate API traffic.
+ * - Poll search.list sparingly; use fast oEmbed retries and periodic playlist fallback.
  */
 (function (global) {
   'use strict';
@@ -18,37 +15,31 @@
   const CHANNEL_HANDLE = '@apexscorpio';
   const UPLOADS_PLAYLIST_ID = CHANNEL_ID.replace(/^UC/, 'UU');
 
-  // Stable keys: never version these again. Versioned keys caused a confirmed
-  // broadcast ID to be forgotten every time the module was updated.
+  // Persistent state keys. Do not version these again.
   const STATE_KEY = 'apex_yt_live_state';
   const VIDEO_KEY = 'apex_yt_live_video_id';
-  const LEADER_KEY = 'apex_yt_live_leader';
-  const BUS_KEY = 'apex_yt_live_bus';
   const LAST_SEARCH_KEY = 'apex_yt_last_search';
-  const LEGACY_STATE_KEYS = [
-    'apex_yt_live_state_v5', 'apex_yt_live_state_v4',
-    'apex_yt_live_state_v3', 'apex_yt_live_state_v2'
-  ];
-  const LEGACY_VIDEO_KEYS = [
-    'apex_yt_live_video_id_v5', 'apex_yt_live_video_id_v4',
-    'apex_yt_live_video_id_v3', 'apex_yt_live_video_id_v2'
-  ];
+  const LAST_PLAYLIST_KEY = 'apex_yt_last_playlist';
 
-  const LEADER_TTL_MS = 30000;
+  // Coordination keys isolated from older cached versions.
+  const STATE_LEADER_KEY = 'apex_yt_state_leader2';
+  const CHAT_LEADER_KEY = 'apex_yt_chat_leader2';
+  const BUS_KEY = 'apex_yt_bus2';
+  const CHANNEL_NAME = 'apex_youtube_live_bus2';
+
+  const LEADER_TTL_MS = 20000;
   const LEADER_HEARTBEAT_MS = 5000;
-  const VIDEO_POLL_MS = 5000;
-  const OFFLINE_RETRY_MS = 5000;
-  const END_CONFIRMATIONS_REQUIRED = 2;
-  // search.list has a separate 100-call daily allowance. One search every
-  // 15 minutes stays within that limit even if the dashboard remains open 24/7.
-  const OFFLINE_DISCOVERY_MS = 15 * 60 * 1000;
-  const MIN_SEARCH_GAP_MS = 60 * 1000;
+  const LIVE_POLL_MS = 15000;
+  const FAST_DISCOVERY_MS = 10000;
+  const PLAYLIST_DISCOVERY_MS = 60000;
+  const SEARCH_DISCOVERY_MS = 15 * 60 * 1000;
+  const LIVE_ERROR_GRACE_MS = 60000;
   const MIN_CHAT_POLL_MS = 1000;
   const MAX_CHAT_POLL_MS = 15000;
 
   const instanceId = `yt-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
-  const channel = typeof BroadcastChannel !== 'undefined'
-    ? new BroadcastChannel('apex_youtube_live')
+  const bus = typeof BroadcastChannel !== 'undefined'
+    ? new BroadcastChannel(CHANNEL_NAME)
     : null;
 
   const messageHandlers = new Set();
@@ -59,79 +50,65 @@
   const seenApiItemIds = new Set();
 
   let started = false;
-  let isLeader = false;
-  let leaderTimer = null;
-  let videoTimer = null;
-  let discoveryTimer = null;
+  let stateLeader = false;
+  let chatLeader = false;
+  let stateLeaderTimer = null;
+  let chatLeaderTimer = null;
+  let stateTimer = null;
   let chatTimer = null;
-  let liveChatPageToken = null;
+  let activeVideoId = safeGet(VIDEO_KEY) || null;
   let activeChatId = null;
+  let liveChatPageToken = null;
+  let lastPositiveLiveAt = 0;
   let state = loadState();
-  let activeVideoId = safeGet(VIDEO_KEY) || state.videoId || loadLegacyVideoId() || null;
-  let consecutiveEndChecks = 0;
+
+  if (!activeVideoId && state.videoId) activeVideoId = state.videoId;
+  if (state.isLive) lastPositiveLiveAt = Number(state.updatedAt || Date.now());
 
   function safeGet(key) {
     try { return localStorage.getItem(key); } catch (_) { return null; }
   }
 
   function safeSet(key, value) {
-    try { localStorage.setItem(key, value); return true; } catch (_) { return false; }
+    try {
+      localStorage.setItem(key, value);
+      return true;
+    } catch (_) {
+      return false;
+    }
   }
 
   function safeRemove(key) {
     try { localStorage.removeItem(key); } catch (_) {}
   }
 
-  function normalizeStoredState(parsed) {
-    if (!parsed || typeof parsed !== 'object') return null;
-    return {
-      isLive: Boolean(parsed.isLive),
-      viewers: Number(parsed.viewers || 0),
-      videoId: parsed.videoId || null,
-      liveChatId: parsed.liveChatId || null,
-      title: parsed.title || '',
-      updatedAt: Number(parsed.updatedAt || 0),
-      error: parsed.error || null
-    };
-  }
-
-  function loadLegacyVideoId() {
-    for (const key of LEGACY_VIDEO_KEYS) {
-      const value = safeGet(key);
-      if (value) return value;
-    }
-    return null;
-  }
-
   function loadState() {
-    const candidates = [];
-    for (const key of [STATE_KEY, ...LEGACY_STATE_KEYS]) {
-      try {
-        const normalized = normalizeStoredState(JSON.parse(safeGet(key) || 'null'));
-        if (normalized) candidates.push(normalized);
-      } catch (_) {}
-    }
+    try {
+      const parsed = JSON.parse(safeGet(STATE_KEY) || 'null');
+      if (parsed && typeof parsed === 'object') {
+        return {
+          isLive: Boolean(parsed.isLive),
+          viewers: Math.max(0, Number(parsed.viewers || 0)),
+          videoId: parsed.videoId || null,
+          liveChatId: parsed.liveChatId || null,
+          title: parsed.title || '',
+          updatedAt: Number(parsed.updatedAt || 0),
+          error: parsed.error || null,
+          source: parsed.source || null
+        };
+      }
+    } catch (_) {}
 
-    candidates.sort((a, b) => b.updatedAt - a.updatedAt);
-    // Prefer a positively confirmed live with a video ID, even when a newer
-    // broken version wrote an offline state afterwards. The ID is validated
-    // against videos.list before it is shown as online.
-    const chosen = candidates.find(item => item.isLive && item.videoId)
-      || candidates.find(item => item.videoId)
-      || candidates[0]
-      || {
-        isLive: false, viewers: 0, videoId: null, liveChatId: null,
-        title: '', updatedAt: 0, error: null
-      };
-
-    const migratedVideoId = chosen.videoId || loadLegacyVideoId();
-    const migrated = { ...chosen, videoId: migratedVideoId || null };
-    safeSet(STATE_KEY, JSON.stringify(migrated));
-    if (migrated.videoId) safeSet(VIDEO_KEY, migrated.videoId);
-    // Migration is one-time. Keeping the old keys would allow a stale live
-    // state to win again on a future page load.
-    for (const key of [...LEGACY_STATE_KEYS, ...LEGACY_VIDEO_KEYS]) safeRemove(key);
-    return migrated;
+    return {
+      isLive: false,
+      viewers: 0,
+      videoId: null,
+      liveChatId: null,
+      title: '',
+      updatedAt: 0,
+      error: null,
+      source: null
+    };
   }
 
   function publicState() {
@@ -146,7 +123,7 @@
     return false;
   }
 
-  function makeEnvelope(kind, payload) {
+  function envelope(kind, payload) {
     return {
       id: `${instanceId}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
       source: instanceId,
@@ -157,60 +134,74 @@
   }
 
   function broadcast(kind, payload) {
-    const envelope = makeEnvelope(kind, payload);
-    handleEnvelope(envelope);
-    if (channel) {
-      try { channel.postMessage(envelope); } catch (_) {}
+    const packet = envelope(kind, payload);
+    handleEnvelope(packet);
+    if (bus) {
+      try { bus.postMessage(packet); } catch (_) {}
     }
-    safeSet(BUS_KEY, JSON.stringify(envelope));
+    safeSet(BUS_KEY, JSON.stringify(packet));
   }
 
-  function handleEnvelope(envelope) {
-    if (!envelope || !envelope.id || remember(seenEnvelopeIds, envelope.id, 120000)) return;
-    const payload = envelope.payload;
+  function applyIncomingState(payload) {
+    const incomingUpdatedAt = Number(payload?.updatedAt || 0);
+    if (state.updatedAt && incomingUpdatedAt && incomingUpdatedAt < state.updatedAt) return;
 
-    if (envelope.kind === 'state' && payload) {
-      const incomingUpdatedAt = Number(payload.updatedAt || 0);
-      if (state.updatedAt && incomingUpdatedAt && incomingUpdatedAt < state.updatedAt) return;
-      state = {
-        isLive: Boolean(payload.isLive),
-        viewers: Number(payload.viewers || 0),
-        videoId: payload.videoId || null,
-        liveChatId: payload.liveChatId || null,
-        title: payload.title || '',
-        updatedAt: Number(payload.updatedAt || Date.now()),
-        error: payload.error || null
-      };
-      global.ytLiveState = publicState();
-      stateHandlers.forEach(handler => {
-        try { handler(publicState()); } catch (_) {}
-      });
+    state = {
+      isLive: Boolean(payload?.isLive),
+      viewers: Math.max(0, Number(payload?.viewers || 0)),
+      videoId: payload?.videoId || null,
+      liveChatId: payload?.liveChatId || null,
+      title: payload?.title || '',
+      updatedAt: incomingUpdatedAt || Date.now(),
+      error: payload?.error || null,
+      source: payload?.source || null
+    };
+
+    if (state.videoId) {
+      activeVideoId = state.videoId;
+      safeSet(VIDEO_KEY, state.videoId);
+    }
+
+    global.ytLiveState = publicState();
+    stateHandlers.forEach(handler => {
+      try { handler(publicState()); } catch (_) {}
+    });
+
+    if (messageHandlers.size || eventHandlers.size) ensureChatElection();
+  }
+
+  function handleEnvelope(packet) {
+    if (!packet?.id || remember(seenEnvelopeIds, packet.id, 120000)) return;
+
+    if (packet.kind === 'state' && packet.payload) {
+      applyIncomingState(packet.payload);
       return;
     }
 
-    if (envelope.kind === 'chat' && payload) {
-      if (remember(seenChatIds, payload.id, 10 * 60 * 1000)) return;
+    if (packet.kind === 'chat' && packet.payload) {
+      if (remember(seenChatIds, packet.payload.id, 10 * 60 * 1000)) return;
       messageHandlers.forEach(handler => {
-        try { handler(payload); } catch (_) {}
+        try { handler(packet.payload); } catch (_) {}
       });
       return;
     }
 
-    if (envelope.kind === 'event' && payload) {
-      if (remember(seenChatIds, `evt:${payload.id}`, 10 * 60 * 1000)) return;
+    if (packet.kind === 'event' && packet.payload) {
+      const eventKey = `evt:${packet.payload.id}`;
+      if (remember(seenChatIds, eventKey, 10 * 60 * 1000)) return;
       eventHandlers.forEach(handler => {
-        try { handler(payload); } catch (_) {}
+        try { handler(packet.payload); } catch (_) {}
       });
       return;
     }
 
-    if (envelope.kind === 'refresh' && isLeader) {
-      if (activeVideoId || state.isLive) refreshVideoDetails();
+    if (packet.kind === 'refresh' && stateLeader) {
+      if (activeVideoId || state.videoId) refreshKnownVideo();
       else discoverLive(true);
     }
   }
 
-  if (channel) channel.addEventListener('message', event => handleEnvelope(event.data));
+  if (bus) bus.addEventListener('message', event => handleEnvelope(event.data));
 
   global.addEventListener('storage', event => {
     if (event.key !== BUS_KEY || !event.newValue) return;
@@ -220,17 +211,20 @@
   async function apiGet(path, params) {
     const query = new URLSearchParams(params || {});
     query.set('key', API_KEY);
-    const response = await fetch(`https://www.googleapis.com/youtube/v3/${path}?${query.toString()}`, {
-      cache: 'no-store'
-    });
+
+    const response = await fetch(
+      `https://www.googleapis.com/youtube/v3/${path}?${query.toString()}`,
+      { cache: 'no-store' }
+    );
+
     const data = await response.json().catch(() => ({}));
     if (!response.ok || data.error) {
-      const message = data?.error?.message || `YouTube API ${response.status}`;
-      const error = new Error(message);
+      const error = new Error(data?.error?.message || `YouTube API ${response.status}`);
       error.status = response.status;
       error.reason = data?.error?.errors?.[0]?.reason || null;
       throw error;
     }
+
     return data;
   }
 
@@ -242,129 +236,122 @@
       liveChatId: next.liveChatId || null,
       title: next.title || '',
       updatedAt: Date.now(),
-      error: next.error || null
+      error: next.error || null,
+      source: next.source || null
     };
+
     global.ytLiveState = publicState();
     safeSet(STATE_KEY, JSON.stringify(state));
-    if (state.videoId) safeSet(VIDEO_KEY, state.videoId);
-    else safeRemove(VIDEO_KEY);
+
+    if (state.videoId) {
+      activeVideoId = state.videoId;
+      safeSet(VIDEO_KEY, state.videoId);
+    } else {
+      safeRemove(VIDEO_KEY);
+    }
+
     broadcast('state', state);
   }
 
+  function publishLive(video, source) {
+    const details = video?.liveStreamingDetails || {};
+    const concurrent = details.concurrentViewers;
+    lastPositiveLiveAt = Date.now();
 
-  function hasActiveLeadership() {
-    const lock = readLeader();
-    return Boolean(
-      isLeader && lock && lock.owner === instanceId && Number(lock.expiresAt || 0) > Date.now()
-    );
+    publishState({
+      isLive: true,
+      viewers: concurrent == null ? Number(state.viewers || 0) : Number(concurrent || 0),
+      videoId: video.id,
+      liveChatId: details.activeLiveChatId || null,
+      title: video?.snippet?.title || state.title || '',
+      error: null,
+      source
+    });
+
+    scheduleState(LIVE_POLL_MS);
+    ensureChatElection();
   }
 
-  function recordConfirmedLive() {
-    consecutiveEndChecks = 0;
+  function publishOffline(error = null, source = null) {
+    activeVideoId = null;
+    activeChatId = null;
+    liveChatPageToken = null;
+    safeRemove(VIDEO_KEY);
+
+    publishState({
+      isLive: false,
+      viewers: 0,
+      videoId: null,
+      liveChatId: null,
+      title: '',
+      error,
+      source
+    });
+
+    scheduleState(FAST_DISCOVERY_MS);
   }
 
-  function holdKnownLive(error = null) {
-    if (!state.isLive) return false;
-    activeVideoId = activeVideoId || state.videoId || null;
+  function holdLiveOnFailure(error) {
+    if (!state.isLive || !state.videoId) return false;
+    const age = Date.now() - Number(lastPositiveLiveAt || state.updatedAt || 0);
+    if (age > LIVE_ERROR_GRACE_MS) return false;
+
     publishState({
       ...state,
       isLive: true,
-      videoId: activeVideoId || state.videoId,
-      error
+      videoId: state.videoId,
+      error: error || null,
+      source: state.source || 'cached-live'
     });
-    if (activeVideoId) scheduleVideoPoll(OFFLINE_RETRY_MS);
-    else scheduleDiscovery(OFFLINE_RETRY_MS);
+    scheduleState(FAST_DISCOVERY_MS);
     return true;
   }
 
-  function publishConfirmedOffline(discoveryDelay = OFFLINE_DISCOVERY_MS) {
-    consecutiveEndChecks = 0;
-    activeVideoId = null;
-    stopChatPolling();
-    publishState({ isLive: false, viewers: 0, videoId: null, liveChatId: null, title: '', error: null });
-    scheduleDiscovery(discoveryDelay);
+  function isLiveVideo(video) {
+    const details = video?.liveStreamingDetails;
+    const content = video?.snippet?.liveBroadcastContent || 'none';
+    if (!video || !details || details.actualEndTime) return false;
+    return content === 'live' || Boolean(details.actualStartTime);
   }
 
-  function scheduleVideoPoll(delay = VIDEO_POLL_MS) {
-    if (videoTimer) clearTimeout(videoTimer);
-    if (!isLeader) return;
-    videoTimer = setTimeout(refreshVideoDetails, delay);
+  async function fetchVideo(videoId) {
+    if (!videoId) return null;
+    const data = await apiGet('videos', {
+      part: 'snippet,liveStreamingDetails',
+      id: videoId,
+      maxResults: '1'
+    });
+    return data?.items?.[0] || null;
   }
 
-  function scheduleDiscovery(delay = OFFLINE_DISCOVERY_MS) {
-    if (discoveryTimer) clearTimeout(discoveryTimer);
-    if (!isLeader) return;
-    discoveryTimer = setTimeout(() => discoverLive(false), delay);
-  }
+  async function refreshKnownVideo() {
+    if (!stateLeader) return;
 
-  function stopChatPolling() {
-    if (chatTimer) clearTimeout(chatTimer);
-    chatTimer = null;
-    liveChatPageToken = null;
-    activeChatId = null;
-  }
-
-  async function refreshVideoDetails() {
-    if (!activeVideoId || !hasActiveLeadership()) {
-      if (state.isLive && !activeVideoId) scheduleDiscovery(OFFLINE_RETRY_MS);
+    const videoId = activeVideoId || state.videoId;
+    if (!videoId) {
+      discoverLive(true);
       return;
     }
 
     try {
-      const requestedVideoId = activeVideoId;
-      const data = await apiGet('videos', {
-        part: 'snippet,liveStreamingDetails',
-        id: requestedVideoId,
-        maxResults: '1'
-      });
-      if (!hasActiveLeadership() || activeVideoId !== requestedVideoId) return;
+      const video = await fetchVideo(videoId);
+      if (!stateLeader) return;
 
-      const video = data?.items?.[0] || null;
-      const details = video?.liveStreamingDetails || null;
-      const liveContent = video?.snippet?.liveBroadcastContent || 'none';
-      const hasExplicitEnd = Boolean(details?.actualEndTime);
-      const isActuallyLive = Boolean(
-        video && details && !hasExplicitEnd &&
-        (liveContent === 'live' || details.actualStartTime)
-      );
-
-      if (hasExplicitEnd) {
-        consecutiveEndChecks += 1;
-        if (consecutiveEndChecks < END_CONFIRMATIONS_REQUIRED && holdKnownLive(null)) return;
-        publishConfirmedOffline(OFFLINE_DISCOVERY_MS);
+      if (isLiveVideo(video)) {
+        activeVideoId = video.id;
+        publishLive(video, 'known-video');
         return;
       }
 
-      // Missing/partial API data must never cancel a live session that was
-      // already positively confirmed. Only actualEndTime may do that.
-      if (!isActuallyLive) {
-        consecutiveEndChecks = 0;
-        if (holdKnownLive(null)) return;
-
-        activeVideoId = null;
-        safeRemove(VIDEO_KEY);
-        scheduleDiscovery(OFFLINE_DISCOVERY_MS);
-        return;
-      }
-
-      recordConfirmedLive();
-      const liveChatId = details.activeLiveChatId || null;
-      publishState({
-        isLive: true,
-        viewers: Number(details.concurrentViewers || 0),
-        videoId: activeVideoId,
-        liveChatId,
-        title: video?.snippet?.title || ''
-      });
-
-      if (liveChatId) startChatPolling(liveChatId);
-      else stopChatPolling();
-      scheduleVideoPoll(VIDEO_POLL_MS);
+      // The known broadcast ended, disappeared, or YouTube changed the video ID.
+      // Do not wait 15 minutes: immediately discover the replacement live.
+      activeVideoId = null;
+      safeRemove(VIDEO_KEY);
+      await discoverLive(true);
     } catch (error) {
-      if (!hasActiveLeadership()) return;
-      if (!holdKnownLive(error.message)) {
-        publishState({ ...state, error: error.message });
-        scheduleDiscovery(OFFLINE_DISCOVERY_MS);
+      if (!stateLeader) return;
+      if (!holdLiveOnFailure(error.message)) {
+        await discoverLive(false, error.message);
       }
     }
   }
@@ -375,106 +362,163 @@
       channelId: CHANNEL_ID,
       eventType: 'live',
       type: 'video',
-      maxResults: '1'
+      maxResults: '5'
     });
-    return data?.items?.[0]?.id?.videoId || null;
+    return (data?.items || [])
+      .map(item => item?.id?.videoId)
+      .filter(Boolean);
   }
 
-  async function discoverFromUploadsPlaylist() {
+  async function discoverFromPlaylist() {
     const playlist = await apiGet('playlistItems', {
       part: 'contentDetails,snippet',
       playlistId: UPLOADS_PLAYLIST_ID,
-      maxResults: '10'
+      maxResults: '15'
     });
 
-    const ids = [...new Set((playlist?.items || [])
+    return [...new Set((playlist?.items || [])
       .map(item => item?.contentDetails?.videoId || item?.snippet?.resourceId?.videoId)
       .filter(Boolean))];
-    if (!ids.length) return null;
-
-    const videos = await apiGet('videos', {
-      part: 'snippet,liveStreamingDetails',
-      id: ids.join(','),
-      maxResults: String(ids.length)
-    });
-
-    const live = (videos?.items || []).find(video => {
-      const details = video?.liveStreamingDetails;
-      const content = video?.snippet?.liveBroadcastContent || 'none';
-      return Boolean(details && !details.actualEndTime &&
-        (content === 'live' || details.actualStartTime));
-    });
-    return live?.id || null;
   }
 
   async function discoverFromOEmbed() {
-    try {
-      const liveUrl = `https://www.youtube.com/${CHANNEL_HANDLE}/live`;
-      const response = await fetch(`https://www.youtube.com/oembed?format=json&url=${encodeURIComponent(liveUrl)}`, {
-        cache: 'no-store'
-      });
-      if (!response.ok) return null;
-      const data = await response.json();
-      const match = String(data?.html || '').match(/youtube(?:-nocookie)?\.com\/embed\/([a-zA-Z0-9_-]{11})/);
-      return match?.[1] || null;
-    } catch (_) {
-      return null;
+    const candidates = [
+      `https://www.youtube.com/channel/${CHANNEL_ID}/live`,
+      `https://www.youtube.com/${CHANNEL_HANDLE}/live`
+    ];
+
+    for (const liveUrl of candidates) {
+      try {
+        const endpoint = `https://www.youtube.com/oembed?format=json&url=${encodeURIComponent(liveUrl)}`;
+        const response = await fetch(endpoint, { cache: 'no-store' });
+        if (!response.ok) continue;
+        const data = await response.json();
+        const html = String(data?.html || '');
+        const match = html.match(/youtube(?:-nocookie)?\.com\/embed\/([a-zA-Z0-9_-]{11})/);
+        if (match?.[1]) return [match[1]];
+      } catch (_) {}
     }
+
+    return [];
   }
 
-  async function discoverLive(force) {
-    if (!hasActiveLeadership()) return;
+  async function firstConfirmedLive(ids, source) {
+    const unique = [...new Set((ids || []).filter(Boolean))];
+    if (!unique.length) return null;
 
-    // Once a broadcast has been confirmed, discovery is no longer allowed to
-    // overwrite it. The known video is authoritative until YouTube supplies
-    // actualEndTime for that exact video.
-    if (state.isLive && (activeVideoId || state.videoId)) {
-      activeVideoId = activeVideoId || state.videoId;
-      refreshVideoDetails();
-      return;
-    }
+    const data = await apiGet('videos', {
+      part: 'snippet,liveStreamingDetails',
+      id: unique.slice(0, 50).join(','),
+      maxResults: String(Math.min(unique.length, 50))
+    });
 
-    const now = Date.now();
-    const lastSearchAt = Number(safeGet(LAST_SEARCH_KEY) || 0);
-    if (!force && lastSearchAt && now - lastSearchAt < MIN_SEARCH_GAP_MS) {
-      scheduleDiscovery(Math.max(1000, MIN_SEARCH_GAP_MS - (now - lastSearchAt)));
-      return;
-    }
+    const live = (data?.items || []).find(isLiveVideo) || null;
+    if (live) publishLive(live, source);
+    return live;
+  }
 
-    safeSet(LAST_SEARCH_KEY, String(now));
-    let searchError = null;
+  function due(key, interval, force) {
+    if (force) return true;
+    const last = Number(safeGet(key) || 0);
+    return !last || Date.now() - last >= interval;
+  }
+
+  async function discoverLive(forceSearch = false, inheritedError = null) {
+    if (!stateLeader) return;
+
+    let lastError = inheritedError || null;
+
+    // Fast no-search discovery. This is safe to retry frequently.
     try {
-      // Official and authoritative discovery path. It is called sparingly;
-      // once a video is found, only the cheap videos.list poll is used.
-      let videoId = null;
-      try {
-        videoId = await discoverFromSearch();
-      } catch (error) {
-        searchError = error;
-      }
-
-      // Best-effort fallbacks are retained, but they are not authoritative.
-      if (!videoId) videoId = await discoverFromOEmbed();
-      if (!videoId) videoId = await discoverFromUploadsPlaylist();
-      if (!hasActiveLeadership()) return;
-
-      if (videoId) {
-        activeVideoId = videoId;
-        safeSet(VIDEO_KEY, videoId);
-        liveChatPageToken = null;
-        await refreshVideoDetails();
-      } else {
-        publishState({
-          isLive: false, viewers: 0, videoId: null, liveChatId: null,
-          title: '', error: searchError?.message || null
-        });
-        scheduleDiscovery(OFFLINE_DISCOVERY_MS);
-      }
+      const oembedIds = await discoverFromOEmbed();
+      if (!stateLeader) return;
+      const live = await firstConfirmedLive(oembedIds, 'oembed');
+      if (live) return;
     } catch (error) {
-      if (!hasActiveLeadership()) return;
-      console.warn('[YouTube Live] discovery failed:', error);
-      publishState({ ...state, error: error.message });
-      scheduleDiscovery(OFFLINE_DISCOVERY_MS);
+      lastError = error.message;
+    }
+
+    // Playlist fallback once per minute.
+    if (due(LAST_PLAYLIST_KEY, PLAYLIST_DISCOVERY_MS, forceSearch)) {
+      safeSet(LAST_PLAYLIST_KEY, String(Date.now()));
+      try {
+        const playlistIds = await discoverFromPlaylist();
+        if (!stateLeader) return;
+        const live = await firstConfirmedLive(playlistIds, 'uploads-playlist');
+        if (live) return;
+      } catch (error) {
+        lastError = error.message;
+      }
+    }
+
+    // Authoritative search on initial load, after an ended video, or every 15 min.
+    if (due(LAST_SEARCH_KEY, SEARCH_DISCOVERY_MS, forceSearch)) {
+      safeSet(LAST_SEARCH_KEY, String(Date.now()));
+      try {
+        const searchIds = await discoverFromSearch();
+        if (!stateLeader) return;
+        const live = await firstConfirmedLive(searchIds, 'search');
+        if (live) return;
+      } catch (error) {
+        lastError = error.message;
+      }
+    }
+
+    if (state.isLive && state.videoId && holdLiveOnFailure(lastError)) return;
+
+    publishOffline(lastError, 'discovery');
+  }
+
+  function readLock(key) {
+    try { return JSON.parse(safeGet(key) || 'null'); } catch (_) { return null; }
+  }
+
+  function writeLock(key) {
+    const lock = { owner: instanceId, expiresAt: Date.now() + LEADER_TTL_MS };
+    safeSet(key, JSON.stringify(lock));
+    return readLock(key)?.owner === instanceId;
+  }
+
+  function releaseLock(key) {
+    const lock = readLock(key);
+    if (lock?.owner === instanceId) safeRemove(key);
+  }
+
+  function scheduleState(delay) {
+    if (stateTimer) clearTimeout(stateTimer);
+    if (!stateLeader) return;
+    stateTimer = setTimeout(() => {
+      if (activeVideoId || state.videoId) refreshKnownVideo();
+      else discoverLive(false);
+    }, delay);
+  }
+
+  function stopStateLeaderWork() {
+    stateLeader = false;
+    if (stateTimer) clearTimeout(stateTimer);
+    stateTimer = null;
+  }
+
+  function becomeStateLeader() {
+    if (stateLeader) return;
+    stateLeader = true;
+    activeVideoId = safeGet(VIDEO_KEY) || state.videoId || null;
+
+    // Every fresh leader performs an authoritative discovery if no live ID is
+    // known. This removes the previous 15-minute startup delay.
+    if (activeVideoId) refreshKnownVideo();
+    else discoverLive(true);
+  }
+
+  function electStateLeader() {
+    const lock = readLock(STATE_LEADER_KEY);
+    const now = Date.now();
+
+    if (!lock || Number(lock.expiresAt || 0) <= now || lock.owner === instanceId) {
+      if (writeLock(STATE_LEADER_KEY)) becomeStateLeader();
+      else stopStateLeaderWork();
+    } else if (stateLeader) {
+      stopStateLeaderWork();
     }
   }
 
@@ -512,6 +556,7 @@
     }
 
     if (!text) return null;
+
     return {
       id: item.id,
       platform: 'youtube',
@@ -543,6 +588,7 @@
         memberLevel: snippet.newSponsorDetails?.memberLevelName || ''
       };
     }
+
     if (snippet.type === 'membershipGiftingEvent') {
       return {
         ...base,
@@ -550,6 +596,7 @@
         giftCount: Number(snippet.membershipGiftingDetails?.giftMembershipsCount || 0)
       };
     }
+
     if (snippet.type === 'memberMilestoneChatEvent') {
       return {
         ...base,
@@ -558,6 +605,7 @@
         message: snippet.memberMilestoneChatDetails?.userComment || ''
       };
     }
+
     if (snippet.type === 'superChatEvent') {
       const details = snippet.superChatDetails || {};
       return {
@@ -569,6 +617,7 @@
         message: details.userComment || ''
       };
     }
+
     if (snippet.type === 'superStickerEvent') {
       const details = snippet.superStickerDetails || {};
       return {
@@ -580,23 +629,80 @@
         message: details.superStickerMetadata?.altText || 'Super Sticker'
       };
     }
+
     return null;
   }
 
-  function startChatPolling(liveChatId) {
-    if (!isLeader || !liveChatId) return;
-    if (activeChatId === liveChatId && chatTimer) return;
-    if (activeChatId !== liveChatId) {
-      activeChatId = liveChatId;
+  function hasChatDemand() {
+    return messageHandlers.size > 0 || eventHandlers.size > 0;
+  }
+
+  function stopChatLeaderWork() {
+    chatLeader = false;
+    if (chatTimer) clearTimeout(chatTimer);
+    chatTimer = null;
+    activeChatId = null;
+    liveChatPageToken = null;
+  }
+
+  function becomeChatLeader() {
+    if (chatLeader || !hasChatDemand()) return;
+    chatLeader = true;
+    startChatForCurrentState();
+  }
+
+  function electChatLeader() {
+    if (!hasChatDemand()) {
+      if (chatLeader) {
+        releaseLock(CHAT_LEADER_KEY);
+        stopChatLeaderWork();
+      }
+      return;
+    }
+
+    const lock = readLock(CHAT_LEADER_KEY);
+    const now = Date.now();
+
+    if (!lock || Number(lock.expiresAt || 0) <= now || lock.owner === instanceId) {
+      if (writeLock(CHAT_LEADER_KEY)) becomeChatLeader();
+      else stopChatLeaderWork();
+    } else if (chatLeader) {
+      stopChatLeaderWork();
+    }
+  }
+
+  function ensureChatElection() {
+    if (!hasChatDemand()) return;
+    if (!chatLeaderTimer) {
+      electChatLeader();
+      chatLeaderTimer = setInterval(electChatLeader, LEADER_HEARTBEAT_MS);
+    }
+    if (chatLeader) startChatForCurrentState();
+  }
+
+  function startChatForCurrentState() {
+    if (!chatLeader || !hasChatDemand()) return;
+    const chatId = state.isLive ? state.liveChatId : null;
+
+    if (!chatId) {
+      if (chatTimer) clearTimeout(chatTimer);
+      chatTimer = setTimeout(startChatForCurrentState, 5000);
+      return;
+    }
+
+    if (activeChatId !== chatId) {
+      activeChatId = chatId;
       liveChatPageToken = null;
       seenApiItemIds.clear();
     }
+
     if (chatTimer) clearTimeout(chatTimer);
     chatTimer = setTimeout(pollChat, 0);
   }
 
   async function pollChat() {
-    if (!activeChatId || !hasActiveLeadership()) return;
+    if (!chatLeader || !hasChatDemand() || !activeChatId) return;
+
     try {
       const params = {
         liveChatId: activeChatId,
@@ -605,8 +711,10 @@
         hl: 'pt-PT'
       };
       if (liveChatPageToken) params.pageToken = liveChatPageToken;
+
       const data = await apiGet('liveChat/messages', params);
-      if (!hasActiveLeadership()) return;
+      if (!chatLeader) return;
+
       liveChatPageToken = data.nextPageToken || liveChatPageToken;
 
       for (const item of data.items || []) {
@@ -627,59 +735,14 @@
       );
       chatTimer = setTimeout(pollChat, delay);
     } catch (error) {
-      const ended = error.reason === 'liveChatEnded' || error.reason === 'liveChatNotFound';
+      const ended = ['liveChatEnded', 'liveChatNotFound'].includes(error.reason);
       if (ended) {
-        stopChatPolling();
-        scheduleVideoPoll(0);
+        activeChatId = null;
+        liveChatPageToken = null;
+        chatTimer = setTimeout(startChatForCurrentState, 5000);
       } else {
         chatTimer = setTimeout(pollChat, 15000);
       }
-    }
-  }
-
-  function readLeader() {
-    try { return JSON.parse(safeGet(LEADER_KEY) || 'null'); } catch (_) { return null; }
-  }
-
-  function writeLeader() {
-    const lock = { owner: instanceId, expiresAt: Date.now() + LEADER_TTL_MS };
-    safeSet(LEADER_KEY, JSON.stringify(lock));
-    return readLeader()?.owner === instanceId;
-  }
-
-  function stopLeaderWork() {
-    isLeader = false;
-    if (videoTimer) clearTimeout(videoTimer);
-    if (discoveryTimer) clearTimeout(discoveryTimer);
-    if (chatTimer) clearTimeout(chatTimer);
-    videoTimer = discoveryTimer = chatTimer = null;
-  }
-
-  function beginLeaderWork() {
-    if (isLeader) return;
-    isLeader = true;
-    activeVideoId = safeGet(VIDEO_KEY) || state.videoId || loadLegacyVideoId() || null;
-    if (activeVideoId) {
-      safeSet(VIDEO_KEY, activeVideoId);
-      refreshVideoDetails();
-    } else {
-      discoverLive(false);
-    }
-  }
-
-  function electLeader() {
-    const lock = readLeader();
-    const now = Date.now();
-    if (!lock || lock.expiresAt <= now || lock.owner === instanceId) {
-      if (writeLeader()) beginLeaderWork();
-      else stopLeaderWork();
-    } else if (lock.owner !== instanceId && isLeader) {
-      stopLeaderWork();
-    }
-
-    if (!isLeader && state.updatedAt && Date.now() - state.updatedAt > 30000) {
-      state = loadState();
-      global.ytLiveState = publicState();
     }
   }
 
@@ -687,25 +750,32 @@
     if (started) return;
     started = true;
     global.ytLiveState = publicState();
-    electLeader();
-    leaderTimer = setInterval(electLeader, LEADER_HEARTBEAT_MS);
+
+    electStateLeader();
+    stateLeaderTimer = setInterval(electStateLeader, LEADER_HEARTBEAT_MS);
+
     global.addEventListener('beforeunload', () => {
-      if (leaderTimer) clearInterval(leaderTimer);
-      const lock = readLeader();
-      if (lock?.owner === instanceId) safeRemove(LEADER_KEY);
+      if (stateLeaderTimer) clearInterval(stateLeaderTimer);
+      if (chatLeaderTimer) clearInterval(chatLeaderTimer);
+      releaseLock(STATE_LEADER_KEY);
+      releaseLock(CHAT_LEADER_KEY);
     });
   }
 
   global.YoutubeLive = {
-    startChat(onMsg, onEvt) {
-      if (typeof onMsg === 'function') messageHandlers.add(onMsg);
-      if (typeof onEvt === 'function') eventHandlers.add(onEvt);
+    startChat(onMessage, onEvent) {
+      if (typeof onMessage === 'function') messageHandlers.add(onMessage);
+      if (typeof onEvent === 'function') eventHandlers.add(onEvent);
       start();
+      ensureChatElection();
+
       return () => {
-        if (typeof onMsg === 'function') messageHandlers.delete(onMsg);
-        if (typeof onEvt === 'function') eventHandlers.delete(onEvt);
+        if (typeof onMessage === 'function') messageHandlers.delete(onMessage);
+        if (typeof onEvent === 'function') eventHandlers.delete(onEvent);
+        electChatLeader();
       };
     },
+
     subscribeState(handler) {
       if (typeof handler !== 'function') return () => {};
       stateHandlers.add(handler);
@@ -713,34 +783,53 @@
       start();
       return () => stateHandlers.delete(handler);
     },
+
     resolveLiveDetails() {
       start();
-      if (isLeader) {
-        const task = (activeVideoId || state.isLive)
-          ? refreshVideoDetails()
+      if (stateLeader) {
+        const task = activeVideoId || state.videoId
+          ? refreshKnownVideo()
           : discoverLive(true);
         return Promise.resolve(task).then(() => publicState());
       }
       broadcast('refresh', { requestedBy: instanceId });
       return Promise.resolve(publicState());
     },
+
     refresh() {
       start();
-      if (isLeader) {
-        if (activeVideoId || state.isLive) refreshVideoDetails();
+      if (stateLeader) {
+        if (activeVideoId || state.videoId) refreshKnownVideo();
         else discoverLive(true);
       } else {
         broadcast('refresh', { requestedBy: instanceId });
       }
     },
+
     getState: publicState,
+
+    debug() {
+      return {
+        version: '2.5',
+        instanceId,
+        stateLeader,
+        chatLeader,
+        activeVideoId,
+        activeChatId,
+        state: publicState()
+      };
+    },
+
     stopChat() {
       messageHandlers.clear();
       eventHandlers.clear();
+      if (chatLeader) releaseLock(CHAT_LEADER_KEY);
+      stopChatLeaderWork();
     },
+
     channelId: CHANNEL_ID,
     channelHandle: CHANNEL_HANDLE,
-    version: '2.4'
+    version: '2.5'
   };
 
   start();
