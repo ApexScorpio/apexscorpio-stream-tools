@@ -263,8 +263,8 @@ body.chat-page {
   flex-shrink: 0;
   word-wrap: break-word;
   overflow-wrap: break-word;
-  transform-origin: left center;
-  animation: chatSlideIn 0.38s cubic-bezier(0.16, 1, 0.3, 1) both;
+  transform-origin: left top;
+  animation: chatSlideIn 0.46s cubic-bezier(0.16, 1, 0.3, 1) both;
 }
 
 .chat-message.mode-pill {
@@ -290,7 +290,8 @@ body.chat-page {
 
 /* REVERSE EXIT ANIMATION */
 .chat-message.exiting {
-  animation: chatSlideOut 0.36s cubic-bezier(0.16, 1, 0.3, 1) forwards !important;
+  transform-origin: left top;
+  animation: chatSlideOut 0.42s cubic-bezier(0.16, 1, 0.3, 1) forwards !important;
   pointer-events: none;
 }
 
@@ -385,11 +386,13 @@ body.events-page {
   border-radius: 0 12px 12px 0;
   box-shadow: 0 3px 15px rgba(0,0,0,0.5);
   flex-shrink: 0;
-  animation: eventSlideIn 0.4s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+  transform-origin: left top;
+  animation: eventSlideIn 0.46s cubic-bezier(0.16, 1, 0.3, 1) both;
 }
 
 .event-card.removing {
-  animation: eventSlideOut 0.35s cubic-bezier(0.4, 0, 1, 1) forwards !important;
+  transform-origin: left top;
+  animation: eventSlideOut 0.42s cubic-bezier(0.16, 1, 0.3, 1) forwards !important;
 }
 
 .event-card.follower   { border-left-color: #E8181F; }
@@ -446,55 +449,108 @@ body.events-page {
   50%       { box-shadow: 0 0 12px #E8181F, 0 0 24px rgba(232,24,31,0.7); }
 }
 
-/* --- Chat Messages --- */
-/* Entry: vertical bar shoots up, then pill unfurls horizontally from left */
+/* --- Chat Messages & Event List Unfurl Animations --- */
+/* Stage 1: Colored vertical bar shoots up. Stage 2: Pill/Card opens outward to the right */
 @keyframes chatSlideIn {
-  0%   { 
+  0% {
     opacity: 0;
-    clip-path: inset(0 100% 0 0);
-    transform: scaleY(0.3);
+    transform: scaleY(0);
+    clip-path: inset(0 96% 0 0);
   }
-  30%  { 
+  32% {
     opacity: 1;
-    clip-path: inset(0 97% 0 0);
     transform: scaleY(1);
+    clip-path: inset(0 96% 0 0);
   }
-  100% { 
+  100% {
     opacity: 1;
+    transform: scaleY(1);
     clip-path: inset(0 0% 0 0);
-    transform: scaleY(1);
   }
 }
 
-/* Exit: pill contracts back to vertical bar, then vanishes (REVERSE) */
+/* Exit: Stage 1: Pill/Card contracts left to colored bar. Stage 2: Bar shrinks down & disappears */
 @keyframes chatSlideOut {
-  0%   { 
+  0% {
     opacity: 1;
+    transform: scaleY(1);
     clip-path: inset(0 0% 0 0);
-    transform: scaleY(1);
+    max-height: 140px;
   }
-  70%  { 
+  60% {
     opacity: 1;
-    clip-path: inset(0 97% 0 0);
     transform: scaleY(1);
+    clip-path: inset(0 96% 0 0);
+    max-height: 140px;
   }
-  100% { 
+  86% {
     opacity: 0;
-    clip-path: inset(0 100% 0 0);
-    transform: scaleY(0.3);
+    transform: scaleY(0);
+    clip-path: inset(0 96% 0 0);
+    max-height: 140px;
+  }
+  100% {
+    opacity: 0;
+    transform: scaleY(0);
+    clip-path: inset(0 96% 0 0);
+    max-height: 0;
+    padding-top: 0;
+    padding-bottom: 0;
+    margin-top: 0;
+    margin-bottom: 0;
+    border: none;
   }
 }
 
 /* --- Events --- */
 @keyframes eventSlideIn {
-  0%   { opacity: 0; transform: translateX(-28px) scale(0.95); }
-  60%  { transform: translateX(4px) scale(1.01); }
-  100% { opacity: 1; transform: translateX(0) scale(1); }
+  0% {
+    opacity: 0;
+    transform: scaleY(0);
+    clip-path: inset(0 96% 0 0);
+  }
+  32% {
+    opacity: 1;
+    transform: scaleY(1);
+    clip-path: inset(0 96% 0 0);
+  }
+  100% {
+    opacity: 1;
+    transform: scaleY(1);
+    clip-path: inset(0 0% 0 0);
+  }
 }
 
 @keyframes eventSlideOut {
-  0%   { opacity: 1; transform: translateX(0); max-height: 80px; }
-  100% { opacity: 0; transform: translateX(-40px); max-height: 0; padding: 0; margin: 0; }
+  0% {
+    opacity: 1;
+    transform: scaleY(1);
+    clip-path: inset(0 0% 0 0);
+    max-height: 120px;
+  }
+  60% {
+    opacity: 1;
+    transform: scaleY(1);
+    clip-path: inset(0 96% 0 0);
+    max-height: 120px;
+  }
+  86% {
+    opacity: 0;
+    transform: scaleY(0);
+    clip-path: inset(0 96% 0 0);
+    max-height: 120px;
+  }
+  100% {
+    opacity: 0;
+    transform: scaleY(0);
+    clip-path: inset(0 96% 0 0);
+    max-height: 0;
+    padding-top: 0;
+    padding-bottom: 0;
+    margin-top: 0;
+    margin-bottom: 0;
+    border: none;
+  }
 }
 
 @keyframes badgePopIn {
