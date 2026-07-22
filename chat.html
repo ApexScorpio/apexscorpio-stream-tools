@@ -8,6 +8,7 @@
   <title>ApexScorpio - Unified Chat Overlay</title>
   <link rel="stylesheet" href="css/style.css?v=6.2">
   <script src="https://cdn.jsdelivr.net/npm/mqtt@5.3.4/dist/mqtt.min.js"></script>
+  <script src="youtube-live.js"></script>
 </head>
 <body class="chat-page">
   <div class="chat-container has-bg" id="chat-container"></div>
@@ -358,6 +359,14 @@
 
     loadSavedConfig();
     applyConfig();
+
+    // Start YouTube Live Chat (real messages from youtube.com/c/apexscorpio)
+    if (typeof YoutubeLive !== 'undefined') {
+      YoutubeLive.startChat(
+        (msg) => { if (cfg.showYoutube) addMsg(msg, 'youtube'); },
+        null // events handled by events.html
+      );
+    }
   </script>
 </body>
 </html>

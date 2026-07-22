@@ -261,10 +261,93 @@
       }
     }
 
+    // YouTube Data API v3 live viewer counter
+    const YT_API_KEY    = 'AIzaSyD_tdt10TzQhoM1-PRhTXORBOPVRgqLJUI';
+    const YT_CHANNEL_HANDLE = 'apexscorpio'; // youtube.com/c/apexscorpio
+    let ytChannelId     = localStorage.getItem('apex_yt_channel_id') || null;
+    let ytLiveVideoId   = null;
+    let ytLiveChatId    = null;
+
+    async function resolveYtChannelId() {
+      if (ytChannelId) return ytChannelId;
+      // Try forHandle first (works for @handle and /c/ custom URLs)
+      const handles = [YT_CHANNEL_HANDLE, '@' + YT_CHANNEL_HANDLE];
+      for (const handle of handles) {
+        try {
+          const r = await fetch(`https://www.googleapis.com/youtube/v3/channels?part=id&forHandle=${encodeURIComponent(handle)}&key=${YT_API_KEY}`);
+          const d = await r.json();
+          if (d?.items?.[0]?.id) {
+            ytChannelId = d.items[0].id;
+            localStorage.setItem('apex_yt_channel_id', ytChannelId);
+            return ytChannelId;
+          }
+        } catch(e) {}
+      }
+      // Fallback: search by name
+      try {
+        const r = await fetch(`https://www.googleapis.com/youtube/v3/search?part=snippet&q=${encodeURIComponent(YT_CHANNEL_HANDLE)}&type=channel&maxResults=1&key=${YT_API_KEY}`);
+        const d = await r.json();
+        if (d?.items?.[0]?.snippet?.channelId) {
+          ytChannelId = d.items[0].snippet.channelId;
+          localStorage.setItem('apex_yt_channel_id', ytChannelId);
+          return ytChannelId;
+        }
+      } catch(e) {}
+      return null;
+    }
+
+    async function checkYoutubeLive() {
+      if (isTestActive) return;
+      try {
+        const channelId = await resolveYtChannelId();
+        if (!channelId) return;
+
+        // Search for active live stream on this channel (costs 100 quota units)
+        const searchResp = await fetch(
+          `https://www.googleapis.com/youtube/v3/search?part=id&channelId=${channelId}&eventType=live&type=video&key=${YT_API_KEY}`
+        );
+        const searchData = await searchResp.json();
+
+        if (!searchData?.items?.length) {
+          realState.youtube = { isLive: false, viewers: 0 };
+          ytLiveVideoId = null;
+          ytLiveChatId = null;
+          realState.totalViewers = (realState.twitch.viewers || 0) + 0 + (realState.facebook.viewers || 0);
+          if (!isTestActive) renderStatus(realState);
+          return;
+        }
+
+        ytLiveVideoId = searchData.items[0].id.videoId;
+
+        // Get concurrent viewers and liveChatId (costs 1 quota unit)
+        const videoResp = await fetch(
+          `https://www.googleapis.com/youtube/v3/videos?part=liveStreamingDetails&id=${ytLiveVideoId}&key=${YT_API_KEY}`
+        );
+        const videoData = await videoResp.json();
+        const lsd = videoData?.items?.[0]?.liveStreamingDetails;
+
+        if (lsd) {
+          const viewers = parseInt(lsd.concurrentViewers || '0', 10);
+          ytLiveChatId = lsd.activeLiveChatId || null;
+          realState.youtube = { isLive: true, viewers };
+        } else {
+          realState.youtube = { isLive: false, viewers: 0 };
+        }
+
+        realState.totalViewers = (realState.twitch.viewers || 0) + (realState.youtube.viewers || 0) + (realState.facebook.viewers || 0);
+        if (!isTestActive) renderStatus(realState);
+
+      } catch(err) {
+        // Keep last known state on error
+      }
+    }
+
     loadSavedConfig();
     applyConfig();
     checkPublicTwitchLive();
-    setInterval(checkPublicTwitchLive, 10000); // Poll every 10s for live viewer count
+    checkYoutubeLive();
+    setInterval(checkPublicTwitchLive, 10000);  // Twitch: every 10s
+    setInterval(checkYoutubeLive, 60000);        // YouTube: every 60s (quota: ~100 units/call)
   </script>
 </body>
 </html>

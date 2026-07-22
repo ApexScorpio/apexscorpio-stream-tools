@@ -8,6 +8,7 @@
   <title>ApexScorpio - Alert Box Overlay v7</title><!-- cache-bust:2026-07-22T16 -->
   <link rel="stylesheet" href="css/style.css?v=7.0">
   <script src="https://cdn.jsdelivr.net/npm/mqtt@5.3.4/dist/mqtt.min.js"></script>
+  <script src="youtube-live.js"></script>
   <style>
     body {
       background: transparent;
@@ -397,6 +398,17 @@
     }
 
     loadSavedConfig();
+
+    // YouTube Live: trigger alerts for superchats and new members
+    if (typeof YoutubeLive !== 'undefined') {
+      YoutubeLive.startChat(
+        null,
+        (evt) => {
+          if (!currentConfig.showYoutube) return;
+          queueAlert({ ...evt, platform: 'youtube' });
+        }
+      );
+    }
   </script>
 </body>
 </html>
