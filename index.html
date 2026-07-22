@@ -6,8 +6,8 @@
   <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
   <meta http-equiv="Pragma" content="no-cache">
   <meta http-equiv="Expires" content="0">
-  <title>ApexScorpio - Central de Overlays & Opções Avançadas</title>
-  <link rel="stylesheet" href="css/style.css?v=6.0">
+  <title>ApexScorpio - Central de Overlays v7</title><!-- cache-bust:2026-07-22T16 -->
+  <link rel="stylesheet" href="css/style.css?v=7.1">
   <script src="https://cdn.jsdelivr.net/npm/mqtt@5.3.4/dist/mqtt.min.js"></script>
   <style>
     body {
@@ -207,6 +207,12 @@
         <span>CENTRAL DE OVERLAYS & STREAMTOOLS</span>
       </div>
       <div id="cloud-status-badge" style="font-size: 13px; color: #10B981; font-weight: 700;">● CLOUD RELAY ATIVO (Porta 443 WSS)</div>
+      <div id="twitch-auth-area" style="display:flex;align-items:center;justify-content:flex-end;gap:8px;flex-wrap:wrap;max-width:760px;">
+        <input id="twitch-client-id" type="text" autocomplete="off" spellcheck="false" placeholder="Twitch Client ID (configuracao unica)" aria-label="Twitch Client ID" style="width:235px;height:34px;border:1px solid rgba(145,70,255,.55);border-radius:7px;background:#11131A;color:#F8FAFC;padding:0 10px;font-size:12px;outline:none;">
+        <div id="twitch-auth-status" style="font-size:12px;color:#94A3B8;font-weight:700;min-width:210px;text-align:right;">Twitch nao ligada</div>
+        <button id="btn-twitch-login" onclick="twitchOAuthLogin()" class="btn" style="background:#9146FF;font-size:12px;padding:7px 14px;">Ligar Twitch</button>
+        <button id="btn-twitch-logout" onclick="twitchOAuthLogout()" class="btn" style="display:none;background:#343746;font-size:12px;padding:7px 14px;">Desligar</button>
+      </div>
     </div>
 
     <!-- CARD 1: CONTADOR DE ESPECTADORES -->
@@ -666,17 +672,16 @@
       const baseUrl = isLocal
         ? window.location.href.replace('index.html', '').replace(/#.*$/, '').replace(/\?.*$/, '')
         : 'https://apexscorpio.github.io/apexscorpio-stream-tools/';
-      const rand = isLocal ? '' : ('?v=' + Date.now());
 
-      document.getElementById('url-viewers').value = `${baseUrl}viewers.html${rand}`;
-      document.getElementById('url-chat').value = `${baseUrl}chat.html${rand}`;
-      document.getElementById('url-events').value = `${baseUrl}events.html${rand}`;
-      document.getElementById('url-alerts').value = `${baseUrl}alerts.html${rand}`;
+      document.getElementById('url-viewers').value = `${baseUrl}viewers.html`;
+      document.getElementById('url-chat').value = `${baseUrl}chat.html`;
+      document.getElementById('url-events').value = `${baseUrl}events.html`;
+      document.getElementById('url-alerts').value = `${baseUrl}alerts.html`;
 
-      document.getElementById('url-starting').value = `${baseUrl}starting.html${rand}`;
-      document.getElementById('url-brb').value = `${baseUrl}brb.html${rand}`;
-      document.getElementById('url-technical').value = `${baseUrl}technical.html${rand}`;
-      document.getElementById('url-ending').value = `${baseUrl}ending.html${rand}`;
+      document.getElementById('url-starting').value = `${baseUrl}starting.html`;
+      document.getElementById('url-brb').value = `${baseUrl}brb.html`;
+      document.getElementById('url-technical').value = `${baseUrl}technical.html`;
+      document.getElementById('url-ending').value = `${baseUrl}ending.html`;
     }
 
     function toggleDrawer(id) {
@@ -694,6 +699,7 @@
         layout: document.getElementById('vw-layout').value,
         fontSize: Number(document.getElementById('vw-fontsize').value)
       };
+      try { localStorage.setItem('apex_cfg_viewers', JSON.stringify(cfg)); } catch(e) {}
       publishConfig('viewers', cfg);
     }
 
@@ -714,6 +720,51 @@
       } catch(e) {
         return false;
       }
+    }
+
+    function restoreViewersControls() {
+      try {
+        const saved = localStorage.getItem('apex_cfg_viewers');
+        if (!saved) return false;
+        const c = JSON.parse(saved);
+        if (document.getElementById('vw-twitch'))   document.getElementById('vw-twitch').checked   = c.showTwitch !== false;
+        if (document.getElementById('vw-youtube'))  document.getElementById('vw-youtube').checked  = c.showYoutube !== false;
+        if (document.getElementById('vw-facebook')) document.getElementById('vw-facebook').checked = c.showFacebook !== false;
+        if (document.getElementById('vw-total'))    document.getElementById('vw-total').checked    = c.showTotal !== false;
+        if (document.getElementById('vw-bg'))       document.getElementById('vw-bg').checked       = c.showBg !== false;
+        if (document.getElementById('vw-layout') && c.layout)   document.getElementById('vw-layout').value   = c.layout;
+        if (document.getElementById('vw-fontsize') && c.fontSize) document.getElementById('vw-fontsize').value = String(c.fontSize);
+        return true;
+      } catch(e) { return false; }
+    }
+
+    function restoreEventsControls() {
+      try {
+        const saved = localStorage.getItem('apex_cfg_events');
+        if (!saved) return false;
+        const c = JSON.parse(saved);
+        if (document.getElementById('evt-twitch'))   document.getElementById('evt-twitch').checked   = c.showTwitch !== false;
+        if (document.getElementById('evt-youtube'))  document.getElementById('evt-youtube').checked  = c.showYoutube !== false;
+        if (document.getElementById('evt-facebook')) document.getElementById('evt-facebook').checked = c.showFacebook !== false;
+        if (document.getElementById('evt-logos'))    document.getElementById('evt-logos').checked    = c.showLogos !== false;
+        if (document.getElementById('evt-bg'))       document.getElementById('evt-bg').checked       = c.showBg !== false;
+        if (document.getElementById('evt-max') && c.maxItems) document.getElementById('evt-max').value = String(c.maxItems);
+        return true;
+      } catch(e) { return false; }
+    }
+
+    function restoreAlertsControls() {
+      try {
+        const saved = localStorage.getItem('apex_cfg_alerts');
+        if (!saved) return false;
+        const c = JSON.parse(saved);
+        if (document.getElementById('alt-twitch'))   document.getElementById('alt-twitch').checked   = c.showTwitch !== false;
+        if (document.getElementById('alt-youtube'))  document.getElementById('alt-youtube').checked  = c.showYoutube !== false;
+        if (document.getElementById('alt-facebook')) document.getElementById('alt-facebook').checked = c.showFacebook !== false;
+        if (document.getElementById('alt-sound'))    document.getElementById('alt-sound').checked    = c.playSound !== false;
+        if (document.getElementById('alt-duration') && c.durationSeconds) document.getElementById('alt-duration').value = String(c.durationSeconds);
+        return true;
+      } catch(e) { return false; }
     }
 
     function saveChatConfig() {
@@ -740,6 +791,7 @@
         showBg: document.getElementById('evt-bg').checked,
         maxItems: Number(document.getElementById('evt-max').value)
       };
+      try { localStorage.setItem('apex_cfg_events', JSON.stringify(cfg)); } catch(e) {}
       publishConfig('events', cfg);
     }
 
@@ -751,6 +803,7 @@
         playSound: document.getElementById('alt-sound').checked,
         durationSeconds: Number(document.getElementById('alt-duration').value)
       };
+      try { localStorage.setItem('apex_cfg_alerts', JSON.stringify(cfg)); } catch(e) {}
       publishConfig('alerts', cfg);
     }
 
@@ -933,6 +986,9 @@
     window.addEventListener('resize', fitPreviews);
     document.addEventListener('DOMContentLoaded', () => {
       restoreChatControls();
+      restoreViewersControls();
+      restoreEventsControls();
+      restoreAlertsControls();
       updatePublicUrls();
       fitPreviews();
     });
@@ -944,5 +1000,6 @@
       setTimeout(fitPreviews, 100);
     }
   </script>
+  <script src="twitch-eventsub.js"></script>
 </body>
 </html>

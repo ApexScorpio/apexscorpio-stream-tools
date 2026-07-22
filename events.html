@@ -8,6 +8,7 @@
   <title>ApexScorpio - Event List Overlay</title>
   <link rel="stylesheet" href="css/style.css?v=6.2">
   <script src="https://cdn.jsdelivr.net/npm/mqtt@5.3.4/dist/mqtt.min.js"></script>
+  <script src="youtube-live.js"></script>
 </head>
 <body class="events-page">
   <div class="event-list-container has-bg" id="event-feed"></div>
@@ -218,6 +219,14 @@
 
     loadSavedConfig();
     applyConfig();
+
+    // YouTube Live: show superchats and new members as events
+    if (typeof YoutubeLive !== 'undefined') {
+      YoutubeLive.startChat(
+        null, // chat messages handled by chat.html
+        (evt) => { if (cfg.showYoutube) addCard(evt, 'youtube'); }
+      );
+    }
   </script>
 </body>
 </html>
