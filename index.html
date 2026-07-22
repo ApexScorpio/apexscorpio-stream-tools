@@ -694,6 +694,7 @@
         layout: document.getElementById('vw-layout').value,
         fontSize: Number(document.getElementById('vw-fontsize').value)
       };
+      try { localStorage.setItem('apex_cfg_viewers', JSON.stringify(cfg)); } catch(e) {}
       publishConfig('viewers', cfg);
     }
 
@@ -714,6 +715,51 @@
       } catch(e) {
         return false;
       }
+    }
+
+    function restoreViewersControls() {
+      try {
+        const saved = localStorage.getItem('apex_cfg_viewers');
+        if (!saved) return false;
+        const c = JSON.parse(saved);
+        if (document.getElementById('vw-twitch'))   document.getElementById('vw-twitch').checked   = c.showTwitch !== false;
+        if (document.getElementById('vw-youtube'))  document.getElementById('vw-youtube').checked  = c.showYoutube !== false;
+        if (document.getElementById('vw-facebook')) document.getElementById('vw-facebook').checked = c.showFacebook !== false;
+        if (document.getElementById('vw-total'))    document.getElementById('vw-total').checked    = c.showTotal !== false;
+        if (document.getElementById('vw-bg'))       document.getElementById('vw-bg').checked       = c.showBg !== false;
+        if (document.getElementById('vw-layout') && c.layout)   document.getElementById('vw-layout').value   = c.layout;
+        if (document.getElementById('vw-fontsize') && c.fontSize) document.getElementById('vw-fontsize').value = String(c.fontSize);
+        return true;
+      } catch(e) { return false; }
+    }
+
+    function restoreEventsControls() {
+      try {
+        const saved = localStorage.getItem('apex_cfg_events');
+        if (!saved) return false;
+        const c = JSON.parse(saved);
+        if (document.getElementById('evt-twitch'))   document.getElementById('evt-twitch').checked   = c.showTwitch !== false;
+        if (document.getElementById('evt-youtube'))  document.getElementById('evt-youtube').checked  = c.showYoutube !== false;
+        if (document.getElementById('evt-facebook')) document.getElementById('evt-facebook').checked = c.showFacebook !== false;
+        if (document.getElementById('evt-logos'))    document.getElementById('evt-logos').checked    = c.showLogos !== false;
+        if (document.getElementById('evt-bg'))       document.getElementById('evt-bg').checked       = c.showBg !== false;
+        if (document.getElementById('evt-max') && c.maxItems) document.getElementById('evt-max').value = String(c.maxItems);
+        return true;
+      } catch(e) { return false; }
+    }
+
+    function restoreAlertsControls() {
+      try {
+        const saved = localStorage.getItem('apex_cfg_alerts');
+        if (!saved) return false;
+        const c = JSON.parse(saved);
+        if (document.getElementById('alt-twitch'))   document.getElementById('alt-twitch').checked   = c.showTwitch !== false;
+        if (document.getElementById('alt-youtube'))  document.getElementById('alt-youtube').checked  = c.showYoutube !== false;
+        if (document.getElementById('alt-facebook')) document.getElementById('alt-facebook').checked = c.showFacebook !== false;
+        if (document.getElementById('alt-sound'))    document.getElementById('alt-sound').checked    = c.playSound !== false;
+        if (document.getElementById('alt-duration') && c.durationSeconds) document.getElementById('alt-duration').value = String(c.durationSeconds);
+        return true;
+      } catch(e) { return false; }
     }
 
     function saveChatConfig() {
@@ -740,6 +786,7 @@
         showBg: document.getElementById('evt-bg').checked,
         maxItems: Number(document.getElementById('evt-max').value)
       };
+      try { localStorage.setItem('apex_cfg_events', JSON.stringify(cfg)); } catch(e) {}
       publishConfig('events', cfg);
     }
 
@@ -751,6 +798,7 @@
         playSound: document.getElementById('alt-sound').checked,
         durationSeconds: Number(document.getElementById('alt-duration').value)
       };
+      try { localStorage.setItem('apex_cfg_alerts', JSON.stringify(cfg)); } catch(e) {}
       publishConfig('alerts', cfg);
     }
 
@@ -933,6 +981,9 @@
     window.addEventListener('resize', fitPreviews);
     document.addEventListener('DOMContentLoaded', () => {
       restoreChatControls();
+      restoreViewersControls();
+      restoreEventsControls();
+      restoreAlertsControls();
       updatePublicUrls();
       fitPreviews();
     });

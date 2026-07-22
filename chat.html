@@ -280,7 +280,7 @@
         chatContainer.removeChild(chatContainer.firstChild);
       }
 
-      // Permanent means permanent for both real and test messages.
+      // Permanent means permanent — only set timer if fadeSeconds > 0
       const fadeDur = normalizeFadeSeconds(cfg.fadeSeconds);
       if (fadeDur > 0) {
         const expiryTimer = setTimeout(() => {
@@ -292,6 +292,7 @@
         }, fadeDur * 1000);
         expiryTimers.set(el, expiryTimer);
       }
+      // fadeDur === 0 → message stays on screen permanently, no timer set.
     }
 
     function esc(str) {

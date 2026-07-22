@@ -264,7 +264,7 @@
     loadSavedConfig();
     applyConfig();
     checkPublicTwitchLive();
-    setInterval(checkPublicTwitchLive, 25000);
+    setInterval(checkPublicTwitchLive, 10000); // Poll every 10s for live viewer count
   </script>
 </body>
 </html>
