@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+  <meta charset="UTF-8">
+  <title>ApexScorpio - Viewers Counter</title>
+  <link rel="stylesheet" href="/css/style.css">
+  <script src="/socket.io/socket.io.js"></script>
+</head>
+<body class="viewers-page">
+  <div class="viewer-counter-container has-bg" id="viewer-container">
+
+    <div class="platform-pill twitch" id="pill-twitch">
+      <span class="platform-icon">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor"><path d="M11.571 4.714h1.715v5.143H11.571V4.714zm4.715 0H18v5.143h-1.714V4.714zM6 0L1.714 4.286v15.428h5.143V24l4.286-4.286h3.428L22.286 12V0H6zm14.571 11.143l-3.428 3.428h-3.429l-3 3v-3H6.857V1.714h13.714v9.429z"/></svg>
+      </span>
+      <span class="status-dot" id="dot-twitch"></span>
+      <span class="count-number" id="count-twitch">0</span>
+    </div>
+
+    <div class="platform-pill youtube" id="pill-youtube">
+      <span class="platform-icon">
+        <svg width="17" height="17" viewBox="0 0 24 24" fill="currentColor"><path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/></svg>
+      </span>
+      <span class="status-dot" id="dot-youtube"></span>
+      <span class="count-number" id="count-youtube">0</span>
+    </div>
+
+    <div class="platform-pill facebook-pill" id="pill-facebook">
+      <span class="platform-icon">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor"><path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/></svg>
+      </span>
+      <span class="status-dot" id="dot-facebook"></span>
+      <span class="count-number" id="count-facebook">0</span>
+    </div>
+
+    <div class="platform-pill total" id="pill-total">
+      <span style="font-size:11px;font-weight:900;font-family:'Outfit',sans-serif;letter-spacing:1px;">TOTAL</span>
+      <span class="count-number" id="count-total">0</span>
+    </div>
+
+  </div>
+
+  <script>
+    const socket = io();
+    const container = document.getElementById('viewer-container');
+
+    const pills = {
+      twitch:   document.getElementById('pill-twitch'),
+      youtube:  document.getElementById('pill-youtube'),
+      facebook: document.getElementById('pill-facebook'),
+      total:    document.getElementById('pill-total'),
+    };
+    const dots = {
+      twitch:   document.getElementById('dot-twitch'),
+      youtube:  document.getElementById('dot-youtube'),
+      facebook: document.getElementById('dot-facebook'),
+    };
+    const counts = {
+      twitch:   document.getElementById('count-twitch'),
+      youtube:  document.getElementById('count-youtube'),
+      facebook: document.getElementById('count-facebook'),
+      total:    document.getElementById('count-total'),
+    };
+
+    let cfg = {
+      showTwitch: true, showYoutube: true, showFacebook: true, showTotal: true,
+      showBg: true, layout: 'horizontal', fontSize: 15
+    };
+
+    socket.on('config_update', (config) => {
+      if (config && config.viewers) {
+        cfg = { ...cfg, ...config.viewers };
+        applyConfig();
+      }
+    });
+
+    function setPillVisible(pill, visible) {
+      if (visible) {
+        pill.classList.remove('hiding');
+        pill.style.display = 'inline-flex';
+        // Restart the enter animation
+        pill.style.animation = 'none';
+        pill.offsetHeight; // force reflow
+        pill.style.animation = '';
+      } else {
+        // Play exit animation, then hide
+        pill.classList.add('hiding');
+        setTimeout(() => {
+          if (pill.classList.contains('hiding')) {
+            pill.style.display = 'none';
+            pill.classList.remove('hiding');
+          }
+        }, 320);
+      }
+    }
+
+    function applyConfig() {
+      setPillVisible(pills.twitch,   cfg.showTwitch);
+      setPillVisible(pills.youtube,  cfg.showYoutube);
+      setPillVisible(pills.facebook, cfg.showFacebook);
+      setPillVisible(pills.total,    cfg.showTotal);
+
+      // Background toggle
+      if (cfg.showBg) {
+        container.classList.add('has-bg');
+        container.classList.remove('no-bg');
+      } else {
+        container.classList.remove('has-bg');
+        container.classList.add('no-bg');
+      }
+
+      // Layout direction
+      container.classList.toggle('layout-vertical', cfg.layout === 'vertical');
+
+      // Font size on count numbers
+      const fs = (cfg.fontSize || 15) + 'px';
+      Object.values(counts).forEach(el => el.style.fontSize = fs);
+    }
+
+    socket.on('status_update', (state) => {
+      const animateCount = (el, newVal) => {
+        const formatted = fmt(newVal);
+        if (el.innerText !== formatted) {
+          el.style.transform = 'scale(1.25)';
+          el.style.color = '#FFFFFF';
+          el.innerText = formatted;
+          setTimeout(() => {
+            el.style.transform = 'scale(1)';
+          }, 200);
+        }
+      };
+
+      if (state.twitch) {
+        animateCount(counts.twitch, state.twitch.viewers);
+        dots.twitch.classList.toggle('online', !!state.twitch.isLive);
+      }
+      if (state.youtube) {
+        animateCount(counts.youtube, state.youtube.viewers);
+        dots.youtube.classList.toggle('online', !!state.youtube.isLive);
+      }
+      if (state.facebook) {
+        animateCount(counts.facebook, state.facebook.viewers);
+        dots.facebook.classList.toggle('online', !!state.facebook.isLive);
+      }
+      animateCount(counts.total, state.totalViewers || 0);
+    });
+
+    function fmt(n) {
+      n = n || 0;
+      if (n >= 1000000) return (n/1000000).toFixed(1) + 'M';
+      if (n >= 1000)    return (n/1000).toFixed(1) + 'K';
+      return String(n);
+    }
+  </script>
+</body>
+</html>

@@ -1,0 +1,488 @@
+@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;700;800;900&family=Inter:wght@400;500;600;700&family=Orbitron:wght@600;800;900&display=swap');
+
+:root {
+  --apex-red: #E8181F;
+  --apex-red-glow: rgba(232, 24, 31, 0.4);
+  --apex-black: #08080C;
+  --apex-graphite: #141722;
+  --apex-silver: #E2E8F0;
+  
+  --twitch-color: #9146FF;
+  --twitch-bg: rgba(145, 70, 255, 0.18);
+  --twitch-border: rgba(145, 70, 255, 0.45);
+
+  --youtube-color: #E8181F;
+  --youtube-bg: rgba(232, 24, 31, 0.18);
+  --youtube-border: rgba(232, 24, 31, 0.45);
+
+  --facebook-color: #1877F2;
+  --facebook-bg: rgba(24, 119, 242, 0.18);
+  --facebook-border: rgba(24, 119, 242, 0.45);
+
+  --dark-bg: rgba(8, 8, 12, 0.94);
+  --glass-border: rgba(232, 24, 31, 0.35);
+  --text-main: #FFFFFF;
+  --text-muted: #94A3B8;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  font-family: 'Inter', sans-serif;
+  background-color: transparent;
+  color: var(--text-main);
+  overflow: hidden;
+}
+
+/* =============================================
+   1. VIEWERS COUNTER
+   Auto-width so pills NEVER get cut.
+   has-bg fills entire box with glassmorphism.
+   Pills animate in on appear, out when hidden.
+============================================= */
+body.viewers-page {
+  /* Auto-sized to content so pills never get clipped */
+  width: max-content;
+  height: max-content;
+  min-width: 300px;
+  display: flex;
+  align-items: center;
+  padding: 8px;
+}
+
+.viewer-counter-container {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 20px;
+  border-radius: 50px;
+  position: relative;
+  /* Auto-size so large numbers don't clip */
+  width: max-content;
+  height: auto;
+  min-height: 54px;
+  flex-wrap: nowrap;
+  white-space: nowrap;
+  transition: background 0.3s ease, border 0.3s ease, box-shadow 0.3s ease, padding 0.3s ease;
+}
+
+.viewer-counter-container.has-bg {
+  background: var(--dark-bg);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid var(--glass-border);
+  box-shadow: 0 8px 32px rgba(0,0,0,0.8), 0 0 20px rgba(232,24,31,0.25);
+}
+
+.viewer-counter-container.has-bg::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 3px;
+  background: linear-gradient(90deg, #E8181F, #9146FF, #E8181F);
+  border-radius: 50px 50px 0 0;
+}
+
+.viewer-counter-container.has-bg::after {
+  content: '';
+  position: absolute;
+  right: 4px; top: 4px;
+  width: 36px; height: 36px;
+  background: url('/brandkit/Apex_Scorpio_Brand_Assets/02_Jewel/AS_Jewel_Full_Metallic.png') no-repeat center;
+  background-size: contain;
+  opacity: 0.22;
+  pointer-events: none;
+}
+
+.viewer-counter-container.no-bg {
+  background: transparent;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+  border: none;
+  box-shadow: none;
+  padding: 0;
+}
+
+.viewer-counter-container.no-bg::before,
+.viewer-counter-container.no-bg::after {
+  display: none;
+}
+
+.viewer-counter-container.layout-vertical {
+  flex-direction: column;
+  align-items: stretch;
+  border-radius: 20px;
+  flex-wrap: nowrap;
+}
+
+/* Pills */
+.platform-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 6px 14px;
+  border-radius: 30px;
+  font-family: 'Outfit', sans-serif;
+  font-weight: 800;
+  font-size: 15px;
+  white-space: nowrap;
+  flex-shrink: 0;
+  animation: pillEnter 0.4s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+}
+
+.platform-pill.hiding {
+  animation: pillExit 0.3s ease-in forwards !important;
+}
+
+.platform-pill.twitch {
+  background: var(--twitch-bg);
+  border: 1px solid var(--twitch-border);
+  color: #E9D5FF;
+  box-shadow: 0 0 12px rgba(145,70,255,0.25);
+}
+
+.platform-pill.youtube {
+  background: var(--youtube-bg);
+  border: 1px solid var(--youtube-border);
+  color: #FECACA;
+  box-shadow: 0 0 12px rgba(232,24,31,0.25);
+}
+
+.platform-pill.facebook-pill {
+  background: var(--facebook-bg);
+  border: 1px solid var(--facebook-border);
+  color: #93C5FD;
+  box-shadow: 0 0 12px rgba(24,119,242,0.25);
+}
+
+.platform-pill.total {
+  background: linear-gradient(135deg, rgba(232,24,31,0.25), rgba(20,23,34,0.9));
+  border: 1px solid rgba(232,24,31,0.6);
+  color: #FFFFFF;
+  box-shadow: 0 0 18px rgba(232,24,31,0.35);
+}
+
+.platform-icon {
+  width: 17px; height: 17px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.status-dot {
+  width: 7px; height: 7px;
+  border-radius: 50%;
+  background: #475569;
+  display: inline-block;
+  flex-shrink: 0;
+  transition: background 0.4s ease, box-shadow 0.4s ease;
+}
+
+.status-dot.online {
+  background: #E8181F;
+  box-shadow: 0 0 8px #E8181F, 0 0 16px rgba(232,24,31,0.6);
+  animation: dotPulse 1.8s ease-in-out infinite;
+}
+
+.count-number {
+  font-family: 'Orbitron', 'Outfit', sans-serif;
+  font-weight: 800;
+  font-size: 15px;
+  min-width: 20px;
+  text-align: center;
+  transition: all 0.3s ease;
+}
+
+/* =============================================
+   2. CHAT OVERLAY — 440x580, glassmorphism bg
+============================================= */
+body.chat-page {
+  width: 440px;
+  height: 580px;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  padding: 0;
+}
+
+.chat-container {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  width: 440px;
+  height: 580px;
+  overflow-y: auto;
+  scroll-behavior: smooth;
+  padding: 14px;
+  justify-content: flex-end;
+  transition: background 0.3s ease, border 0.3s ease;
+}
+
+.chat-container.has-bg {
+  background: var(--dark-bg);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid var(--glass-border);
+  box-shadow: 0 8px 32px rgba(0,0,0,0.8), 0 0 20px rgba(232,24,31,0.2);
+  border-radius: 16px;
+}
+
+.chat-container.no-bg {
+  background: transparent;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+  border: none;
+  box-shadow: none;
+  padding: 4px;
+}
+
+.chat-container::-webkit-scrollbar { width: 3px; }
+.chat-container::-webkit-scrollbar-thumb {
+  background: rgba(232,24,31,0.4);
+  border-radius: 3px;
+}
+
+/* Chat messages */
+.chat-message {
+  flex-shrink: 0;
+  word-wrap: break-word;
+  overflow-wrap: break-word;
+  transform-origin: left center;
+  animation: chatSlideIn 0.38s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+.chat-message.mode-pill {
+  background: rgba(20, 23, 34, 0.85);
+  border: 1px solid rgba(255,255,255,0.07);
+  border-left: 4px solid var(--apex-red);
+  border-radius: 0 14px 14px 0;
+  padding: 9px 14px;
+  box-shadow: 0 3px 12px rgba(0,0,0,0.5);
+}
+
+.chat-message.mode-compact {
+  background: transparent;
+  border: none;
+  border-left: 3px solid var(--apex-red);
+  padding: 3px 10px;
+  box-shadow: none;
+}
+
+.chat-message.twitch.mode-pill,   .chat-message.twitch.mode-compact   { border-left-color: var(--twitch-color); }
+.chat-message.youtube.mode-pill,  .chat-message.youtube.mode-compact  { border-left-color: var(--youtube-color); }
+.chat-message.facebook.mode-pill, .chat-message.facebook.mode-compact { border-left-color: var(--facebook-color); }
+
+/* REVERSE EXIT ANIMATION */
+.chat-message.exiting {
+  animation: chatSlideOut 0.36s cubic-bezier(0.16, 1, 0.3, 1) forwards !important;
+  pointer-events: none;
+}
+
+.chat-header {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 3px;
+  flex-wrap: wrap;
+}
+
+.platform-badge {
+  padding: 2px 5px;
+  border-radius: 5px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+.platform-badge.twitch   { background: var(--twitch-color); }
+.platform-badge.youtube  { background: var(--youtube-color); }
+.platform-badge.facebook { background: var(--facebook-color); }
+
+.role-badge {
+  font-size: 9px; font-weight: 800;
+  padding: 2px 5px; border-radius: 4px;
+  text-transform: uppercase;
+}
+
+.user-name {
+  font-family: 'Outfit', sans-serif;
+  font-weight: 800; font-size: 14px;
+}
+
+.chat-text {
+  font-family: 'Inter', sans-serif;
+  font-size: 14px; line-height: 1.45;
+  color: #E2E8F0;
+  word-break: break-word;
+}
+
+/* =============================================
+   3. EVENT LIST — 380x460, glassmorphism bg
+============================================= */
+body.events-page {
+  width: 380px;
+  height: 460px;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  padding: 0;
+}
+
+.event-list-container {
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+  width: 380px;
+  height: 460px;
+  overflow: hidden;
+  padding: 14px;
+  transition: background 0.3s ease, border 0.3s ease;
+  justify-content: flex-start;
+}
+
+.event-list-container.has-bg {
+  background: var(--dark-bg);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid var(--glass-border);
+  box-shadow: 0 8px 32px rgba(0,0,0,0.8), 0 0 20px rgba(232,24,31,0.2);
+  border-radius: 16px;
+}
+
+.event-list-container.no-bg {
+  background: transparent;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+  border: none;
+  box-shadow: none;
+  padding: 4px;
+}
+
+.event-card {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 14px;
+  background: rgba(20, 23, 34, 0.82);
+  border: 1px solid rgba(255,255,255,0.07);
+  border-left: 4px solid #E8181F;
+  border-radius: 0 12px 12px 0;
+  box-shadow: 0 3px 15px rgba(0,0,0,0.5);
+  flex-shrink: 0;
+  animation: eventSlideIn 0.4s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+}
+
+.event-card.removing {
+  animation: eventSlideOut 0.35s cubic-bezier(0.4, 0, 1, 1) forwards !important;
+}
+
+.event-card.follower   { border-left-color: #E8181F; }
+.event-card.subscriber { border-left-color: #F59E0B; }
+.event-card.raid       { border-left-color: #9146FF; }
+
+.platform-logo-badge {
+  width: 28px; height: 28px;
+  border-radius: 6px;
+  display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0;
+  animation: badgePopIn 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) 0.15s both;
+}
+.platform-logo-badge.twitch   { background: rgba(145,70,255,0.25); border: 1px solid rgba(145,70,255,0.5); }
+.platform-logo-badge.youtube  { background: rgba(232,24,31,0.25);  border: 1px solid rgba(232,24,31,0.5); }
+.platform-logo-badge.facebook { background: rgba(24,119,242,0.25); border: 1px solid rgba(24,119,242,0.5); }
+
+.event-info { display: flex; flex-direction: column; }
+
+.event-user {
+  font-family: 'Outfit', sans-serif;
+  font-weight: 800; font-size: 14px; color: #FFFFFF;
+}
+
+.event-action {
+  font-family: 'Inter', sans-serif;
+  font-size: 12px; color: #94A3B8; font-weight: 600;
+}
+
+/* =============================================
+   KEYFRAME ANIMATIONS
+============================================= */
+
+/* --- Viewers Pills --- */
+@keyframes pillEnter {
+  0%   { opacity: 0; transform: scale(0.6) translateY(8px); }
+  100% { opacity: 1; transform: scale(1) translateY(0); }
+}
+
+@keyframes pillExit {
+  0%   { opacity: 1; transform: scale(1) translateY(0); }
+  100% { opacity: 0; transform: scale(0.6) translateY(8px); }
+}
+
+@keyframes dotPulse {
+  0%, 100% { box-shadow: 0 0 6px #E8181F, 0 0 12px rgba(232,24,31,0.4); }
+  50%       { box-shadow: 0 0 12px #E8181F, 0 0 24px rgba(232,24,31,0.7); }
+}
+
+/* --- Chat Messages --- */
+/* Entry: vertical bar shoots up, then pill unfurls horizontally from left */
+@keyframes chatSlideIn {
+  0%   { 
+    opacity: 0;
+    clip-path: inset(0 100% 0 0);
+    transform: scaleY(0.3);
+  }
+  30%  { 
+    opacity: 1;
+    clip-path: inset(0 97% 0 0);
+    transform: scaleY(1);
+  }
+  100% { 
+    opacity: 1;
+    clip-path: inset(0 0% 0 0);
+    transform: scaleY(1);
+  }
+}
+
+/* Exit: pill contracts back to vertical bar, then vanishes (REVERSE) */
+@keyframes chatSlideOut {
+  0%   { 
+    opacity: 1;
+    clip-path: inset(0 0% 0 0);
+    transform: scaleY(1);
+  }
+  70%  { 
+    opacity: 1;
+    clip-path: inset(0 97% 0 0);
+    transform: scaleY(1);
+  }
+  100% { 
+    opacity: 0;
+    clip-path: inset(0 100% 0 0);
+    transform: scaleY(0.3);
+  }
+}
+
+/* --- Events --- */
+@keyframes eventSlideIn {
+  0%   { opacity: 0; transform: translateX(-28px) scale(0.95); }
+  60%  { transform: translateX(4px) scale(1.01); }
+  100% { opacity: 1; transform: translateX(0) scale(1); }
+}
+
+@keyframes eventSlideOut {
+  0%   { opacity: 1; transform: translateX(0); max-height: 80px; }
+  100% { opacity: 0; transform: translateX(-40px); max-height: 0; padding: 0; margin: 0; }
+}
+
+@keyframes badgePopIn {
+  0%   { transform: scale(0); opacity: 0; }
+  70%  { transform: scale(1.15); opacity: 1; }
+  100% { transform: scale(1); }
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}

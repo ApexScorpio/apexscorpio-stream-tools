@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ApexScorpio - Be Right Back / Intervalo</title>
+  <link rel="stylesheet" href="/css/style.css">
+  <style>
+    body {
+      background: #08080C;
+      overflow: hidden;
+      width: 100vw;
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      color: #FFF;
+      position: relative;
+    }
+
+    .bg-grid {
+      position: absolute;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background: radial-gradient(circle at center, rgba(145, 70, 255, 0.15) 0%, rgba(8, 8, 12, 0.98) 70%);
+      z-index: 1;
+    }
+
+    .as-logo-container {
+      position: relative;
+      z-index: 2;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      animation: floatAnim 4s infinite ease-in-out;
+    }
+
+    .as-logo-container img {
+      max-width: 180px;
+      height: auto;
+      filter: drop-shadow(0 0 25px rgba(232, 24, 31, 0.7));
+    }
+
+    .scene-title {
+      font-family: 'Orbitron', sans-serif;
+      font-size: 38px;
+      font-weight: 900;
+      color: #E8181F;
+      margin-top: 24px;
+      letter-spacing: 4px;
+      text-transform: uppercase;
+      text-shadow: 0 0 20px rgba(232, 24, 31, 0.8);
+      z-index: 2;
+    }
+
+    .scene-subtitle {
+      font-family: 'Outfit', sans-serif;
+      font-size: 20px;
+      color: #94A3B8;
+      margin-top: 8px;
+      font-weight: 600;
+      letter-spacing: 1px;
+      z-index: 2;
+    }
+
+    .brb-badge {
+      margin-top: 24px;
+      font-family: 'Outfit', sans-serif;
+      font-size: 16px;
+      font-weight: 800;
+      color: #FFF;
+      background: rgba(232, 24, 31, 0.2);
+      border: 1px solid #E8181F;
+      padding: 10px 24px;
+      border-radius: 30px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      z-index: 2;
+      box-shadow: 0 0 20px rgba(232, 24, 31, 0.3);
+    }
+
+    @keyframes floatAnim {
+      0%, 100% { transform: translateY(0); }
+      50% { transform: translateY(-12px); }
+    }
+  </style>
+</head>
+<body>
+  <div class="bg-grid"></div>
+
+  <div class="as-logo-container">
+    <img src="/brandkit/Apex_Scorpio_Brand_Assets/02_Jewel/AS_Jewel_Full_Metallic.png" alt="AS Jewel">
+  </div>
+
+  <div class="scene-title">INTERVALO • BE RIGHT BACK</div>
+  <div class="scene-subtitle">VOLTAMOS JÁ EM ALGUNS MINUTOS</div>
+
+  <div class="brb-badge">
+    <span>☕ PAUSA RÁPIDA</span>
+    <span>•</span>
+    <span>STREAM PAUSED</span>
+  </div>
+</body>
+</html>
