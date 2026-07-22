@@ -22,8 +22,8 @@ app.use(express.static(path.join(__dirname, 'public')));
 
 const CONFIG_FILE = path.join(__dirname, 'config.json');
 
-// Store public URL
-let publicBaseUrl = process.env.PUBLIC_URL || 'https://montana-favour-dialogue-programme.trycloudflare.com';
+// Fixed public domain URL for Apex Scorpio Stream Tools
+let publicBaseUrl = process.env.PUBLIC_URL || 'https://apexscorpio-stream.loca.lt';
 
 // Global state for multi-platform stream status (Twitch, YouTube, Facebook)
 const streamState = {
@@ -160,13 +160,7 @@ app.get('/api/status', (req, res) => res.json(streamState));
 app.get('/api/config', (req, res) => res.json(overlayConfig));
 
 app.get('/api/public-url', (req, res) => {
-  const host = req.get('host');
-  const protocol = req.protocol;
-  let detectedUrl = publicBaseUrl;
-  if (host && !host.includes('localhost') && !host.includes('127.0.0.1')) {
-    detectedUrl = `${protocol}://${host}`;
-  }
-  res.json({ publicBaseUrl: detectedUrl });
+  res.json({ publicBaseUrl });
 });
 
 app.post('/api/public-url', (req, res) => {
@@ -243,6 +237,6 @@ app.post('/api/simulate-counts', (req, res) => {
 server.listen(PORT, () => {
   console.log(`=======================================================`);
   console.log(`🚀 ApexScorpio Streamlabs Overlay Suite is LIVE!`);
-  console.log(`👉 Public HTTPS Base URL: ${publicBaseUrl}`);
+  console.log(`👉 Fixed Domain URL: ${publicBaseUrl}`);
   console.log(`=======================================================`);
 });
