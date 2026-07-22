@@ -79,7 +79,7 @@
 </head>
 <body>
   <div class="alert-box" id="alert-box">
-    <img src="brandkit/Apex_Scorpio_Brand_Assets/03_Scorpion/Apex_Scorpion_Full_Metallic.png" class="alert-header-img" id="alert-img" alt="Brandkit Clipart">
+    <img src="brandkit/Apex_Scorpio_Brand_Assets/03_Scorpion/Apex_Scorpio_Full_Metallic.png" class="alert-header-img" id="alert-img" alt="Brandkit Clipart">
     <div class="platform-logo-container" id="logo-box"></div>
     <div class="alert-title" id="alert-title">NOVO SEGUIDOR!</div>
     <div class="alert-message" id="alert-message">GamerScorpio</div>
@@ -131,7 +131,10 @@
 
     function doClearAlerts() {
       alertQueue = [];
-      alertBox.style.display = 'none';
+      if (alertBox) {
+        alertBox.style.animation = 'none';
+        alertBox.style.display = 'none';
+      }
       isShowingAlert = false;
       _seenIds.clear();
     }
@@ -144,7 +147,7 @@
           currentConfig = { ...currentConfig, ...config };
         }
       }
-      if (type === 'clear_alerts') {
+      if (type === 'clear_alerts' || type === 'clear' || (payload && payload.type === 'clear_alerts')) {
         doClearAlerts();
         return;
       }
@@ -166,19 +169,18 @@
       try {
         const mqttClient = mqtt.connect('wss://broker.emqx.io:8084/mqtt', { clientId: 'scorpio_alerts_' + Math.random().toString(16).substring(2, 8) });
         mqttClient.on('connect', () => {
-          mqttClient.subscribe('apexscorpio/streamtools/v1/cfg/alerts');
-          mqttClient.subscribe('apexscorpio/streamtools/v1/cfg/clear_alerts');
-          mqttClient.subscribe('apexscorpio/streamtools/v1/events');
+          mqttClient.subscribe('apexscorpio/streamtools/v1/cfg/#');
+          mqttClient.subscribe('apexscorpio/streamtools/v1/events/#');
         });
         mqttClient.on('message', (topic, message) => {
           try {
             const data = JSON.parse(message.toString());
-            if (topic.includes('/cfg/clear_alerts')) {
+            if (topic.includes('clear')) {
               doClearAlerts();
             } else if (topic.includes('/cfg/alerts')) {
               currentConfig = { ...currentConfig, ...data };
-            } else if (data && data.type) {
-              handleIncomingData(data.type, data.payload);
+            } else if (data && (data.type || data.payload)) {
+              handleIncomingData(data.type || data.payload?.type, data.payload || data);
             }
           } catch(err) {}
         });

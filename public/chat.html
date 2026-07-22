@@ -58,7 +58,15 @@
     }
 
     function doClearChat() {
-      if (chatContainer) chatContainer.innerHTML = '';
+      const container = document.getElementById('chat-container') || chatContainer;
+      if (container) {
+        Array.from(container.children).forEach(child => {
+          child.style.animation = 'none';
+          child.style.transition = 'none';
+          child.remove();
+        });
+        container.innerHTML = '';
+      }
       _seenIds.clear();
     }
 
@@ -71,7 +79,7 @@
           applyConfig();
         }
       }
-      if (type === 'clear_chat') {
+      if (type === 'clear_chat' || type === 'clear' || (payload && payload.type === 'clear_chat')) {
         doClearChat();
         return;
       }
@@ -91,20 +99,19 @@
       try {
         const mqttClient = mqtt.connect('wss://broker.emqx.io:8084/mqtt', { clientId: 'scorpio_chat_' + Math.random().toString(16).substring(2, 8) });
         mqttClient.on('connect', () => {
-          mqttClient.subscribe('apexscorpio/streamtools/v1/cfg/chat');
-          mqttClient.subscribe('apexscorpio/streamtools/v1/cfg/clear_chat');
-          mqttClient.subscribe('apexscorpio/streamtools/v1/events');
+          mqttClient.subscribe('apexscorpio/streamtools/v1/cfg/#');
+          mqttClient.subscribe('apexscorpio/streamtools/v1/events/#');
         });
         mqttClient.on('message', (topic, message) => {
           try {
             const data = JSON.parse(message.toString());
-            if (topic.includes('/cfg/clear_chat')) {
+            if (topic.includes('clear')) {
               doClearChat();
             } else if (topic.includes('/cfg/chat')) {
               cfg = { ...cfg, ...data };
               applyConfig();
-            } else if (data && data.type) {
-              handleIncomingData(data.type, data.payload);
+            } else if (data && (data.type || data.payload)) {
+              handleIncomingData(data.type || data.payload?.type, data.payload || data);
             }
           } catch(err) {}
         });
@@ -186,6 +193,7 @@
       const fadeDur = msg.isTest ? 8 : (cfg.fadeSeconds || 0);
       if (fadeDur > 0) {
         setTimeout(() => {
+          el.style.animation = 'none';
           el.classList.add('exiting');
           setTimeout(() => el.remove(), 380);
         }, fadeDur * 1000);

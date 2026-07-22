@@ -52,7 +52,15 @@
     }
 
     function doClearEvents() {
-      if (feed) feed.innerHTML = '';
+      const container = document.getElementById('event-feed') || feed;
+      if (container) {
+        Array.from(container.children).forEach(child => {
+          child.style.animation = 'none';
+          child.style.transition = 'none';
+          child.remove();
+        });
+        container.innerHTML = '';
+      }
       _seenIds.clear();
     }
 
@@ -65,7 +73,7 @@
           applyConfig();
         }
       }
-      if (type === 'clear_events') {
+      if (type === 'clear_events' || type === 'clear' || (payload && payload.type === 'clear_events')) {
         doClearEvents();
         return;
       }
@@ -85,20 +93,19 @@
       try {
         const mqttClient = mqtt.connect('wss://broker.emqx.io:8084/mqtt', { clientId: 'scorpio_events_' + Math.random().toString(16).substring(2, 8) });
         mqttClient.on('connect', () => {
-          mqttClient.subscribe('apexscorpio/streamtools/v1/cfg/events');
-          mqttClient.subscribe('apexscorpio/streamtools/v1/cfg/clear_events');
-          mqttClient.subscribe('apexscorpio/streamtools/v1/events');
+          mqttClient.subscribe('apexscorpio/streamtools/v1/cfg/#');
+          mqttClient.subscribe('apexscorpio/streamtools/v1/events/#');
         });
         mqttClient.on('message', (topic, message) => {
           try {
             const data = JSON.parse(message.toString());
-            if (topic.includes('/cfg/clear_events')) {
+            if (topic.includes('clear')) {
               doClearEvents();
             } else if (topic.includes('/cfg/events')) {
               cfg = { ...cfg, ...data };
               applyConfig();
-            } else if (data && data.type) {
-              handleIncomingData(data.type, data.payload);
+            } else if (data && (data.type || data.payload)) {
+              handleIncomingData(data.type || data.payload?.type, data.payload || data);
             }
           } catch(err) {}
         });
@@ -171,6 +178,7 @@
       // Auto-expire test events after 8 seconds
       if (event.isTest) {
         setTimeout(() => {
+          card.style.animation = 'none';
           card.classList.add('removing');
           setTimeout(() => card.remove(), 380);
         }, 8000);

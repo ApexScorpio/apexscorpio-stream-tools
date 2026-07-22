@@ -264,7 +264,7 @@
 
       <div class="controls-group">
         <button class="btn" id="btn-sim-viewers" style="background: #10B981;" onclick="simulateViewers()">🎲 Simular Live (50 Twitch / 120 YouTube / 35 FB por 8s)</button>
-        <button class="btn" style="background: #DC2626;" onclick="resetViewers()">🛑 Terminar Teste & Restaurar Valores Reais</button>
+        <button class="btn" style="background: #DC2626;" onclick="resetViewers()">🧹 Limpar teste</button>
       </div>
 
       <label style="font-weight: 700; font-size: 13px; color: #94A3B8; text-transform: uppercase;">Visualização da Source em Tempo Real:</label>
@@ -328,11 +328,11 @@
       </div>
 
       <div class="controls-group">
-        <button class="btn btn-twitch" onclick="sendTestChat('twitch')">💬 Chat Twitch (8s)</button>
-        <button class="btn btn-youtube" onclick="sendTestChat('youtube')">💬 Chat YouTube (8s)</button>
-        <button class="btn btn-facebook" onclick="sendTestChat('facebook')">💬 Chat Facebook (8s)</button>
-        <button class="btn" style="background: linear-gradient(135deg, #9146FF, #E8181F);" onclick="triggerRandomChat()">🎲 Testar Chat Aleatório (8s)</button>
-        <button class="btn" style="background: #DC2626;" onclick="clearChat()">🛑 Limpar Chat de Teste</button>
+        <button class="btn btn-twitch" onclick="sendTestChat('twitch')">💬 Chat Twitch</button>
+        <button class="btn btn-youtube" onclick="sendTestChat('youtube')">💬 Chat YouTube</button>
+        <button class="btn btn-facebook" onclick="sendTestChat('facebook')">💬 Chat Facebook</button>
+        <button class="btn" style="background: linear-gradient(135deg, #9146FF, #E8181F);" onclick="triggerRandomChat()">🎲 Testar Chat Aleatório</button>
+        <button class="btn" style="background: #DC2626;" onclick="clearChat()">🧹 Limpar teste</button>
       </div>
 
       <label style="font-weight: 700; font-size: 13px; color: #94A3B8; text-transform: uppercase;">Visualização da Source em Tempo Real:</label>
@@ -387,7 +387,7 @@
         <button class="btn" style="background: #F59E0B;" onclick="triggerAlert('subscriber')">⭐ Testar Subscriber Event</button>
         <button class="btn" style="background: #9146FF;" onclick="triggerAlert('raid')">🚀 Testar Raid Event</button>
         <button class="btn" style="background: linear-gradient(135deg, #38BDF8, #9146FF);" onclick="triggerRandomEvent()">🎲 Disparar Evento Aleatório</button>
-        <button class="btn" style="background: #DC2626;" onclick="clearEvents()">🛑 Limpar Eventos de Teste</button>
+        <button class="btn" style="background: #DC2626;" onclick="clearEvents()">🧹 Limpar teste</button>
       </div>
 
       <label style="font-weight: 700; font-size: 13px; color: #94A3B8; text-transform: uppercase;">Visualização da Source em Tempo Real:</label>
@@ -440,7 +440,7 @@
         <button class="btn" style="background: #F59E0B;" onclick="triggerAlert('subscriber')">⭐ Alerta Subscriber</button>
         <button class="btn" style="background: #9146FF;" onclick="triggerAlert('raid')">🚀 Alerta Raid</button>
         <button class="btn" style="background: linear-gradient(135deg, #E8181F, #F59E0B);" onclick="triggerRandomAlert()">🎲 Disparar Alerta Aleatório com Som</button>
-        <button class="btn" style="background: #DC2626;" onclick="clearAlerts()">🛑 Parar Alerta & Limpar Queue</button>
+        <button class="btn" style="background: #DC2626;" onclick="clearAlerts()">🧹 Limpar teste</button>
       </div>
 
       <label style="font-weight: 700; font-size: 13px; color: #94A3B8; text-transform: uppercase;">Visualização da Source em Tempo Real:</label>
@@ -505,6 +505,7 @@
         <button class="btn" style="background: #9146FF;" onclick="switchScene('brb.html')">☕ Ver BRB</button>
         <button class="btn" style="background: #F59E0B;" onclick="switchScene('technical.html')">⚠️ Ver Technical Issues</button>
         <button class="btn" style="background: #38BDF8;" onclick="switchScene('ending.html')">🏁 Ver Stream Ending</button>
+        <button class="btn" style="background: #64748B;" onclick="clearScenes()">🧹 Limpar teste</button>
       </div>
 
       <label style="font-weight: 700; font-size: 13px; color: #94A3B8; text-transform: uppercase;">Visualização da Cena em Tempo Real:</label>
@@ -734,7 +735,7 @@
         timestamp: new Date().toISOString()
       };
       broadcastEvent('chat_message', testMsg);
-      showToast('💬 Mensagem de teste enviada (Auto-reverte após 8s)!');
+      showToast('💬 Mensagem de teste enviada. Usa “Limpar teste” para a remover.');
     }
 
     function triggerRandomChat() {
@@ -802,6 +803,12 @@
     function clearAlerts() {
       broadcastClear('alerts');
       showToast('🛑 Alertas & Queue limpos!');
+    }
+
+    function clearScenes() {
+      broadcastClear('scenes');
+      switchScene('starting.html');
+      showToast('🧹 Teste das cenas limpo e Starting Soon reiniciado!');
     }
 
     let simTimer = null;

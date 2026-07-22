@@ -129,14 +129,16 @@
   </div>
 
   <script>
-    let secondsLeft = 300;
+    let currentTimerMinutes = 5;
+    let secondsLeft = currentTimerMinutes * 60;
     const timerEl = document.getElementById('timer');
 
     function loadSavedConfig() {
       const p = new URLSearchParams(window.location.search);
       if (p.has('min')) {
         const mins = Number(p.get('min')) || 5;
-        secondsLeft = mins * 60;
+        currentTimerMinutes = mins;
+        secondsLeft = currentTimerMinutes * 60;
         updateTimerDisplay();
       }
 
@@ -145,7 +147,8 @@
         if (saved && [...p.keys()].length === 0) {
           const cfg = JSON.parse(saved);
           if (cfg.timerMinutes) {
-            secondsLeft = Number(cfg.timerMinutes) * 60;
+            currentTimerMinutes = Number(cfg.timerMinutes);
+            secondsLeft = currentTimerMinutes * 60;
             updateTimerDisplay();
           }
         }
@@ -158,10 +161,19 @@
       if (type === 'config_update') {
         const config = payload.starting || payload.config || payload;
         if (config && config.timerMinutes) {
-          secondsLeft = Number(config.timerMinutes) * 60;
+          currentTimerMinutes = Number(config.timerMinutes);
+          secondsLeft = currentTimerMinutes * 60;
           updateTimerDisplay();
         }
       }
+      if (type === 'clear_scenes') {
+        resetSceneTest();
+      }
+    }
+
+    function resetSceneTest() {
+      secondsLeft = currentTimerMinutes * 60;
+      updateTimerDisplay();
     }
 
     // Public WSS Cloud Relay + Retained Message Subscribing
@@ -170,14 +182,18 @@
         const mqttClient = mqtt.connect('wss://broker.emqx.io:8084/mqtt', { clientId: 'scorpio_starting_' + Math.random().toString(16).substring(2, 8) });
         mqttClient.on('connect', () => {
           mqttClient.subscribe('apexscorpio/streamtools/v1/cfg/starting');
+          mqttClient.subscribe('apexscorpio/streamtools/v1/cfg/clear_scenes');
           mqttClient.subscribe('apexscorpio/streamtools/v1/events');
         });
         mqttClient.on('message', (topic, message) => {
           try {
             const data = JSON.parse(message.toString());
-            if (topic.includes('/cfg/starting')) {
+            if (topic.includes('/cfg/clear_scenes')) {
+              resetSceneTest();
+            } else if (topic.includes('/cfg/starting')) {
               if (data && data.timerMinutes) {
-                secondsLeft = Number(data.timerMinutes) * 60;
+                currentTimerMinutes = Number(data.timerMinutes);
+                secondsLeft = currentTimerMinutes * 60;
                 updateTimerDisplay();
               }
             } else if (data && data.type) {
