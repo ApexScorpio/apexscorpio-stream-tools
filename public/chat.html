@@ -45,6 +45,10 @@
     function applyConfigStyles() {
       document.querySelectorAll('.chat-message').forEach(msg => {
         msg.style.fontSize = `${activeConfig.fontSize}px`;
+        if (activeConfig.fadeSeconds === 0) {
+          msg.style.opacity = '1';
+          msg.style.transition = 'none';
+        }
         if (activeConfig.showBg) {
           msg.style.background = 'rgba(15, 23, 42, 0.88)';
           msg.style.boxShadow = '0 4px 20px rgba(0, 0, 0, 0.3)';

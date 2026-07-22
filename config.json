@@ -1,0 +1,16 @@
+{
+  "chat": {
+    "fadeSeconds": 0,
+    "showBg": true,
+    "fontSize": 14,
+    "showBadges": true,
+    "maxMessages": 100
+  },
+  "viewers": {
+    "showTwitch": true,
+    "showYoutube": true,
+    "showTotal": true,
+    "showBg": true,
+    "layout": "horizontal"
+  }
+}
