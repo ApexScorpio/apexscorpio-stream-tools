@@ -324,17 +324,17 @@
       }
 
       playAlertSound();
-      alertBox.classList.remove('exiting');
+      alertBox.className = 'alert-box';
       alertBox.style.display = 'flex';
 
       const durationMs = (currentConfig.durationSeconds || 5) * 1000;
 
       if (activeAlertTimer) clearTimeout(activeAlertTimer);
       activeAlertTimer = setTimeout(() => {
-        alertBox.classList.add('exiting');
+        alertBox.className = 'alert-box exiting';
         setTimeout(() => {
           alertBox.style.display = 'none';
-          alertBox.classList.remove('exiting');
+          alertBox.className = 'alert-box';
           isShowingAlert = false;
           setTimeout(processAlertQueue, 300);
         }, 480);
