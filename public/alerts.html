@@ -31,8 +31,15 @@
       border: 2px solid #E8181F;
       border-radius: 24px;
       box-shadow: 0 10px 45px rgba(0, 0, 0, 0.95), 0 0 40px rgba(232, 24, 31, 0.5);
-      animation: alertPopIn 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.275);
       position: relative;
+    }
+    .alert-box.pop-in {
+      display: flex !important;
+      animation: alertPopIn 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+    }
+    .alert-box.pop-out {
+      display: flex !important;
+      animation: alertPopIn 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.275) reverse forwards !important;
     }
     .alert-header-img {
       max-width: 130px;
@@ -74,9 +81,11 @@
     }
 
     @keyframes alertPopIn {
-      0% { opacity: 0; transform: scale(0.5) translateY(50px); }
-      100% { opacity: 1; transform: scale(1) translateY(0); }
+      0% { opacity: 0; transform: scale(0.4) translateY(60px); filter: blur(10px); }
+      70% { opacity: 1; transform: scale(1.05) translateY(-5px); filter: blur(0); }
+      100% { opacity: 1; transform: scale(1) translateY(0); filter: blur(0); }
     }
+
   </style>
 </head>
 <body>
@@ -107,6 +116,9 @@
     let alertQueue = [];
     let isShowingAlert = false;
     let activeAlertTimer = null;
+    let exitFallbackTimer = null;
+    let exitInProgress = false;
+    let currentAlert = null;
 
     function loadSavedConfig() {
       const p = new URLSearchParams(window.location.search);
@@ -135,22 +147,67 @@
       return false;
     }
 
-    function doClearAlerts() {
-      alertQueue = [];
+    function cancelAlertTimers() {
       if (activeAlertTimer) clearTimeout(activeAlertTimer);
-      if (alertBox) {
-        alertBox.style.animation = 'none';
-        alertBox.style.display = 'none';
-      }
+      if (exitFallbackTimer) clearTimeout(exitFallbackTimer);
+      activeAlertTimer = null;
+      exitFallbackTimer = null;
+    }
+
+    function resetAlertVisual() {
+      exitInProgress = false;
+      alertBox.removeEventListener('animationend', finishAlertExit);
+      alertBox.style.removeProperty('animation');
+      alertBox.style.removeProperty('display');
+      alertBox.className = 'alert-box';
+    }
+
+    function finishAlertExit(event) {
+      if (event && (event.target !== alertBox || event.animationName !== 'alertPopIn')) return;
+      if (!exitInProgress) return;
+      exitInProgress = false;
+      if (exitFallbackTimer) clearTimeout(exitFallbackTimer);
+      exitFallbackTimer = null;
+      alertBox.removeEventListener('animationend', finishAlertExit);
+      alertBox.className = 'alert-box';
+      currentAlert = null;
       isShowingAlert = false;
-      _seenIds.clear();
+      setTimeout(processAlertQueue, 200);
+    }
+
+    function beginAlertExit() {
+      exitInProgress = true;
+      alertBox.removeEventListener('animationend', finishAlertExit);
+      alertBox.className = 'alert-box pop-out';
+      alertBox.addEventListener('animationend', finishAlertExit);
+      exitFallbackTimer = setTimeout(finishAlertExit, 700);
+    }
+
+    function doClearAlerts(onlyTests = true) {
+      if (onlyTests) {
+        alertQueue = alertQueue.filter(event => !event.isTest);
+        if (currentAlert && currentAlert.isTest) {
+          cancelAlertTimers();
+          resetAlertVisual();
+          currentAlert = null;
+          isShowingAlert = false;
+          setTimeout(processAlertQueue, 200);
+        }
+      } else {
+        alertQueue = [];
+        cancelAlertTimers();
+        resetAlertVisual();
+        currentAlert = null;
+        isShowingAlert = false;
+        _seenIds.clear();
+      }
     }
 
     function handleIncomingData(type, payload) {
       if (!type) return;
       const typeStr = String(type).toLowerCase();
       if (typeStr.includes('clear')) {
-        doClearAlerts();
+        doClearAlerts(true);
         return;
       }
       if (type === 'config_update') {
@@ -198,7 +255,7 @@
 
               if (topicStr.includes('clear') || dataStr.includes('clear')) {
                 if (topicStr.includes('clear_alerts') || dataStr.includes('clear_alerts') || topicStr.includes('clear_all') || dataStr.includes('clear_all') || data.type === 'clear_alerts') {
-                  doClearAlerts();
+                  doClearAlerts(true);
                   return;
                 }
               }
@@ -271,6 +328,7 @@
 
       isShowingAlert = true;
       const event = alertQueue.shift();
+      currentAlert = event;
 
       const platformSvg = event.platform === 'youtube' ? youtubeSvg : (event.platform === 'facebook' ? facebookSvg : twitchSvg);
       const platformName = event.platform === 'youtube' ? 'YouTube' : (event.platform === 'facebook' ? 'Facebook' : 'Twitch');
@@ -299,15 +357,15 @@
       }
 
       playAlertSound();
-      alertBox.style.display = 'flex';
+      cancelAlertTimers();
+      resetAlertVisual();
+      alertBox.className = 'alert-box pop-in';
 
       const durationMs = (currentConfig.durationSeconds || 5) * 1000;
 
-      if (activeAlertTimer) clearTimeout(activeAlertTimer);
       activeAlertTimer = setTimeout(() => {
-        alertBox.style.display = 'none';
-        isShowingAlert = false;
-        setTimeout(processAlertQueue, 500);
+        activeAlertTimer = null;
+        beginAlertExit();
       }, durationMs);
     }
 
