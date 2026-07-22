@@ -96,17 +96,62 @@
     .status-live { background: rgba(34, 197, 94, 0.2); color: #4ADE80; border: 1px solid rgba(34, 197, 94, 0.4); }
     .status-offline { background: rgba(148, 163, 184, 0.2); color: #94A3B8; border: 1px solid rgba(148, 163, 184, 0.4); }
 
-    .instructions {
-      background: rgba(15, 23, 42, 0.6);
-      border-radius: 12px;
-      padding: 20px;
-      margin-top: 20px;
-      border-left: 4px solid #38BDF8;
+    .control-group {
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+      margin-top: 15px;
     }
-    .instructions ol {
-      margin-left: 20px;
-      margin-top: 10px;
-      line-height: 1.6;
+    .control-item {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      background: rgba(15, 23, 42, 0.6);
+      padding: 12px 16px;
+      border-radius: 10px;
+      border: 1px solid rgba(255, 255, 255, 0.05);
+    }
+    .control-item label {
+      font-size: 14px;
+      font-weight: 600;
+    }
+    select, input[type="checkbox"] {
+      cursor: pointer;
+    }
+    select {
+      background: #1E293B;
+      color: #F8FAFC;
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      padding: 6px 12px;
+      border-radius: 6px;
+      font-size: 14px;
+    }
+    .toggle-switch {
+      width: 44px;
+      height: 24px;
+      appearance: none;
+      background: #475569;
+      border-radius: 20px;
+      position: relative;
+      outline: none;
+      transition: background 0.3s;
+    }
+    .toggle-switch:checked {
+      background: #10B981;
+    }
+    .toggle-switch::before {
+      content: '';
+      position: absolute;
+      width: 18px;
+      height: 18px;
+      border-radius: 50%;
+      background: #FFF;
+      top: 3px;
+      left: 3px;
+      transition: transform 0.3s;
+    }
+    .toggle-switch:checked::before {
+      transform: translateX(20px);
     }
   </style>
 </head>
@@ -150,13 +195,96 @@
       </div>
     </div>
 
+    <!-- Live Customizer Controls Section -->
+    <div class="grid">
+      <!-- Chat Settings Card -->
+      <div class="card">
+        <h2>💬 Personalizar Chat Unificado</h2>
+        <div class="control-group">
+          
+          <div class="control-item">
+            <label>Mensagens Permanentes (Sem desaparecer)</label>
+            <input type="checkbox" id="cfg-chat-permanent" class="toggle-switch" checked onchange="updateChatConfig()">
+          </div>
+
+          <div class="control-item">
+            <label>Desaparecer após (segundos)</label>
+            <select id="cfg-chat-fade" onchange="updateChatConfig()">
+              <option value="0">Desativado (Permanentes)</option>
+              <option value="10">10 Segundos</option>
+              <option value="20">20 Segundos</option>
+              <option value="30">30 Segundos</option>
+              <option value="60">60 Segundos</option>
+            </select>
+          </div>
+
+          <div class="control-item">
+            <label>Fundo Escuro (Glassmorphic)</label>
+            <input type="checkbox" id="cfg-chat-bg" class="toggle-switch" checked onchange="updateChatConfig()">
+          </div>
+
+          <div class="control-item">
+            <label>Tamanho do Texto</label>
+            <select id="cfg-chat-font" onchange="updateChatConfig()">
+              <option value="12">Pequeno (12px)</option>
+              <option value="14" selected>Médio (14px)</option>
+              <option value="18">Grande (18px)</option>
+              <option value="22">Gigante (22px)</option>
+            </select>
+          </div>
+
+          <div class="control-item">
+            <label>Mostrar Badges (Twitch/YouTube)</label>
+            <input type="checkbox" id="cfg-chat-badges" class="toggle-switch" checked onchange="updateChatConfig()">
+          </div>
+
+        </div>
+      </div>
+
+      <!-- Viewers Settings Card -->
+      <div class="card">
+        <h2>📊 Personalizar Contador de Viewers</h2>
+        <div class="control-group">
+          
+          <div class="control-item">
+            <label>Mostrar Badge Twitch</label>
+            <input type="checkbox" id="cfg-view-twitch" class="toggle-switch" checked onchange="updateViewersConfig()">
+          </div>
+
+          <div class="control-item">
+            <label>Mostrar Badge YouTube</label>
+            <input type="checkbox" id="cfg-view-yt" class="toggle-switch" checked onchange="updateViewersConfig()">
+          </div>
+
+          <div class="control-item">
+            <label>Mostrar Contador Total</label>
+            <input type="checkbox" id="cfg-view-total" class="toggle-switch" checked onchange="updateViewersConfig()">
+          </div>
+
+          <div class="control-item">
+            <label>Fundo do Contador</label>
+            <input type="checkbox" id="cfg-view-bg" class="toggle-switch" checked onchange="updateViewersConfig()">
+          </div>
+
+          <div class="control-item">
+            <label>Estilo do Layout</label>
+            <select id="cfg-view-layout" onchange="updateViewersConfig()">
+              <option value="horizontal" selected>Horizontal (Linha)</option>
+              <option value="vertical">Vertical (Coluna)</option>
+            </select>
+          </div>
+
+        </div>
+      </div>
+    </div>
+
     <!-- Streamlabs Browser Sources Section -->
     <div class="card" style="margin-bottom: 30px;">
-      <h2>📺 Links para Adicionar no Streamlabs OBS</h2>
-      <p style="color: #94A3B8; font-size: 14px;">No Streamlabs OBS, adicione uma nova fonte do tipo <strong>Browser (Navegador)</strong> e cole um dos links abaixo:</p>
+      <h2>📺 Links das Fontes para o Streamlabs OBS</h2>
+      <p style="color: #94A3B8; font-size: 14px;">Colas um destes links na tua fonte do tipo <strong>Browser (Navegador)</strong> no Streamlabs:</p>
 
       <div style="margin-top: 20px;">
-        <label style="font-weight: 600; font-size: 14px;">1. Viewer Counter (Contador de Viewers em Tempo Real)</label>
+        <label style="font-weight: 600; font-size: 14px;">1. Viewer Counter Overlay</label>
         <div class="url-box">
           <input type="text" readonly id="url-viewers" class="url-input">
           <button class="btn" onclick="copyUrl('url-viewers')">Copiar Link</button>
@@ -164,7 +292,7 @@
       </div>
 
       <div style="margin-top: 20px;">
-        <label style="font-weight: 600; font-size: 14px;">2. Unified Live Chat (Chat Unificado Twitch + YouTube)</label>
+        <label style="font-weight: 600; font-size: 14px;">2. Unified Live Chat Overlay</label>
         <div class="url-box">
           <input type="text" readonly id="url-chat" class="url-input">
           <button class="btn" onclick="copyUrl('url-chat')">Copiar Link</button>
@@ -175,7 +303,7 @@
     <!-- Test Controls Card -->
     <div class="card">
       <h2>🧪 Testar Overlays no Streamlabs</h2>
-      <p style="color: #94A3B8; font-size: 14px; margin-bottom: 15px;">Clique nos botões para enviar mensagens de teste e simular a entrada de viewers:</p>
+      <p style="color: #94A3B8; font-size: 14px; margin-bottom: 15px;">Clica para simular mensagens e entrada de espectadores em tempo real:</p>
       
       <div style="display: flex; gap: 10px; flex-wrap: wrap;">
         <button class="btn btn-twitch" onclick="sendTestChat('twitch')">Testar Chat Twitch</button>
@@ -183,19 +311,6 @@
         <button class="btn" style="background: #10B981;" onclick="simulateViewers()">Simular Live (50 Twitch / 120 YouTube)</button>
         <button class="btn" style="background: #64748B;" onclick="resetViewers()">Resetar Espectadores (0)</button>
       </div>
-    </div>
-
-    <!-- Instructions -->
-    <div class="instructions">
-      <h3 style="font-size: 16px; font-weight: 700; color: #38BDF8;">📋 Como Configurar no Streamlabs OBS:</h3>
-      <ol>
-        <li>Abra o <strong>Streamlabs OBS</strong> e escolha a sua Cena de Transmissão.</li>
-        <li>Em <strong>Fontes (Sources)</strong>, clique no botão <strong>+</strong> e selecione <strong>Browser Source (Navegador)</strong>.</li>
-        <li>Nomeie a fonte (ex: <code>Contador Viewers</code> ou <code>Chat Unificado</code>).</li>
-        <li>Cole o link copiado acima no campo <strong>URL</strong>.</li>
-        <li>Recomendado para o Chat: Largura <strong>450px</strong>, Altura <strong>700px</strong>.</li>
-        <li>Recomendado para o Contador: Largura <strong>500px</strong>, Altura <strong>100px</strong>.</li>
-      </ol>
     </div>
 
   </div>
@@ -208,23 +323,74 @@
 
     const socket = io();
 
+    // Stream status update listener
     socket.on('status_update', (data) => {
-      // Twitch
       const twitchStatus = document.getElementById('dash-twitch-status');
       twitchStatus.innerText = data.twitch.isLive ? 'ONLINE' : 'OFFLINE';
       twitchStatus.className = `status-badge ${data.twitch.isLive ? 'status-live' : 'status-offline'}`;
       document.getElementById('dash-twitch-viewers').innerText = data.twitch.viewers;
 
-      // YouTube
       const ytStatus = document.getElementById('dash-yt-status');
       ytStatus.innerText = data.youtube.isLive ? 'ONLINE' : 'OFFLINE';
       ytStatus.className = `status-badge ${data.youtube.isLive ? 'status-live' : 'status-offline'}`;
       document.getElementById('dash-yt-viewers').innerText = data.youtube.viewers;
       document.getElementById('dash-yt-videoid').innerText = `Video ID: ${data.youtube.videoId || 'Sem live ativa'}`;
 
-      // Total
       document.getElementById('dash-total-viewers').innerText = data.totalViewers;
     });
+
+    // Config update listener
+    socket.on('config_update', (config) => {
+      if (!config) return;
+      
+      if (config.chat) {
+        document.getElementById('cfg-chat-permanent').checked = config.chat.fadeSeconds === 0;
+        document.getElementById('cfg-chat-fade').value = config.chat.fadeSeconds;
+        document.getElementById('cfg-chat-bg').checked = config.chat.showBg;
+        document.getElementById('cfg-chat-font').value = config.chat.fontSize;
+        document.getElementById('cfg-chat-badges').checked = config.chat.showBadges;
+      }
+
+      if (config.viewers) {
+        document.getElementById('cfg-view-twitch').checked = config.viewers.showTwitch;
+        document.getElementById('cfg-view-yt').checked = config.viewers.showYoutube;
+        document.getElementById('cfg-view-total').checked = config.viewers.showTotal;
+        document.getElementById('cfg-view-bg').checked = config.viewers.showBg;
+        document.getElementById('cfg-view-layout').value = config.viewers.layout;
+      }
+    });
+
+    function updateChatConfig() {
+      const isPermanent = document.getElementById('cfg-chat-permanent').checked;
+      const fadeSelect = document.getElementById('cfg-chat-fade');
+      
+      if (isPermanent) {
+        fadeSelect.value = "0";
+      } else if (fadeSelect.value === "0") {
+        fadeSelect.value = "20"; // default 20s if untoggled
+      }
+
+      const chatConfig = {
+        fadeSeconds: parseInt(fadeSelect.value, 10),
+        showBg: document.getElementById('cfg-chat-bg').checked,
+        fontSize: parseInt(document.getElementById('cfg-chat-font').value, 10),
+        showBadges: document.getElementById('cfg-chat-badges').checked
+      };
+
+      socket.emit('update_config', { chat: chatConfig });
+    }
+
+    function updateViewersConfig() {
+      const viewersConfig = {
+        showTwitch: document.getElementById('cfg-view-twitch').checked,
+        showYoutube: document.getElementById('cfg-view-yt').checked,
+        showTotal: document.getElementById('cfg-view-total').checked,
+        showBg: document.getElementById('cfg-view-bg').checked,
+        layout: document.getElementById('cfg-view-layout').value
+      };
+
+      socket.emit('update_config', { viewers: viewersConfig });
+    }
 
     function copyUrl(inputId) {
       const input = document.getElementById(inputId);

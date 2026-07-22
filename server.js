@@ -19,17 +19,40 @@ app.use(cors());
 app.use(express.json());
 app.use(express.static(path.join(__dirname, 'public')));
 
-// Global state
+// Global state for stream status
 const streamState = {
   twitch: { isLive: false, viewers: 0 },
   youtube: { isLive: false, viewers: 0, videoId: null },
   totalViewers: 0
 };
 
+// Global state for overlay customization
+let overlayConfig = {
+  chat: {
+    fadeSeconds: 0,        // 0 = permanent, >0 = fade out after X seconds
+    showBg: true,          // dark glass background
+    fontSize: 14,          // px font size
+    showBadges: true,      // Twitch/YouTube badges
+    maxMessages: 30
+  },
+  viewers: {
+    showTwitch: true,      // toggle Twitch badge
+    showYoutube: true,     // toggle YouTube badge
+    showTotal: true,       // toggle Total badge
+    showBg: true,          // dark glass background
+    layout: 'horizontal'   // 'horizontal' or 'vertical'
+  }
+};
+
 // Calculate and broadcast status update
 function broadcastStatus() {
   streamState.totalViewers = streamState.twitch.viewers + streamState.youtube.viewers;
   io.emit('status_update', streamState);
+}
+
+// Broadcast configuration updates to connected overlays
+function broadcastConfig() {
+  io.emit('config_update', overlayConfig);
 }
 
 // Handle chat message ingestion
@@ -62,8 +85,15 @@ youtubeService.start();
 io.on('connection', (socket) => {
   console.log(`[Socket] Overlay client connected (${socket.id})`);
   
-  // Send initial state upon connection
+  // Send initial states upon connection
   socket.emit('status_update', streamState);
+  socket.emit('config_update', overlayConfig);
+
+  // Listen for config changes from dashboard
+  socket.on('update_config', (newConfig) => {
+    overlayConfig = { ...overlayConfig, ...newConfig };
+    broadcastConfig();
+  });
 
   socket.on('disconnect', () => {
     console.log(`[Socket] Client disconnected (${socket.id})`);
@@ -73,6 +103,16 @@ io.on('connection', (socket) => {
 // REST API Endpoints for Dashboard & Manual Controls
 app.get('/api/status', (req, res) => {
   res.json(streamState);
+});
+
+app.get('/api/config', (req, res) => {
+  res.json(overlayConfig);
+});
+
+app.post('/api/config', (req, res) => {
+  overlayConfig = { ...overlayConfig, ...req.body };
+  broadcastConfig();
+  res.json({ success: true, overlayConfig });
 });
 
 // Test endpoint to trigger fake chat messages for testing in Streamlabs

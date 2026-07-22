@@ -9,7 +9,7 @@
 </head>
 <body class="viewers-page">
 
-  <div class="viewer-counter-container">
+  <div class="viewer-counter-container" id="viewers-container">
     <!-- Twitch Badge -->
     <div class="platform-pill twitch" id="twitch-pill">
       <span class="platform-icon">
@@ -42,13 +42,63 @@
   <script>
     const socket = io();
 
+    const container = document.getElementById('viewers-container');
+    const twitchPill = document.getElementById('twitch-pill');
     const twitchCount = document.getElementById('twitch-count');
     const twitchDot = document.getElementById('twitch-dot');
 
+    const youtubePill = document.getElementById('youtube-pill');
     const youtubeCount = document.getElementById('youtube-count');
     const youtubeDot = document.getElementById('youtube-dot');
 
+    const totalPill = document.getElementById('total-pill');
     const totalCount = document.getElementById('total-count');
+
+    // Parse URL query params
+    const urlParams = new URLSearchParams(window.location.search);
+
+    let activeConfig = {
+      showTwitch: urlParams.has('twitch') ? urlParams.get('twitch') !== 'false' : true,
+      showYoutube: urlParams.has('yt') ? urlParams.get('yt') !== 'false' : true,
+      showTotal: urlParams.has('total') ? urlParams.get('total') !== 'false' : true,
+      showBg: urlParams.has('bg') ? urlParams.get('bg') !== 'false' : true,
+      layout: urlParams.get('layout') || 'horizontal'
+    };
+
+    socket.on('config_update', (config) => {
+      if (config && config.viewers) {
+        if (!urlParams.has('twitch')) activeConfig.showTwitch = config.viewers.showTwitch;
+        if (!urlParams.has('yt')) activeConfig.showYoutube = config.viewers.showYoutube;
+        if (!urlParams.has('total')) activeConfig.showTotal = config.viewers.showTotal;
+        if (!urlParams.has('bg')) activeConfig.showBg = config.viewers.showBg;
+        if (!urlParams.has('layout')) activeConfig.layout = config.viewers.layout;
+        applyConfig();
+      }
+    });
+
+    function applyConfig() {
+      twitchPill.style.display = activeConfig.showTwitch ? 'flex' : 'none';
+      youtubePill.style.display = activeConfig.showYoutube ? 'flex' : 'none';
+      totalPill.style.display = activeConfig.showTotal ? 'flex' : 'none';
+
+      if (activeConfig.showBg) {
+        container.style.background = 'rgba(15, 23, 42, 0.85)';
+        container.style.border = '1px solid var(--card-border)';
+        container.style.boxShadow = '0 8px 32px rgba(0, 0, 0, 0.4)';
+      } else {
+        container.style.background = 'transparent';
+        container.style.border = 'none';
+        container.style.boxShadow = 'none';
+      }
+
+      if (activeConfig.layout === 'vertical') {
+        container.style.flexDirection = 'column';
+        container.style.borderRadius = '20px';
+      } else {
+        container.style.flexDirection = 'row';
+        container.style.borderRadius = '50px';
+      }
+    }
 
     socket.on('status_update', (data) => {
       // Twitch Update
@@ -70,6 +120,8 @@
       // Total Update
       totalCount.innerText = data.totalViewers.toLocaleString();
     });
+
+    applyConfig();
   </script>
 </body>
 </html>

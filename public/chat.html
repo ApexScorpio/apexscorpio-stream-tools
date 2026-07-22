@@ -17,10 +17,47 @@
     const socket = io();
     const chatContainer = document.getElementById('chat-container');
 
-    // Parse query params (messages remain PERMANENT by default, or fade if ?fade=20)
+    // Parse URL query params override
     const urlParams = new URLSearchParams(window.location.search);
-    const fadeSeconds = parseInt(urlParams.get('fade') || '0', 10);
-    const maxMessages = parseInt(urlParams.get('max') || '30', 10);
+    
+    // Live config state
+    let activeConfig = {
+      fadeSeconds: urlParams.has('fade') ? parseInt(urlParams.get('fade'), 10) : 0,
+      showBg: urlParams.has('bg') ? urlParams.get('bg') !== 'false' : true,
+      fontSize: urlParams.has('font') ? parseInt(urlParams.get('font'), 10) : 14,
+      showBadges: urlParams.has('badges') ? urlParams.get('badges') !== 'false' : true,
+      maxMessages: urlParams.has('max') ? parseInt(urlParams.get('max'), 10) : 30
+    };
+
+    // Receive live config updates from server/dashboard
+    socket.on('config_update', (config) => {
+      if (config && config.chat) {
+        // Only override if query params were not set explicitly
+        if (!urlParams.has('fade')) activeConfig.fadeSeconds = config.chat.fadeSeconds;
+        if (!urlParams.has('bg')) activeConfig.showBg = config.chat.showBg;
+        if (!urlParams.has('font')) activeConfig.fontSize = config.chat.fontSize;
+        if (!urlParams.has('badges')) activeConfig.showBadges = config.chat.showBadges;
+        if (!urlParams.has('max')) activeConfig.maxMessages = config.chat.maxMessages;
+        applyConfigStyles();
+      }
+    });
+
+    function applyConfigStyles() {
+      document.querySelectorAll('.chat-message').forEach(msg => {
+        msg.style.fontSize = `${activeConfig.fontSize}px`;
+        if (activeConfig.showBg) {
+          msg.style.background = 'rgba(15, 23, 42, 0.88)';
+          msg.style.boxShadow = '0 4px 20px rgba(0, 0, 0, 0.3)';
+        } else {
+          msg.style.background = 'transparent';
+          msg.style.boxShadow = 'none';
+        }
+        const badgeEl = msg.querySelector('.platform-badge');
+        if (badgeEl) {
+          badgeEl.style.display = activeConfig.showBadges ? 'inline-flex' : 'none';
+        }
+      });
+    }
 
     socket.on('chat_message', (data) => {
       renderChatMessage(data);
@@ -30,6 +67,12 @@
       const msgElement = document.createElement('div');
       msgElement.className = `chat-message ${data.platform}`;
       msgElement.id = `msg-${data.id}`;
+      msgElement.style.fontSize = `${activeConfig.fontSize}px`;
+
+      if (!activeConfig.showBg) {
+        msgElement.style.background = 'transparent';
+        msgElement.style.boxShadow = 'none';
+      }
 
       // Build role badges
       let roleBadgesHtml = '';
@@ -41,7 +84,8 @@
 
       // Platform badge
       const platformLabel = data.platform === 'twitch' ? 'Twitch' : 'YouTube';
-      const platformBadge = `<span class="platform-badge ${data.platform}">${platformLabel}</span>`;
+      const badgeDisplayStyle = activeConfig.showBadges ? 'inline-flex' : 'none';
+      const platformBadge = `<span class="platform-badge ${data.platform}" style="display: ${badgeDisplayStyle};">${platformLabel}</span>`;
 
       // HTML Structure
       msgElement.innerHTML = `
@@ -50,18 +94,18 @@
           <span class="user-name" style="color: ${data.userColor || '#F8FAFC'};">${escapeHtml(data.username)}</span>
           ${roleBadgesHtml}
         </div>
-        <div class="chat-text">${escapeHtml(data.message)}</div>
+        <div class="chat-text" style="font-size: ${activeConfig.fontSize}px;">${escapeHtml(data.message)}</div>
       `;
 
       chatContainer.appendChild(msgElement);
 
       // Limit max messages in DOM
-      while (chatContainer.children.length > maxMessages) {
+      while (chatContainer.children.length > activeConfig.maxMessages) {
         chatContainer.removeChild(chatContainer.firstChild);
       }
 
-      // Auto-fadeout timer
-      if (fadeSeconds > 0) {
+      // Auto-fadeout timer (if > 0)
+      if (activeConfig.fadeSeconds > 0) {
         setTimeout(() => {
           msgElement.style.opacity = '0';
           setTimeout(() => {
@@ -69,7 +113,7 @@
               msgElement.parentNode.removeChild(msgElement);
             }
           }, 500);
-        }, fadeSeconds * 1000);
+        }, activeConfig.fadeSeconds * 1000);
       }
     }
 
