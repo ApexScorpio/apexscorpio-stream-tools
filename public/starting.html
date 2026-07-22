@@ -133,19 +133,39 @@
     let secondsLeft = 300;
     const timerEl = document.getElementById('timer');
 
-    if (socket) {
-      socket.on('config_update', (config) => {
-        if (config && config.starting && config.starting.timerMinutes) {
-          secondsLeft = Number(config.starting.timerMinutes) * 60;
+    const bc = typeof BroadcastChannel !== 'undefined' ? new BroadcastChannel('apex_scorpio_stream_tools') : null;
+
+    function handleIncomingData(type, payload) {
+      if (type === 'config_update') {
+        const config = payload.starting || payload;
+        if (config && config.timerMinutes) {
+          secondsLeft = Number(config.timerMinutes) * 60;
           updateTimerDisplay();
         }
-      });
+      }
+    }
+
+    if (socket) {
+      socket.on('config_update', (config) => handleIncomingData('config_update', config));
+    }
+
+    if (bc) {
+      bc.onmessage = (e) => {
+        if (e.data) handleIncomingData(e.data.type, e.data.data);
+      };
     }
 
     window.addEventListener('message', (e) => {
-      if (e.data && e.data.type === 'config_update' && e.data.config && e.data.config.starting && e.data.config.starting.timerMinutes) {
-        secondsLeft = Number(e.data.config.starting.timerMinutes) * 60;
-        updateTimerDisplay();
+      if (e.data) handleIncomingData(e.data.type, e.data.data || e.data);
+    });
+
+    window.addEventListener('storage', (e) => {
+      if (e.key && e.key.startsWith('apex_event_') && e.newValue) {
+        try {
+          const parsed = JSON.parse(e.newValue);
+          const type = e.key.replace('apex_event_', '');
+          handleIncomingData(type, parsed.payload);
+        } catch(err) {}
       }
     });
 

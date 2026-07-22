@@ -468,6 +468,28 @@
 
   <script>
     const socket = typeof io !== 'undefined' ? io() : null;
+    const bc = typeof BroadcastChannel !== 'undefined' ? new BroadcastChannel('apex_scorpio_stream_tools') : null;
+
+    function broadcastData(type, payload) {
+      // 1. BroadcastChannel (real-time for Streamlabs OBS & other windows/tabs)
+      if (bc) {
+        try { bc.postMessage({ type, data: payload, timestamp: Date.now() }); } catch(e) {}
+      }
+
+      // 2. localStorage fallback (triggers storage event across all tabs/OBS)
+      try {
+        localStorage.setItem(`apex_event_${type}`, JSON.stringify({ payload, timestamp: Date.now() }));
+      } catch(e) {}
+
+      // 3. PostMessage to local iframe previews in dashboard
+      const iframes = ['iframe-viewers', 'iframe-chat', 'iframe-events', 'iframe-alerts', 'scene-preview'];
+      iframes.forEach(id => {
+        const iframe = document.getElementById(id);
+        if (iframe && iframe.contentWindow) {
+          iframe.contentWindow.postMessage({ type, data: payload, config: payload, state: payload, msg: payload, event: payload }, '*');
+        }
+      });
+    }
 
     function copyUrl(inputId, btnEl) {
       const input = document.getElementById(inputId);
@@ -541,10 +563,7 @@
         });
       } catch (e) {}
       
-      const iframe = document.getElementById('iframe-viewers');
-      if (iframe && iframe.contentWindow) {
-        iframe.contentWindow.postMessage({ type: 'config_update', config: cfg }, '*');
-      }
+      broadcastData('config_update', cfg);
     }
 
     // Save Chat Config
@@ -570,10 +589,7 @@
         });
       } catch (e) {}
 
-      const iframe = document.getElementById('iframe-chat');
-      if (iframe && iframe.contentWindow) {
-        iframe.contentWindow.postMessage({ type: 'config_update', config: cfg }, '*');
-      }
+      broadcastData('config_update', cfg);
     }
 
     // Save Events Config
@@ -596,10 +612,7 @@
         });
       } catch (e) {}
 
-      const iframe = document.getElementById('iframe-events');
-      if (iframe && iframe.contentWindow) {
-        iframe.contentWindow.postMessage({ type: 'config_update', config: cfg }, '*');
-      }
+      broadcastData('config_update', cfg);
     }
 
     // Save Alerts Config
@@ -621,10 +634,7 @@
         });
       } catch (e) {}
 
-      const iframe = document.getElementById('iframe-alerts');
-      if (iframe && iframe.contentWindow) {
-        iframe.contentWindow.postMessage({ type: 'config_update', config: cfg }, '*');
-      }
+      broadcastData('config_update', cfg);
     }
 
     // Save Starting Config
@@ -639,10 +649,7 @@
         });
       } catch (e) {}
 
-      const iframe = document.getElementById('scene-preview');
-      if (iframe && iframe.contentWindow) {
-        iframe.contentWindow.postMessage({ type: 'config_update', config: cfg }, '*');
-      }
+      broadcastData('config_update', cfg);
     }
 
     async function sendTestChat(platform) {
@@ -670,10 +677,7 @@
         });
       } catch (e) {}
 
-      const iframe = document.getElementById('iframe-chat');
-      if (iframe && iframe.contentWindow) {
-        iframe.contentWindow.postMessage({ type: 'chat_message', msg: testMsg }, '*');
-      }
+      broadcastData('chat_message', testMsg);
     }
 
     async function triggerRandomChat() {
@@ -706,14 +710,7 @@
         });
       } catch (e) {}
 
-      const iframeAlerts = document.getElementById('iframe-alerts');
-      if (iframeAlerts && iframeAlerts.contentWindow) {
-        iframeAlerts.contentWindow.postMessage({ type: 'new_event', event: eventPayload }, '*');
-      }
-      const iframeEvents = document.getElementById('iframe-events');
-      if (iframeEvents && iframeEvents.contentWindow) {
-        iframeEvents.contentWindow.postMessage({ type: 'new_event', event: eventPayload }, '*');
-      }
+      broadcastData('new_event', eventPayload);
     }
 
     async function triggerRandomEvent() {
@@ -742,14 +739,7 @@
         });
       } catch (e) {}
 
-      const iframeEvents = document.getElementById('iframe-events');
-      if (iframeEvents && iframeEvents.contentWindow) {
-        iframeEvents.contentWindow.postMessage({ type: 'new_event', event: eventPayload }, '*');
-      }
-      const iframeAlerts = document.getElementById('iframe-alerts');
-      if (iframeAlerts && iframeAlerts.contentWindow) {
-        iframeAlerts.contentWindow.postMessage({ type: 'new_event', event: eventPayload }, '*');
-      }
+      broadcastData('new_event', eventPayload);
     }
 
     async function triggerRandomAlert() {
@@ -772,10 +762,7 @@
         facebook: { isLive: true, viewers: 35 },
         totalViewers: 205
       };
-      const iframe = document.getElementById('iframe-viewers');
-      if (iframe && iframe.contentWindow) {
-        iframe.contentWindow.postMessage({ type: 'status_update', state: state }, '*');
-      }
+      broadcastData('status_update', state);
     }
 
     async function resetViewers() {
@@ -794,10 +781,7 @@
         facebook: { isLive: false, viewers: 0 },
         totalViewers: 0
       };
-      const iframe = document.getElementById('iframe-viewers');
-      if (iframe && iframe.contentWindow) {
-        iframe.contentWindow.postMessage({ type: 'status_update', state: state }, '*');
-      }
+      broadcastData('status_update', state);
     }
   </script>
 </body>

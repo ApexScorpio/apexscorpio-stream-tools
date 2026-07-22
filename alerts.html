@@ -103,13 +103,18 @@
       durationSeconds: 5
     };
 
-    if (socket) {
-      socket.on('config_update', (config) => {
-        if (config && config.alerts) {
-          currentConfig = { ...currentConfig, ...config.alerts };
+    const bc = typeof BroadcastChannel !== 'undefined' ? new BroadcastChannel('apex_scorpio_stream_tools') : null;
+
+    function handleIncomingData(type, payload) {
+      if (!type || !payload) return;
+      if (type === 'config_update') {
+        const config = payload.alerts || payload;
+        if (config) {
+          currentConfig = { ...currentConfig, ...config };
         }
-      });
-      socket.on('new_event', (event) => {
+      }
+      if (type === 'new_event') {
+        const event = payload.event || payload;
         const platform = (event.platform || 'twitch').toLowerCase();
         if (platform === 'twitch' && !currentConfig.showTwitch) return;
         if (platform === 'youtube' && !currentConfig.showYoutube) return;
@@ -117,23 +122,31 @@
 
         alertQueue.push(event);
         processAlertQueue();
-      });
+      }
+    }
+
+    if (socket) {
+      socket.on('config_update', (config) => handleIncomingData('config_update', config));
+      socket.on('new_event', (event) => handleIncomingData('new_event', event));
+    }
+
+    if (bc) {
+      bc.onmessage = (e) => {
+        if (e.data) handleIncomingData(e.data.type, e.data.data);
+      };
     }
 
     window.addEventListener('message', (e) => {
-      if (e.data) {
-        if (e.data.type === 'config_update' && e.data.config && e.data.config.alerts) {
-          currentConfig = { ...currentConfig, ...e.data.config.alerts };
-        }
-        if (e.data.type === 'new_event' && e.data.event) {
-          const platform = (e.data.event.platform || 'twitch').toLowerCase();
-          if (platform === 'twitch' && !currentConfig.showTwitch) return;
-          if (platform === 'youtube' && !currentConfig.showYoutube) return;
-          if (platform === 'facebook' && !currentConfig.showFacebook) return;
+      if (e.data) handleIncomingData(e.data.type, e.data.data || e.data);
+    });
 
-          alertQueue.push(e.data.event);
-          processAlertQueue();
-        }
+    window.addEventListener('storage', (e) => {
+      if (e.key && e.key.startsWith('apex_event_') && e.newValue) {
+        try {
+          const parsed = JSON.parse(e.newValue);
+          const type = e.key.replace('apex_event_', '');
+          handleIncomingData(type, parsed.payload);
+        } catch(err) {}
       }
     });
 

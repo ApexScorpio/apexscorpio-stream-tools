@@ -24,35 +24,49 @@
       facebook: `<svg width="16" height="16" viewBox="0 0 24 24" fill="#1877F2"><path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/></svg>`,
     };
 
-    if (socket) {
-      socket.on('config_update', (config) => {
-        if (config && config.events) {
-          cfg = { ...cfg, ...config.events };
+    const bc = typeof BroadcastChannel !== 'undefined' ? new BroadcastChannel('apex_scorpio_stream_tools') : null;
+
+    function handleIncomingData(type, payload) {
+      if (!type || !payload) return;
+      if (type === 'config_update') {
+        const config = payload.events || payload;
+        if (config) {
+          cfg = { ...cfg, ...config };
           applyConfig();
         }
-      });
-      socket.on('new_event', (event) => {
+      }
+      if (type === 'new_event') {
+        const event = payload.event || payload;
         const platform = (event.platform || 'twitch').toLowerCase();
         if (platform === 'twitch'   && !cfg.showTwitch)   return;
         if (platform === 'youtube'  && !cfg.showYoutube)  return;
         if (platform === 'facebook' && !cfg.showFacebook) return;
         addCard(event, platform);
-      });
+      }
+    }
+
+    if (socket) {
+      socket.on('config_update', (config) => handleIncomingData('config_update', config));
+      socket.on('new_event', (event) => handleIncomingData('new_event', event));
+    }
+
+    if (bc) {
+      bc.onmessage = (e) => {
+        if (e.data) handleIncomingData(e.data.type, e.data.data);
+      };
     }
 
     window.addEventListener('message', (e) => {
-      if (e.data) {
-        if (e.data.type === 'config_update' && e.data.config && e.data.config.events) {
-          cfg = { ...cfg, ...e.data.config.events };
-          applyConfig();
-        }
-        if (e.data.type === 'new_event' && e.data.event) {
-          const platform = (e.data.event.platform || 'twitch').toLowerCase();
-          if (platform === 'twitch'   && !cfg.showTwitch)   return;
-          if (platform === 'youtube'  && !cfg.showYoutube)  return;
-          if (platform === 'facebook' && !cfg.showFacebook) return;
-          addCard(e.data.event, platform);
-        }
+      if (e.data) handleIncomingData(e.data.type, e.data.data || e.data);
+    });
+
+    window.addEventListener('storage', (e) => {
+      if (e.key && e.key.startsWith('apex_event_') && e.newValue) {
+        try {
+          const parsed = JSON.parse(e.newValue);
+          const type = e.key.replace('apex_event_', '');
+          handleIncomingData(type, parsed.payload);
+        } catch(err) {}
       }
     });
 
