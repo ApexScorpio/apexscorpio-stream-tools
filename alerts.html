@@ -39,7 +39,7 @@
     }
     .alert-box.pop-out {
       display: flex !important;
-      animation: alertPopOut 0.5s cubic-bezier(0.6, -0.28, 0.735, 0.045) forwards;
+      animation: alertPopOut 0.6s ease-in-out forwards !important;
     }
     .alert-header-img {
       max-width: 130px;
@@ -81,15 +81,15 @@
     }
 
     @keyframes alertPopIn {
-      0% { opacity: 0; transform: scale(0.4) translateY(60px); filter: blur(10px); }
-      70% { transform: scale(1.05) translateY(-5px); filter: blur(0); }
+      0% { opacity: 0; transform: scale(0.3) translateY(80px); filter: blur(10px); }
+      70% { opacity: 1; transform: scale(1.05) translateY(-5px); filter: blur(0); }
       100% { opacity: 1; transform: scale(1) translateY(0); filter: blur(0); }
     }
 
     @keyframes alertPopOut {
       0% { opacity: 1; transform: scale(1) translateY(0); filter: blur(0); }
-      20% { opacity: 1; transform: scale(1.06) translateY(-5px); filter: blur(0); }
-      100% { opacity: 0; transform: scale(0.3) translateY(80px); filter: blur(14px); }
+      30% { opacity: 1; transform: scale(1.08) translateY(-10px); filter: blur(0); }
+      100% { opacity: 0; transform: scale(0.2) translateY(100px); filter: blur(16px); }
     }
   </style>
 </head>
@@ -338,8 +338,8 @@
         setTimeout(() => {
           alertBox.className = 'alert-box';
           isShowingAlert = false;
-          setTimeout(processAlertQueue, 300);
-        }, 480);
+          setTimeout(processAlertQueue, 200);
+        }, 580);
       }, durationMs);
     }
 
