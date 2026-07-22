@@ -6,7 +6,7 @@
   <meta http-equiv="Pragma" content="no-cache">
   <meta http-equiv="Expires" content="0">
   <title>ApexScorpio - Event List Overlay</title>
-  <link rel="stylesheet" href="css/style.css?v=5.0">
+  <link rel="stylesheet" href="css/style.css?v=6.2">
   <script src="https://cdn.jsdelivr.net/npm/mqtt@5.3.4/dist/mqtt.min.js"></script>
 </head>
 <body class="events-page">
@@ -184,7 +184,7 @@
 
       const testClass = event.isTest ? 'is-test-msg' : '';
       const card = document.createElement('div');
-      card.className = `event-card ${evtClass} ${testClass}`;
+      card.className = `event-card ${evtClass} platform-${platform} ${testClass}`;
       card.innerHTML = `
         <div class="platform-logo-badge ${platform}" style="display:${cfg.showLogos ? 'flex' : 'none'}">
           ${svgIcons[platform] || svgIcons.twitch}

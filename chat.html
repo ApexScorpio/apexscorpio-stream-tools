@@ -6,7 +6,7 @@
   <meta http-equiv="Pragma" content="no-cache">
   <meta http-equiv="Expires" content="0">
   <title>ApexScorpio - Unified Chat Overlay</title>
-  <link rel="stylesheet" href="css/style.css?v=5.0">
+  <link rel="stylesheet" href="css/style.css?v=6.2">
   <script src="https://cdn.jsdelivr.net/npm/mqtt@5.3.4/dist/mqtt.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/tmi.js@1.8.5/dist/tmi.min.js"></script>
 </head>
@@ -21,12 +21,43 @@
       fadeSeconds: 0, showBg: true, displayMode: 'pill',
       fontSize: 14, showBadges: true, maxMessages: 50
     };
+    let lastConfigUpdatedAt = 0;
+    const expiryTimers = new Map();
+
+    function normalizeFadeSeconds(value) {
+      const seconds = Number(value);
+      return Number.isFinite(seconds) && seconds > 0 ? seconds : 0;
+    }
+
+    function cancelMessageExpiry(element) {
+      const timer = expiryTimers.get(element);
+      if (timer) clearTimeout(timer);
+      expiryTimers.delete(element);
+    }
+
+    function cancelAllMessageExpiries() {
+      expiryTimers.forEach(timer => clearTimeout(timer));
+      expiryTimers.clear();
+    }
+
+    function applyIncomingChatConfig(config) {
+      if (!config || typeof config !== 'object') return;
+      const updatedAt = Number(config._updatedAt || 0);
+      if (lastConfigUpdatedAt > 0 && updatedAt === 0) return;
+      if (updatedAt > 0 && updatedAt < lastConfigUpdatedAt) return;
+      if (updatedAt > 0) lastConfigUpdatedAt = updatedAt;
+      cfg = { ...cfg, ...config };
+      cfg.fadeSeconds = normalizeFadeSeconds(cfg.fadeSeconds);
+      applyConfig();
+    }
 
     function loadSavedConfig() {
       try {
         const saved = localStorage.getItem('apex_cfg_chat');
         if (saved) {
-          cfg = { ...cfg, ...JSON.parse(saved) };
+          const parsed = JSON.parse(saved);
+          cfg = { ...cfg, ...parsed };
+          lastConfigUpdatedAt = Number(parsed._updatedAt || 0);
         }
       } catch(e) {}
 
@@ -35,7 +66,7 @@
       if (p.has('yt')) cfg.showYoutube = p.get('yt') === '1' || p.get('yt') === 'true';
       if (p.has('fb')) cfg.showFacebook = p.get('fb') === '1' || p.get('fb') === 'true';
       if (p.has('mode')) cfg.displayMode = p.get('mode');
-      if (p.has('fade')) cfg.fadeSeconds = Number(p.get('fade'));
+      if (p.has('fade')) cfg.fadeSeconds = normalizeFadeSeconds(p.get('fade'));
       if (p.has('bg')) cfg.showBg = p.get('bg') === '1' || p.get('bg') === 'true';
       if (p.has('bdg')) cfg.showBadges = p.get('bdg') === '1' || p.get('bdg') === 'true';
       if (p.has('fs')) cfg.fontSize = Number(p.get('fs')) || 14;
@@ -66,6 +97,7 @@
       if (container) {
         Array.from(container.children).forEach(child => {
           if (!onlyTests || child.classList.contains('is-test-msg')) {
+            cancelMessageExpiry(child);
             child.style.animation = 'none';
             child.style.transition = 'none';
             child.remove();
@@ -90,10 +122,7 @@
       }
       if (type === 'config_update') {
         const config = payload.chat || payload.config || payload;
-        if (config) {
-          cfg = { ...cfg, ...config };
-          applyConfig();
-        }
+        if (config) applyIncomingChatConfig(config);
       }
       if (type === 'chat_message' && payload) {
         if (_isDuplicate(type, payload?.msg || payload)) return;
@@ -136,8 +165,7 @@
               }
 
               if (topicStr.includes('/cfg/chat')) {
-                cfg = { ...cfg, ...data };
-                applyConfig();
+                applyIncomingChatConfig(data);
               } else if (data && (data.type || data.payload)) {
                 handleIncomingData(data.type || data.payload?.type, data.payload || data);
               }
@@ -197,6 +225,9 @@
     }
 
     function applyConfig() {
+      cfg.fadeSeconds = normalizeFadeSeconds(cfg.fadeSeconds);
+      if (cfg.fadeSeconds === 0) cancelAllMessageExpiries();
+
       if (cfg.showBg) {
         chatContainer.classList.add('has-bg');
         chatContainer.classList.remove('no-bg');
@@ -245,17 +276,21 @@
       chatContainer.scrollTop = chatContainer.scrollHeight;
 
       while (chatContainer.children.length > (cfg.maxMessages || 50)) {
+        cancelMessageExpiry(chatContainer.firstChild);
         chatContainer.removeChild(chatContainer.firstChild);
       }
 
-      // Auto-expire test messages or real messages if fadeSeconds > 0
-      const fadeDur = msg.isTest ? 8 : (cfg.fadeSeconds > 0 ? cfg.fadeSeconds : 0);
+      // Permanent means permanent for both real and test messages.
+      const fadeDur = normalizeFadeSeconds(cfg.fadeSeconds);
       if (fadeDur > 0) {
-        setTimeout(() => {
+        const expiryTimer = setTimeout(() => {
+          expiryTimers.delete(el);
+          if (!el.isConnected) return;
           el.style.animation = 'none';
           el.classList.add('exiting');
           setTimeout(() => el.remove(), 380);
         }, fadeDur * 1000);
+        expiryTimers.set(el, expiryTimer);
       }
     }
 

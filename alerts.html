@@ -28,10 +28,26 @@
       background: rgba(8, 8, 12, 0.96);
       backdrop-filter: blur(24px);
       -webkit-backdrop-filter: blur(24px);
-      border: 2px solid #E8181F;
+      --platform-accent: #E8181F;
+      --platform-rgb: 232, 24, 31;
+      border: 2px solid var(--platform-accent);
       border-radius: 24px;
-      box-shadow: 0 10px 45px rgba(0, 0, 0, 0.95), 0 0 40px rgba(232, 24, 31, 0.5);
+      box-shadow: 0 10px 45px rgba(0, 0, 0, 0.95), 0 0 40px rgba(var(--platform-rgb), 0.5);
       position: relative;
+    }
+    .alert-box[data-platform="twitch"] { --platform-accent: #9146FF; --platform-rgb: 145, 70, 255; }
+    .alert-box[data-platform="youtube"] { --platform-accent: #E8181F; --platform-rgb: 232, 24, 31; }
+    .alert-box[data-platform="facebook"] { --platform-accent: #1877F2; --platform-rgb: 24, 119, 242; }
+    .alert-box::before {
+      content: '';
+      position: absolute;
+      top: -2px;
+      left: 26px;
+      right: 26px;
+      height: 4px;
+      border-radius: 0 0 4px 4px;
+      background: var(--platform-accent);
+      box-shadow: 0 0 16px rgba(var(--platform-rgb), 0.85);
     }
     .alert-box.pop-in {
       display: flex !important;
@@ -39,7 +55,7 @@
     }
     .alert-box.pop-out {
       display: flex !important;
-      animation: alertPopIn 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.275) reverse forwards !important;
+      animation: alertPopOut 0.6s cubic-bezier(0.68, -0.275, 0.825, 0.115) forwards !important;
     }
     .alert-header-img {
       max-width: 130px;
@@ -84,6 +100,14 @@
       0% { opacity: 0; transform: scale(0.4) translateY(60px); filter: blur(10px); }
       70% { opacity: 1; transform: scale(1.05) translateY(-5px); filter: blur(0); }
       100% { opacity: 1; transform: scale(1) translateY(0); filter: blur(0); }
+    }
+
+    /* Exact inverse of alertPopIn for older Chromium/CEF builds in SLOBS.
+       A distinct animation name guarantees a fresh run without display:none. */
+    @keyframes alertPopOut {
+      0% { opacity: 1; transform: scale(1) translateY(0); filter: blur(0); }
+      30% { opacity: 1; transform: scale(1.05) translateY(-5px); filter: blur(0); }
+      100% { opacity: 0; transform: scale(0.4) translateY(60px); filter: blur(10px); }
     }
 
   </style>
@@ -163,7 +187,7 @@
     }
 
     function finishAlertExit(event) {
-      if (event && (event.target !== alertBox || event.animationName !== 'alertPopIn')) return;
+      if (event && (event.target !== alertBox || event.animationName !== 'alertPopOut')) return;
       if (!exitInProgress) return;
       exitInProgress = false;
       if (exitFallbackTimer) clearTimeout(exitFallbackTimer);
@@ -179,10 +203,8 @@
       exitInProgress = true;
       alertBox.removeEventListener('animationend', finishAlertExit);
 
-      // Removing the completed entrance animation and forcing layout makes
-      // Chromium/SLOBS start a fresh reversed run of the same keyframes.
-      alertBox.className = 'alert-box';
-      void alertBox.offsetWidth;
+      // alertPopOut has a different name, so SLOBS starts it immediately
+      // without passing through the hidden base state.
       alertBox.className = 'alert-box pop-out';
 
       alertBox.addEventListener('animationend', finishAlertExit);
@@ -336,8 +358,10 @@
       const event = alertQueue.shift();
       currentAlert = event;
 
-      const platformSvg = event.platform === 'youtube' ? youtubeSvg : (event.platform === 'facebook' ? facebookSvg : twitchSvg);
-      const platformName = event.platform === 'youtube' ? 'YouTube' : (event.platform === 'facebook' ? 'Facebook' : 'Twitch');
+      const platform = (event.platform || 'twitch').toLowerCase();
+      const platformSvg = platform === 'youtube' ? youtubeSvg : (platform === 'facebook' ? facebookSvg : twitchSvg);
+      const platformName = platform === 'youtube' ? 'YouTube' : (platform === 'facebook' ? 'Facebook' : 'Twitch');
+      alertBox.dataset.platform = platform;
       logoBox.innerHTML = platformSvg;
 
       alertImg.src = clipartMap[event.type] || clipartMap.follower;
@@ -345,19 +369,16 @@
       if (event.type === 'follower') {
         alertTitle.innerText = 'NOVO SEGUIDOR!';
         alertTitle.style.color = '#E8181F';
-        alertBox.style.borderColor = '#E8181F';
         alertMessage.innerText = `@${event.username}`;
         alertSubtext.innerHTML = `Acabou de seguir no ${platformName}!`;
       } else if (event.type === 'subscriber') {
         alertTitle.innerText = 'NOVO SUBSCRICTOR!';
         alertTitle.style.color = '#F59E0B';
-        alertBox.style.borderColor = '#F59E0B';
         alertMessage.innerText = `@${event.username}`;
         alertSubtext.innerHTML = `Inscreveu-se com sucesso no ${platformName}!`;
       } else if (event.type === 'raid') {
         alertTitle.innerText = 'RAID EM DIRETO!';
         alertTitle.style.color = '#9146FF';
-        alertBox.style.borderColor = '#9146FF';
         alertMessage.innerText = `@${event.username}`;
         alertSubtext.innerHTML = `Entrou em raid com ${event.viewers || 15} espectadores!`;
       }

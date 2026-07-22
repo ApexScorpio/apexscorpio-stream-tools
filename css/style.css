@@ -399,6 +399,23 @@ body.events-page {
 .event-card.subscriber { border-left-color: #F59E0B; }
 .event-card.raid       { border-left-color: #9146FF; }
 
+/* Platform identity overrides event-type colours for the frame and marker bar. */
+.event-card.platform-twitch {
+  border-color: rgba(145, 70, 255, 0.45);
+  border-left: 4px solid var(--twitch-color);
+  box-shadow: 0 3px 15px rgba(0,0,0,0.5), 0 0 14px rgba(145,70,255,0.14);
+}
+.event-card.platform-youtube {
+  border-color: rgba(232, 24, 31, 0.45);
+  border-left: 4px solid var(--youtube-color);
+  box-shadow: 0 3px 15px rgba(0,0,0,0.5), 0 0 14px rgba(232,24,31,0.14);
+}
+.event-card.platform-facebook {
+  border-color: rgba(24, 119, 242, 0.45);
+  border-left: 4px solid var(--facebook-color);
+  box-shadow: 0 3px 15px rgba(0,0,0,0.5), 0 0 14px rgba(24,119,242,0.14);
+}
+
 .platform-logo-badge {
   width: 28px; height: 28px;
   border-radius: 6px;
