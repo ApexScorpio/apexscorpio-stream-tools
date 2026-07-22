@@ -303,22 +303,38 @@
         let videoIdFound = null;
         let countFound = 0;
 
-        // Tentar obter o HTML da Live usando proxy CORS (necessário para requisições client-side no browser)
+        // Tentar obter o HTML da Live usando proxies leves e consulta oEmbed oficial
         const targetLiveUrl = 'https://www.youtube.com/@apexscorpio/live';
         const proxyUrls = [
-          `https://api.allorigins.win/raw?url=${encodeURIComponent(targetLiveUrl)}`,
-          `https://corsproxy.io/?${encodeURIComponent(targetLiveUrl)}`
+          `https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(targetLiveUrl)}`,
+          `https://api.allorigins.win/raw?url=${encodeURIComponent(targetLiveUrl)}`
         ];
 
         let html = '';
-        for (const pUrl of proxyUrls) {
-          try {
-            const resp = await fetch(pUrl, { cache: 'no-store' });
-            if (resp.ok) {
-              html = await resp.text();
-              if (html && html.length > 500) break;
+
+        // Método 1: consulta oEmbed oficial da Google (sempre gratuito, sem quota e com suporte a CORS!)
+        try {
+          const oembedResp = await fetch(`https://www.youtube.com/oembed?format=json&url=${encodeURIComponent(targetLiveUrl)}`);
+          if (oembedResp.ok) {
+            const oembedData = await oembedResp.json();
+            if (oembedData && oembedData.title) {
+              isLiveFound = true;
+              const htmlMatch = oembedData.html?.match(/embed\/([a-zA-Z0-9_-]{11})/);
+              if (htmlMatch) videoIdFound = htmlMatch[1];
             }
-          } catch(e) {}
+          }
+        } catch(e) {}
+
+        if (!isLiveFound) {
+          for (const pUrl of proxyUrls) {
+            try {
+              const resp = await fetch(pUrl, { cache: 'no-store' });
+              if (resp.ok) {
+                html = await resp.text();
+                if (html && html.length > 500) break;
+              }
+            } catch(e) {}
+          }
         }
 
         if (html) {
