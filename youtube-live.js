@@ -1,10 +1,11 @@
 /**
- * ApexScorpio YouTube Live Module v2.7
+ * ApexScorpio YouTube Live Module v2.8
  *
  * Sticky live detection:
  * - the official YouTube iframe player is authoritative for online/offline;
  * - API errors, 429s and stale cached sources can never cancel a detected live;
- * - offline requires three continuous minutes without a player video ID.
+ * - offline requires three continuous minutes without a real player video ID;
+ * - the live_stream iframe placeholder is never treated as a YouTube video ID.
  */
 (function (global) {
   'use strict';
@@ -62,6 +63,7 @@
   let playerReady = false;
   let playerInitStarted = false;
   let detailsInFlight = false;
+  let lastApiError = null;
   let activeVideoId = safeGet(VIDEO_KEY) || null;
   let activeChatId = null;
   let liveChatPageToken = null;
@@ -70,7 +72,12 @@
   let state = loadState();
   let playerLock = loadPlayerLock();
 
-  if (!activeVideoId && state.videoId) activeVideoId = state.videoId;
+  activeVideoId = normalizeVideoId(activeVideoId || state.videoId);
+  if (!activeVideoId) safeRemove(VIDEO_KEY);
+  if (!state.videoId && state.isLive) {
+    state = { ...state, isLive: false, viewers: 0, videoId: null, liveChatId: null };
+    safeSet(STATE_KEY, JSON.stringify(state));
+  }
   if (playerLock && Date.now() - playerLock.seenAt < PLAYER_LOCK_MAX_AGE_MS) {
     activeVideoId = playerLock.videoId;
     lastPlayerVideoAt = playerLock.seenAt;
@@ -104,12 +111,19 @@
     try { localStorage.removeItem(key); } catch (_) {}
   }
 
+  function normalizeVideoId(value) {
+    const id = String(value || '').trim();
+    if (!id || id === 'live_stream') return null;
+    return /^[a-zA-Z0-9_-]{11}$/.test(id) ? id : null;
+  }
+
   function loadPlayerLock() {
     try {
       const parsed = JSON.parse(safeGet(PLAYER_LOCK_KEY) || 'null');
-      if (!parsed || !/^[a-zA-Z0-9_-]{11}$/.test(String(parsed.videoId || ''))) return null;
+      const videoId = normalizeVideoId(parsed?.videoId);
+      if (!videoId) return null;
       return {
-        videoId: parsed.videoId,
+        videoId,
         seenAt: Number(parsed.seenAt || 0)
       };
     } catch (_) {
@@ -118,7 +132,8 @@
   }
 
   function savePlayerLock(videoId) {
-    if (!/^[a-zA-Z0-9_-]{11}$/.test(String(videoId || ''))) return;
+    videoId = normalizeVideoId(videoId);
+    if (!videoId) return;
     playerLock = { videoId, seenAt: Date.now() };
     lastPlayerVideoAt = playerLock.seenAt;
     safeSet(PLAYER_LOCK_KEY, JSON.stringify(playerLock));
@@ -140,10 +155,11 @@
     try {
       const parsed = JSON.parse(safeGet(STATE_KEY) || 'null');
       if (parsed && typeof parsed === 'object') {
+        const videoId = normalizeVideoId(parsed.videoId);
         return {
-          isLive: Boolean(parsed.isLive),
-          viewers: Math.max(0, Number(parsed.viewers || 0)),
-          videoId: parsed.videoId || null,
+          isLive: Boolean(parsed.isLive && videoId),
+          viewers: videoId ? Math.max(0, Number(parsed.viewers || 0)) : 0,
+          videoId,
           liveChatId: parsed.liveChatId || null,
           title: parsed.title || '',
           updatedAt: Number(parsed.updatedAt || 0),
@@ -264,10 +280,11 @@
   });
 
   function publishState(next) {
+    const videoId = normalizeVideoId(next.videoId);
     state = {
-      isLive: Boolean(next.isLive),
-      viewers: Math.max(0, Number(next.viewers || 0)),
-      videoId: next.videoId || null,
+      isLive: Boolean(next.isLive && videoId),
+      viewers: videoId ? Math.max(0, Number(next.viewers || 0)) : 0,
+      videoId,
       liveChatId: next.liveChatId || null,
       title: next.title || '',
       updatedAt: Date.now(),
@@ -290,6 +307,7 @@
   }
 
   function publishProvisionalLive(videoId, source) {
+    videoId = normalizeVideoId(videoId);
     if (!videoId) return;
 
     savePlayerLock(videoId);
@@ -395,11 +413,19 @@
     const data = await response.json().catch(() => ({}));
 
     if (!response.ok || data.error) {
-      const error = new Error(data?.error?.message || `YouTube API ${response.status}`);
+      const reason = data?.error?.errors?.[0]?.reason || null;
+      const baseMessage = data?.error?.message || `YouTube API ${response.status}`;
+      const error = new Error(reason ? `${baseMessage} [${reason}]` : baseMessage);
       error.status = response.status;
-      error.reason = data?.error?.errors?.[0]?.reason || null;
+      error.reason = reason;
+      lastApiError = {
+        status: response.status,
+        reason,
+        message: error.message,
+        at: Date.now()
+      };
 
-      if (response.status === 429 || error.reason === 'rateLimitExceeded') {
+      if (response.status === 429 || response.status === 403 || error.reason === 'rateLimitExceeded') {
         registerApiRateLimit();
       }
 
@@ -407,6 +433,7 @@
     }
 
     registerApiSuccess();
+    lastApiError = null;
     return data;
   }
 
@@ -468,7 +495,7 @@
     } catch (error) {
       if (!stateLeader) return;
 
-      if (error.status === 429 || error.reason === 'rateLimitExceeded' || error.reason === 'localRateLimit') {
+      if (error.status === 429 || error.status === 403 || error.reason === 'rateLimitExceeded' || error.reason === 'localRateLimit') {
         publishState({
           ...state,
           isLive: Boolean(state.videoId),
@@ -488,13 +515,34 @@
   function extractPlayerVideoId() {
     if (!playerReady || !player) return null;
 
+    const candidates = [];
+
     try {
       const data = player.getVideoData ? player.getVideoData() : null;
-      const id = data?.video_id || null;
-      return /^[a-zA-Z0-9_-]{11}$/.test(String(id || '')) ? id : null;
-    } catch (_) {
-      return null;
+      candidates.push(data?.video_id);
+    } catch (_) {}
+
+    try {
+      const videoUrl = player.getVideoUrl ? player.getVideoUrl() : '';
+      if (videoUrl) {
+        const parsed = new URL(videoUrl, global.location.href);
+        candidates.push(parsed.searchParams.get('v'));
+        const pathMatch = parsed.pathname.match(/\/(?:embed|live)\/([a-zA-Z0-9_-]{11})/);
+        if (pathMatch?.[1]) candidates.push(pathMatch[1]);
+      }
+    } catch (_) {}
+
+    try {
+      const playlist = player.getPlaylist ? player.getPlaylist() : null;
+      if (Array.isArray(playlist)) candidates.push(...playlist);
+    } catch (_) {}
+
+    for (const candidate of candidates) {
+      const videoId = normalizeVideoId(candidate);
+      if (videoId) return videoId;
     }
+
+    return null;
   }
 
   function probePlayer() {
@@ -551,7 +599,7 @@
     const origin = encodeURIComponent(global.location.origin);
     iframe.src =
       `https://www.youtube.com/embed/live_stream?channel=${CHANNEL_ID}` +
-      `&enablejsapi=1&origin=${origin}&playsinline=1&controls=0&mute=1`;
+      `&enablejsapi=1&origin=${origin}&playsinline=1&controls=0&mute=1&autoplay=1`;
 
     (document.body || document.documentElement).appendChild(iframe);
     return iframe;
@@ -568,21 +616,25 @@
         events: {
           onReady() {
             playerReady = true;
+            try {
+              if (player.mute) player.mute();
+              if (player.playVideo) player.playVideo();
+            } catch (_) {}
             probePlayer();
+            setTimeout(probePlayer, 1000);
           },
           onStateChange() {
             probePlayer();
           },
           onError() {
             playerReady = true;
-            scheduleOEmbedProbe(0);
             schedulePlayerProbe(PLAYER_PROBE_MS);
           }
         }
       });
     } catch (_) {
       playerInitStarted = false;
-      scheduleOEmbedProbe(0);
+      schedulePlayerProbe(PLAYER_PROBE_MS);
     }
   }
 
@@ -661,7 +713,6 @@
   function forceProbe() {
     if (!stateLeader) return;
     probePlayer();
-    scheduleOEmbedProbe(0);
     if (state.videoId) scheduleDetails(0);
   }
 
@@ -694,9 +745,9 @@
   function becomeStateLeader() {
     if (stateLeader) return;
     stateLeader = true;
-    activeVideoId = safeGet(VIDEO_KEY) || state.videoId || null;
+    activeVideoId = normalizeVideoId(safeGet(VIDEO_KEY) || state.videoId);
+    if (!activeVideoId) safeRemove(VIDEO_KEY);
     loadIframeApi();
-    scheduleOEmbedProbe(0);
     schedulePlayerProbe(1000);
     if (activeVideoId) scheduleDetails(0);
   }
@@ -940,7 +991,7 @@
         activeChatId = null;
         liveChatPageToken = null;
         chatTimer = setTimeout(startChatForCurrentState, 5000);
-      } else if (error.status === 429 || error.reason === 'rateLimitExceeded' || error.reason === 'localRateLimit') {
+      } else if (error.status === 429 || error.status === 403 || error.reason === 'rateLimitExceeded' || error.reason === 'localRateLimit') {
         chatTimer = setTimeout(
           startChatForCurrentState,
           Math.max(5000, currentApiBlock() - Date.now())
@@ -1009,7 +1060,7 @@
 
     debug() {
       return {
-        version: '2.7',
+        version: '2.8',
         instanceId,
         stateLeader,
         chatLeader,
@@ -1021,6 +1072,7 @@
         activeVideoId,
         activeChatId,
         apiBlockedUntil: currentApiBlock(),
+        lastApiError,
         state: publicState()
       };
     },
@@ -1034,7 +1086,7 @@
 
     channelId: CHANNEL_ID,
     channelHandle: CHANNEL_HANDLE,
-    version: '2.7'
+    version: '2.8'
   };
 
   start();
