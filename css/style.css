@@ -88,7 +88,7 @@ body.viewers-page {
   position: absolute;
   right: 4px; top: 4px;
   width: 36px; height: 36px;
-  background: url('/brandkit/Apex_Scorpio_Brand_Assets/02_Jewel/AS_Jewel_Full_Metallic.png') no-repeat center;
+  background: url('../brandkit/Apex_Scorpio_Brand_Assets/02_Jewel/AS_Jewel_Full_Metallic.png') no-repeat center;
   background-size: contain;
   opacity: 0.22;
   pointer-events: none;
