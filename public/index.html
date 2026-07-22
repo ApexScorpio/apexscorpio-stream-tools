@@ -108,18 +108,20 @@
     /* Preview frame: clips to fit, inner iframe is native size but CSS-scaled down */
     .preview-frame {
       width: 100%;
-      background: #060810;
+      background: repeating-conic-gradient(#0a0c14 0% 25%, #111525 0% 50%) 0 0 / 16px 16px;
       border-radius: 12px;
       border: 1px solid rgba(232, 24, 31, 0.3);
       overflow: hidden;
       margin-top: 14px;
       position: relative;
-      /* height is set per-frame via data attribute + JS */
+      display: flex;
+      align-items: flex-start;
+      justify-content: center;
     }
     .preview-frame .preview-scale-wrap {
       position: relative;
       transform-origin: top left;
-      /* transform and height set by JS based on source dimensions */
+      flex-shrink: 0;
     }
     .preview-frame .preview-scale-wrap iframe {
       display: block;
@@ -190,6 +192,23 @@
       </div>
     </div>
 
+    <!-- SLOBS Connection Banner -->
+    <div style="background: linear-gradient(135deg, rgba(20,23,34,0.95), rgba(8,8,12,0.98)); border: 1px solid rgba(232,24,31,0.4); border-radius: 14px; padding: 16px 20px; margin-bottom: 18px; display: flex; gap: 16px; flex-wrap: wrap; align-items: stretch;">
+      <div style="flex: 1; min-width: 240px;">
+        <div style="font-size: 12px; font-weight: 800; color: #E8181F; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 6px;">⚡ Opção A — Servidor Local (Recomendado para SLOBS)</div>
+        <div style="font-size: 12px; color: #94A3B8; margin-bottom: 8px;">Corre no terminal para que os testes cheguem ao Streamlabs OBS em tempo real via Socket.IO:</div>
+        <code style="display: block; background: #0D1017; border: 1px solid rgba(56,189,248,0.3); border-radius: 8px; padding: 8px 12px; font-size: 12px; color: #38BDF8;">cd C:\Users\lopes\.gemini\antigravity-ide\scratch\apexscorpio-stream-tools<br>node server.js</code>
+        <div style="font-size: 11px; color: #64748B; margin-top: 6px;">Depois usa <strong style="color:#38BDF8">http://localhost:3000/viewers.html</strong> etc. no SLOBS</div>
+      </div>
+      <div style="width: 1px; background: rgba(255,255,255,0.07);"></div>
+      <div style="flex: 1; min-width: 240px;">
+        <div style="font-size: 12px; font-weight: 800; color: #9146FF; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 6px;">🎮 Opção B — Dashboard Dentro do SLOBS</div>
+        <div style="font-size: 12px; color: #94A3B8; margin-bottom: 8px;">Adiciona o próprio Dashboard como Browser Source no SLOBS (numa cena de controlo). Assim o BroadcastChannel funciona dentro do mesmo processo CEF:</div>
+        <code style="display: block; background: #0D1017; border: 1px solid rgba(145,70,255,0.3); border-radius: 8px; padding: 8px 12px; font-size: 12px; color: #E9D5FF; word-break: break-all;">https://apexscorpio.github.io/apexscorpio-stream-tools/index.html</code>
+        <div style="font-size: 11px; color: #64748B; margin-top: 6px;">Dimensões recomendadas da Browser Source: <strong style="color:#9146FF">1280 × 900</strong></div>
+      </div>
+    </div>
+
     <!-- CARD 1: CONTADOR DE ESPECTADORES -->
     <div class="card">
       <h2>
@@ -241,8 +260,8 @@
       </div>
 
       <label style="font-weight: 700; font-size: 13px; color: #94A3B8; text-transform: uppercase;">Visualização da Source em Tempo Real:</label>
-      <!-- viewers pill is auto-width but typical OBS source is 600x90 -->
-      <div class="preview-frame" id="pf-viewers" data-src-w="600" data-src-h="90">
+      <!-- viewers pill OBS source: 600x90 -->
+      <div class="preview-frame" id="pf-viewers" data-src-w="600" data-src-h="90" data-max-h="100">
         <div class="preview-scale-wrap" id="wrap-viewers">
           <iframe id="iframe-viewers" src="viewers.html" width="600" height="90"></iframe>
         </div>
@@ -310,7 +329,7 @@
 
       <label style="font-weight: 700; font-size: 13px; color: #94A3B8; text-transform: uppercase;">Visualização da Source em Tempo Real:</label>
       <!-- chat OBS source: 440x580 -->
-      <div class="preview-frame" id="pf-chat" data-src-w="440" data-src-h="580">
+      <div class="preview-frame" id="pf-chat" data-src-w="440" data-src-h="580" data-max-h="260">
         <div class="preview-scale-wrap" id="wrap-chat">
           <iframe id="iframe-chat" src="chat.html" width="440" height="580"></iframe>
         </div>
@@ -365,7 +384,7 @@
 
       <label style="font-weight: 700; font-size: 13px; color: #94A3B8; text-transform: uppercase;">Visualização da Source em Tempo Real:</label>
       <!-- events OBS source: 380x460 -->
-      <div class="preview-frame" id="pf-events" data-src-w="380" data-src-h="460">
+      <div class="preview-frame" id="pf-events" data-src-w="380" data-src-h="460" data-max-h="260">
         <div class="preview-scale-wrap" id="wrap-events">
           <iframe id="iframe-events" src="events.html" width="380" height="460"></iframe>
         </div>
@@ -418,7 +437,7 @@
 
       <label style="font-weight: 700; font-size: 13px; color: #94A3B8; text-transform: uppercase;">Visualização da Source em Tempo Real:</label>
       <!-- alerts OBS source typically 600x300: popup centered in transparent area -->
-      <div class="preview-frame" id="pf-alerts" data-src-w="600" data-src-h="300">
+      <div class="preview-frame" id="pf-alerts" data-src-w="600" data-src-h="300" data-max-h="180">
         <div class="preview-scale-wrap" id="wrap-alerts">
           <iframe id="iframe-alerts" src="alerts.html" width="600" height="300"></iframe>
         </div>
@@ -482,7 +501,7 @@
       </div>
 
       <label style="font-weight: 700; font-size: 13px; color: #94A3B8; text-transform: uppercase;">Visualização da Cena em Tempo Real:</label>
-      <div class="preview-frame" id="pf-scene" data-src-w="1920" data-src-h="1080">
+      <div class="preview-frame" id="pf-scene" data-src-w="1920" data-src-h="1080" data-max-h="260">
         <div class="preview-scale-wrap" id="wrap-scene">
           <iframe id="scene-preview" src="starting.html" width="1920" height="1080"></iframe>
         </div>
@@ -849,25 +868,35 @@
       broadcastData('status_update', state);
     }
 
-    // ─── Scale previews to fit their native source dimensions ───────────────
-    // Each .preview-frame has data-src-w and data-src-h (the real OBS source size).
-    // We compute a CSS scale so the iframe fits exactly inside the card width.
+    // ─── Scale previews to fit a target box (maintain aspect ratio) ──────────
+    // Max preview height per overlay type (via data-max-h attribute, default 220px).
+    // Scale is min(containerW/srcW, maxH/srcH) so the overlay fits INSIDE the box.
     function fitPreviews() {
       document.querySelectorAll('.preview-frame[data-src-w]').forEach(frame => {
-        const srcW = parseInt(frame.dataset.srcW, 10);
-        const srcH = parseInt(frame.dataset.srcH, 10);
-        const containerW = frame.offsetWidth;
-        const scale = containerW / srcW;
-        const scaledH = Math.ceil(srcH * scale);
+        const srcW    = parseInt(frame.dataset.srcW, 10);
+        const srcH    = parseInt(frame.dataset.srcH, 10);
+        const maxH    = parseInt(frame.dataset.maxH || '220', 10);
+        const containerW = frame.parentElement ? frame.parentElement.offsetWidth - 32 : frame.offsetWidth;
 
-        frame.style.height = scaledH + 'px';
+        const scaleByW = containerW / srcW;
+        const scaleByH = maxH / srcH;
+        const scale    = Math.min(scaleByW, scaleByH);
+
+        const previewW = Math.ceil(srcW * scale);
+        const previewH = Math.ceil(srcH * scale);
+
+        // Set the outer box to the scaled dimensions (centered)
+        frame.style.height = previewH + 'px';
 
         const wrap = frame.querySelector('.preview-scale-wrap');
         if (wrap) {
-          wrap.style.width = srcW + 'px';
+          wrap.style.width  = srcW + 'px';
           wrap.style.height = srcH + 'px';
           wrap.style.transform = `scale(${scale})`;
           wrap.style.transformOrigin = 'top left';
+          // center horizontally if narrower than card
+          const leftOffset = Math.max(0, Math.floor((containerW - previewW) / 2));
+          wrap.style.marginLeft = leftOffset + 'px';
         }
       });
     }
