@@ -353,7 +353,8 @@
 
   <script src="/socket.io/socket.io.js"></script>
   <script>
-    const baseUrl = window.location.origin;
+    const onlineDomain = 'https://highland-hood-answers-steam.trycloudflare.com';
+    const baseUrl = window.location.origin.includes('localhost') ? onlineDomain : window.location.origin;
 
     const socket = io();
 
