@@ -207,6 +207,12 @@
         <span>CENTRAL DE OVERLAYS & STREAMTOOLS</span>
       </div>
       <div id="cloud-status-badge" style="font-size: 13px; color: #10B981; font-weight: 700;">● CLOUD RELAY ATIVO (Porta 443 WSS)</div>
+      <div id="twitch-auth-area" style="display:flex;align-items:center;justify-content:flex-end;gap:8px;flex-wrap:wrap;max-width:760px;">
+        <input id="twitch-client-id" type="text" autocomplete="off" spellcheck="false" placeholder="Twitch Client ID (configuracao unica)" aria-label="Twitch Client ID" style="width:235px;height:34px;border:1px solid rgba(145,70,255,.55);border-radius:7px;background:#11131A;color:#F8FAFC;padding:0 10px;font-size:12px;outline:none;">
+        <div id="twitch-auth-status" style="font-size:12px;color:#94A3B8;font-weight:700;min-width:210px;text-align:right;">Twitch nao ligada</div>
+        <button id="btn-twitch-login" onclick="twitchOAuthLogin()" class="btn" style="background:#9146FF;font-size:12px;padding:7px 14px;">Ligar Twitch</button>
+        <button id="btn-twitch-logout" onclick="twitchOAuthLogout()" class="btn" style="display:none;background:#343746;font-size:12px;padding:7px 14px;">Desligar</button>
+      </div>
     </div>
 
     <!-- CARD 1: CONTADOR DE ESPECTADORES -->
@@ -994,5 +1000,6 @@
       setTimeout(fitPreviews, 100);
     }
   </script>
+  <script src="twitch-eventsub.js"></script>
 </body>
 </html>

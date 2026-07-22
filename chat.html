@@ -209,9 +209,9 @@
 
           twitchWs.onopen = () => {
             twitchConnected = true;
-            twitchWs.send('CAP REQ :twitch.tv/tags twitch.tv/commands');
             twitchWs.send('PASS SCHMOOPIIE');
             twitchWs.send('NICK justinfan' + Math.floor(Math.random() * 99999));
+            twitchWs.send('CAP REQ :twitch.tv/tags twitch.tv/commands twitch.tv/membership');
             twitchWs.send('JOIN #' + TWITCH_CHANNEL);
           };
 
