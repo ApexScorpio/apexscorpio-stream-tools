@@ -109,22 +109,27 @@
     });
 
     function setPillVisible(pill, visible) {
+      if (!pill) return;
+      const isHidden = pill.style.display === 'none' || pill.classList.contains('hiding');
       if (visible) {
-        pill.classList.remove('hiding');
-        pill.style.display = 'inline-flex';
-        // Restart the enter animation
-        pill.style.animation = 'none';
-        pill.offsetHeight; // force reflow
-        pill.style.animation = '';
+        if (isHidden) {
+          pill.classList.remove('hiding');
+          pill.style.display = 'inline-flex';
+          pill.classList.remove('animate-enter');
+          void pill.offsetWidth; // force DOM reflow
+          pill.classList.add('animate-enter');
+        }
       } else {
-        // Play exit animation, then hide
-        pill.classList.add('hiding');
-        setTimeout(() => {
-          if (pill.classList.contains('hiding')) {
-            pill.style.display = 'none';
-            pill.classList.remove('hiding');
-          }
-        }, 320);
+        if (!isHidden) {
+          pill.classList.add('hiding');
+          pill.classList.remove('animate-enter');
+          setTimeout(() => {
+            if (pill.classList.contains('hiding')) {
+              pill.style.display = 'none';
+              pill.classList.remove('hiding');
+            }
+          }, 290);
+        }
       }
     }
 
@@ -155,12 +160,10 @@
       const animateCount = (el, newVal) => {
         const formatted = fmt(newVal);
         if (el.innerText !== formatted) {
-          el.style.transform = 'scale(1.25)';
-          el.style.color = '#FFFFFF';
           el.innerText = formatted;
-          setTimeout(() => {
-            el.style.transform = 'scale(1)';
-          }, 200);
+          el.classList.remove('bump');
+          void el.offsetWidth; // force DOM reflow
+          el.classList.add('bump');
         }
       };
 
@@ -186,6 +189,7 @@
       if (n >= 1000)    return (n/1000).toFixed(1) + 'K';
       return String(n);
     }
+    applyConfig();
   </script>
 </body>
 </html>
