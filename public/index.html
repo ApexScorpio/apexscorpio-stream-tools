@@ -444,15 +444,8 @@
 
   <script>
     const socket = io();
-    async function updatePublicUrls() {
-      let baseUrl = window.location.origin;
-      try {
-        const res = await fetch('/api/public-url');
-        const data = await res.json();
-        if (data && data.publicBaseUrl) {
-          baseUrl = data.publicBaseUrl;
-        }
-      } catch (e) {}
+    function updatePublicUrls() {
+      const baseUrl = 'http://localhost:3000';
 
       document.getElementById('url-viewers').value = `${baseUrl}/viewers.html`;
       document.getElementById('url-chat').value = `${baseUrl}/chat.html`;

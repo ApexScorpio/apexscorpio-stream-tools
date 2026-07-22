@@ -22,8 +22,8 @@ app.use(express.static(path.join(__dirname, 'public')));
 
 const CONFIG_FILE = path.join(__dirname, 'config.json');
 
-// Active public domain URL
-let publicBaseUrl = process.env.PUBLIC_URL || 'https://montana-favour-dialogue-programme.trycloudflare.com';
+// Permanent Local Base URL for OBS / Streamlabs OBS
+const localBaseUrl = `http://localhost:${PORT}`;
 
 // Global state for multi-platform stream status (Twitch, YouTube, Facebook)
 const streamState = {
@@ -160,19 +160,7 @@ app.get('/api/status', (req, res) => res.json(streamState));
 app.get('/api/config', (req, res) => res.json(overlayConfig));
 
 app.get('/api/public-url', (req, res) => {
-  const host = req.get('host');
-  let detectedUrl = publicBaseUrl;
-  if (host && !host.includes('localhost') && !host.includes('127.0.0.1')) {
-    detectedUrl = `https://${host}`;
-  }
-  res.json({ publicBaseUrl: detectedUrl });
-});
-
-app.post('/api/public-url', (req, res) => {
-  if (req.body.publicBaseUrl) {
-    publicBaseUrl = req.body.publicBaseUrl;
-  }
-  res.json({ success: true, publicBaseUrl });
+  res.json({ publicBaseUrl: localBaseUrl });
 });
 
 app.post('/api/config', (req, res) => {
@@ -242,6 +230,6 @@ app.post('/api/simulate-counts', (req, res) => {
 server.listen(PORT, () => {
   console.log(`=======================================================`);
   console.log(`🚀 ApexScorpio Streamlabs Overlay Suite is LIVE!`);
-  console.log(`👉 Active Tunnel URL: ${publicBaseUrl}`);
+  console.log(`👉 Permanent OBS Localhost URL: http://localhost:${PORT}`);
   console.log(`=======================================================`);
 });
