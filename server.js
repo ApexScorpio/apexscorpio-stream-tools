@@ -22,6 +22,18 @@ app.use(express.static(__dirname));
 app.use(express.static(path.join(__dirname, 'public')));
 
 const CONFIG_FILE = path.join(__dirname, 'config.json');
+const LOG_FILE = path.join(__dirname, 'stream_tools.log');
+const EVENTS_FILE = path.join(__dirname, 'events_history.json');
+
+// System Logger with file persistence
+function logSystem(level, component, message) {
+  const timestamp = new Date().toISOString();
+  const logLine = `[${timestamp}] [${level.toUpperCase()}] [${component}] ${message}\n`;
+  console.log(`[${component}] ${message}`);
+  try {
+    fs.appendFileSync(LOG_FILE, logLine, 'utf8');
+  } catch (e) {}
+}
 
 // Permanent GitHub Pages / Cloud domain URL for Apex Scorpio Stream Tools
 let publicBaseUrl = process.env.PUBLIC_URL || 'https://apexscorpio.github.io/apexscorpio-stream-tools';
@@ -160,6 +172,19 @@ io.on('connection', (socket) => {
 app.get('/api/health', (req, res) => res.json({ ok: true, uptime: process.uptime() }));
 app.get('/api/status', (req, res) => res.json(streamState));
 app.get('/api/config', (req, res) => res.json(overlayConfig));
+
+app.get('/api/logs', (req, res) => {
+  try {
+    if (fs.existsSync(LOG_FILE)) {
+      const logs = fs.readFileSync(LOG_FILE, 'utf8');
+      res.type('text/plain').send(logs);
+    } else {
+      res.type('text/plain').send('[System] Log file is empty or has not been created yet.');
+    }
+  } catch (e) {
+    res.status(500).send('Error reading log file: ' + e.message);
+  }
+});
 
 app.get('/api/public-url', (req, res) => {
   const host = req.get('host');

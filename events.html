@@ -176,6 +176,34 @@
       });
     }
 
+    // Permanent events store in localStorage
+    function saveEventsToStorage() {
+      try {
+        const eventsToSave = [];
+        Array.from(feed.children).forEach(child => {
+          if (!child.classList.contains('is-test-msg')) {
+            eventsToSave.push(child.outerHTML);
+          }
+        });
+        localStorage.setItem('apex_permanent_events', JSON.stringify(eventsToSave.slice(0, cfg.maxItems || 15)));
+      } catch(e) {}
+    }
+
+    function restoreEventsFromStorage() {
+      try {
+        const saved = localStorage.getItem('apex_permanent_events');
+        if (saved) {
+          const list = JSON.parse(saved);
+          feed.innerHTML = '';
+          list.forEach(html => {
+            const temp = document.createElement('div');
+            temp.innerHTML = html;
+            if (temp.firstElementChild) feed.appendChild(temp.firstElementChild);
+          });
+        }
+      } catch(e) {}
+    }
+
     function addCard(event, platform) {
       const platName = { twitch:'Twitch', youtube:'YouTube', facebook:'Facebook' }[platform] || 'Twitch';
 
@@ -198,7 +226,7 @@
 
       feed.insertBefore(card, feed.firstChild);
 
-      while (feed.children.length > (cfg.maxItems || 8)) {
+      while (feed.children.length > (cfg.maxItems || 15)) {
         const oldest = feed.lastChild;
         if (oldest) {
           oldest.classList.add('removing');
@@ -207,17 +235,23 @@
         }
       }
 
-      // Auto-expire test events after 8 seconds
-      if (event.isTest) {
+      if (!event.isTest) {
+        saveEventsToStorage();
+      } else {
+        // Auto-expire test events after 8 seconds
         setTimeout(() => {
           card.style.animation = 'none';
           card.classList.add('removing');
-          setTimeout(() => card.remove(), 380);
+          setTimeout(() => {
+            card.remove();
+            saveEventsToStorage();
+          }, 380);
         }, 8000);
       }
     }
 
     loadSavedConfig();
+    restoreEventsFromStorage();
     applyConfig();
 
     // YouTube Live: show superchats and new members as events

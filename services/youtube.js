@@ -25,67 +25,90 @@ class YoutubeService {
 
   async checkStatus() {
     try {
-      // 1. Fetch channel live URL: https://www.youtube.com/@apexscorpio/live
-      const targetUrl = `https://www.youtube.com/${this.channelHandle}/live`;
-      const response = await axios.get(targetUrl, {
-        headers: {
-          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-          'Accept-Language': 'en-US,en;q=0.9,pt-PT;q=0.8'
-        },
-        timeout: 10000
-      });
+      let videoId = null;
+      let isLive = false;
+      let count = 0;
 
-      const html = response.data;
+      // 1. Tentar primeiro com a API oficial do YouTube v3 (se tiver YOUTUBE_API_KEY no ambiente)
+      const apiKey = process.env.YOUTUBE_API_KEY;
+      if (apiKey) {
+        try {
+          // Procurar live ativa no canal
+          const searchRes = await axios.get(`https://www.googleapis.com/youtube/v3/search?part=snippet&channelId=${this.channelHandle.replace('@','')}&type=video&eventType=live&key=${apiKey}`);
+          if (searchRes.data?.items?.length > 0) {
+            videoId = searchRes.data.items[0].id.videoId;
+            isLive = true;
 
-      // Extract canonical video ID
-      const canonicalMatch = html.match(/<link rel="canonical" href="https:\/\/www\.youtube\.com\/watch\?v=([a-zA-Z0-9_-]{11})">/);
-      const videoId = canonicalMatch ? canonicalMatch[1] : null;
+            // Buscar viewers reais na API de estatísticas
+            const statsRes = await axios.get(`https://www.googleapis.com/youtube/v3/videos?part=liveStreamingDetails&id=${videoId}&key=${apiKey}`);
+            const details = statsRes.data?.items?.[0]?.liveStreamingDetails;
+            if (details && details.concurrentViewers) {
+              count = parseInt(details.concurrentViewers, 10);
+            }
+          }
+        } catch (apiErr) {
+          console.error('[YouTube API Error - Falling back to Parallel DOM Scraping]', apiErr.message);
+        }
+      }
 
-      // Check if video is TRULY live right now (not upcoming, scheduled, or past replay)
-      const isUpcoming = html.includes('"isUpcoming":true');
-      const isLiveNow = html.includes('"isLiveNow":true') || 
-                        html.includes('"status":"LIVE"') || 
-                        html.includes('watching now') || 
-                        html.includes('a assistir') || 
-                        html.includes('espectadores');
-                        
-      const isLiveMatch = !isUpcoming && isLiveNow && (html.includes('"isLive":true') || html.includes('"isLiveContent":true'));
+      // 2. Se a API não estiver disponível ou não retornar live, executar Processo Paralelo de Leitura DOM
+      if (!isLive) {
+        const targetUrl = `https://www.youtube.com/${this.channelHandle}/live`;
+        const response = await axios.get(targetUrl, {
+          headers: {
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+            'Accept-Language': 'en-US,en;q=0.9,pt-PT;q=0.8'
+          },
+          timeout: 10000
+        });
 
-      if (videoId && isLiveMatch) {
+        const html = response.data;
+        const canonicalMatch = html.match(/<link rel="canonical" href="https:\/\/www\.youtube\.com\/watch\?v=([a-zA-Z0-9_-]{11})">/);
+        videoId = canonicalMatch ? canonicalMatch[1] : null;
+
+        const isUpcoming = html.includes('"isUpcoming":true');
+        const isLiveNow = html.includes('"isLiveNow":true') || 
+                          html.includes('"status":"LIVE"') || 
+                          html.includes('watching now') || 
+                          html.includes('a assistir') || 
+                          html.includes('espectadores');
+                          
+        isLive = !isUpcoming && isLiveNow && (html.includes('"isLive":true') || html.includes('"isLiveContent":true'));
+
+        if (videoId && isLive) {
+          const viewerPatterns = [
+            /"viewCount":\s*\{\s*"runs":\s*\[\s*\{\s*"text":\s*"([\d,\.\s]+)"/,
+            /"shortViewCount":\s*\{\s*"runs":\s*\[\s*\{\s*"text":\s*"([\d,\.\s]+)"/,
+            /"videoDetails":\s*\{[^}]*"viewCount":\s*"(\d+)"/,
+            /([\d,\.]+)\s*(?:watching now|spectators|a assistir)/i
+          ];
+
+          for (const pattern of viewerPatterns) {
+            const match = html.match(pattern);
+            if (match && match[1]) {
+              const rawStr = match[1].replace(/[^\d]/g, '');
+              if (rawStr) {
+                count = parseInt(rawStr, 10);
+                break;
+              }
+            }
+          }
+        }
+      }
+
+      if (videoId && isLive) {
         this.isLive = true;
+        this.viewers = count;
         
         if (this.activeVideoId !== videoId) {
-          console.log(`[YouTube] Live stream detected! Video ID: ${videoId}`);
+          console.log(`[YouTube] Live stream detetada com sucesso! Video ID: ${videoId}`);
           this.activeVideoId = videoId;
           this.seenMessageIds.clear();
           this.startChatPolling();
         }
-
-        // Extract viewer count from ytInitialData
-        let count = 0;
-        const viewerPatterns = [
-          /"viewCount":\s*\{\s*"runs":\s*\[\s*\{\s*"text":\s*"([\d,\.\s]+)"/,
-          /"shortViewCount":\s*\{\s*"runs":\s*\[\s*\{\s*"text":\s*"([\d,\.\s]+)"/,
-          /"videoDetails":\s*\{[^}]*"viewCount":\s*"(\d+)"/,
-          /([\d,\.]+)\s*(?:watching now|spectators|a assistir)/i
-        ];
-
-        for (const pattern of viewerPatterns) {
-          const match = html.match(pattern);
-          if (match && match[1]) {
-            const rawStr = match[1].replace(/[^\d]/g, '');
-            if (rawStr) {
-              count = parseInt(rawStr, 10);
-              break;
-            }
-          }
-        }
-
-        this.viewers = count;
       } else {
-        // Fallback search check if /live redirect wasn't caught
         if (this.isLive) {
-          console.log('[YouTube] Stream appears to have ended.');
+          console.log('[YouTube] Transmissão ao vivo terminada.');
         }
         this.isLive = false;
         this.viewers = 0;
