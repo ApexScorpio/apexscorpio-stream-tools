@@ -1,9 +1,10 @@
 /**
- * ApexScorpio YouTube Live Module v2.6
+ * ApexScorpio YouTube Live Module v2.7
  *
- * Live discovery no longer depends on search.list.
- * The official YouTube iframe player detects the current channel live video.
- * Data API calls are used only for viewer count/chat metadata and back off on 429.
+ * Sticky live detection:
+ * - the official YouTube iframe player is authoritative for online/offline;
+ * - API errors, 429s and stale cached sources can never cancel a detected live;
+ * - offline requires three continuous minutes without a player video ID.
  */
 (function (global) {
   'use strict';
@@ -12,21 +13,25 @@
   const CHANNEL_ID = 'UCF3aydfOlV88XVqW8vpdKEw';
   const CHANNEL_HANDLE = '@apexscorpio';
 
-  const STATE_KEY = 'apex_yt_live_state';
-  const VIDEO_KEY = 'apex_yt_live_video_id';
-  const API_BLOCKED_UNTIL_KEY = 'apex_yt_api_blocked_until';
-  const API_BACKOFF_KEY = 'apex_yt_api_backoff';
-  const STATE_LEADER_KEY = 'apex_yt_state_leader3';
-  const CHAT_LEADER_KEY = 'apex_yt_chat_leader3';
-  const BUS_KEY = 'apex_yt_bus3';
-  const CHANNEL_NAME = 'apex_youtube_live_bus3';
+  // v2.7 uses isolated keys so an older cached source cannot overwrite its state.
+  const STATE_KEY = 'apex_yt_live_state_v7_sticky';
+  const VIDEO_KEY = 'apex_yt_live_video_id_v7_sticky';
+  const PLAYER_LOCK_KEY = 'apex_yt_player_lock_v7_sticky';
+  const API_BLOCKED_UNTIL_KEY = 'apex_yt_api_blocked_until_v7';
+  const API_BACKOFF_KEY = 'apex_yt_api_backoff_v7';
+  const STATE_LEADER_KEY = 'apex_yt_state_leader_v7';
+  const CHAT_LEADER_KEY = 'apex_yt_chat_leader_v7';
+  const BUS_KEY = 'apex_yt_bus_v7';
+  const CHANNEL_NAME = 'apex_youtube_live_bus_v7';
 
   const LEADER_TTL_MS = 20000;
   const LEADER_HEARTBEAT_MS = 5000;
-  const PLAYER_PROBE_MS = 10000;
+  const PLAYER_PROBE_MS = 5000;
   const OEMBED_PROBE_MS = 30000;
   const DETAILS_POLL_MS = 15000;
-  const LIVE_PROBE_GRACE_MS = 90000;
+  const PLAYER_OFFLINE_AFTER_MS = 3 * 60 * 1000;
+  const PLAYER_MISS_LIMIT = 36;
+  const PLAYER_LOCK_MAX_AGE_MS = 10 * 60 * 1000;
   const MIN_API_BACKOFF_MS = 60000;
   const MAX_API_BACKOFF_MS = 15 * 60 * 1000;
   const MIN_CHAT_POLL_MS = 1000;
@@ -61,10 +66,26 @@
   let activeChatId = null;
   let liveChatPageToken = null;
   let lastPlayerVideoAt = 0;
-  let consecutiveEndedChecks = 0;
+  let consecutivePlayerMisses = 0;
   let state = loadState();
+  let playerLock = loadPlayerLock();
 
   if (!activeVideoId && state.videoId) activeVideoId = state.videoId;
+  if (playerLock && Date.now() - playerLock.seenAt < PLAYER_LOCK_MAX_AGE_MS) {
+    activeVideoId = playerLock.videoId;
+    lastPlayerVideoAt = playerLock.seenAt;
+    state = {
+      ...state,
+      isLive: true,
+      videoId: playerLock.videoId,
+      viewers: state.videoId === playerLock.videoId ? state.viewers : 0,
+      updatedAt: Date.now(),
+      error: null,
+      source: 'sticky-player-lock'
+    };
+    safeSet(STATE_KEY, JSON.stringify(state));
+    safeSet(VIDEO_KEY, playerLock.videoId);
+  }
 
   function safeGet(key) {
     try { return localStorage.getItem(key); } catch (_) { return null; }
@@ -81,6 +102,38 @@
 
   function safeRemove(key) {
     try { localStorage.removeItem(key); } catch (_) {}
+  }
+
+  function loadPlayerLock() {
+    try {
+      const parsed = JSON.parse(safeGet(PLAYER_LOCK_KEY) || 'null');
+      if (!parsed || !/^[a-zA-Z0-9_-]{11}$/.test(String(parsed.videoId || ''))) return null;
+      return {
+        videoId: parsed.videoId,
+        seenAt: Number(parsed.seenAt || 0)
+      };
+    } catch (_) {
+      return null;
+    }
+  }
+
+  function savePlayerLock(videoId) {
+    if (!/^[a-zA-Z0-9_-]{11}$/.test(String(videoId || ''))) return;
+    playerLock = { videoId, seenAt: Date.now() };
+    lastPlayerVideoAt = playerLock.seenAt;
+    safeSet(PLAYER_LOCK_KEY, JSON.stringify(playerLock));
+  }
+
+  function clearPlayerLock() {
+    playerLock = null;
+    safeRemove(PLAYER_LOCK_KEY);
+  }
+
+  function hasRecentPlayerLock() {
+    const lock = playerLock || loadPlayerLock();
+    return Boolean(
+      lock && Date.now() - Number(lock.seenAt || 0) < PLAYER_OFFLINE_AFTER_MS
+    );
   }
 
   function loadState() {
@@ -152,6 +205,10 @@
       const incoming = packet.payload;
       const incomingUpdatedAt = Number(incoming.updatedAt || 0);
       if (state.updatedAt && incomingUpdatedAt && incomingUpdatedAt < state.updatedAt) return;
+
+      // A positive player detection is authoritative. Ignore any offline packet
+      // while the sticky player lock is still recent.
+      if (!incoming.isLive && hasRecentPlayerLock()) return;
 
       state = {
         isLive: Boolean(incoming.isLive),
@@ -235,8 +292,8 @@
   function publishProvisionalLive(videoId, source) {
     if (!videoId) return;
 
-    lastPlayerVideoAt = Date.now();
-    consecutiveEndedChecks = 0;
+    savePlayerLock(videoId);
+    consecutivePlayerMisses = 0;
     const sameVideo = state.videoId === videoId;
 
     publishState({
@@ -255,8 +312,8 @@
 
   function publishConfirmedLive(video, source) {
     const details = video?.liveStreamingDetails || {};
-    lastPlayerVideoAt = Date.now();
-    consecutiveEndedChecks = 0;
+    savePlayerLock(video.id);
+    consecutivePlayerMisses = 0;
 
     publishState({
       isLive: true,
@@ -274,8 +331,14 @@
     ensureChatElection();
   }
 
-  function publishOffline(error = null, source = null) {
-    consecutiveEndedChecks = 0;
+  function publishOfflineFromPlayer(error = null) {
+    // No API response can call this. Offline is accepted only after the player
+    // has continuously failed to return a video ID for the configured window.
+    if (hasRecentPlayerLock()) return false;
+    if (consecutivePlayerMisses < PLAYER_MISS_LIMIT) return false;
+
+    clearPlayerLock();
+    consecutivePlayerMisses = 0;
     publishState({
       isLive: false,
       viewers: 0,
@@ -283,8 +346,9 @@
       liveChatId: null,
       title: '',
       error,
-      source
+      source: 'player-missing'
     });
+    return true;
   }
 
   function currentApiBlock() {
@@ -387,26 +451,19 @@
         return;
       }
 
-      const explicitlyEnded = Boolean(video?.liveStreamingDetails?.actualEndTime);
-      const playerStillSeesVideo =
-        activeVideoId === requestedId &&
-        Date.now() - lastPlayerVideoAt < LIVE_PROBE_GRACE_MS;
-
-      if (playerStillSeesVideo) {
-        publishProvisionalLive(requestedId, 'iframe-player');
-        return;
+      // The Data API is metadata-only in v2.7. Even an actualEndTime response
+      // cannot cancel a live that the player has detected. The player probe is
+      // the sole authority for switching offline.
+      if (state.isLive && state.videoId) {
+        publishState({
+          ...state,
+          isLive: true,
+          error: video?.liveStreamingDetails?.actualEndTime
+            ? 'Data API reports ended; awaiting player confirmation'
+            : null,
+          source: state.source || 'sticky-player'
+        });
       }
-
-      if (explicitlyEnded) {
-        consecutiveEndedChecks += 1;
-        if (consecutiveEndedChecks >= 2) {
-          publishOffline(null, 'ended-video');
-        } else {
-          scheduleDetails(10000);
-        }
-        return;
-      }
-
       scheduleDetails(30000);
     } catch (error) {
       if (!stateLeader) return;
@@ -445,8 +502,25 @@
 
     const videoId = extractPlayerVideoId();
     if (videoId) {
+      consecutivePlayerMisses = 0;
       activeVideoId = videoId;
-      publishProvisionalLive(videoId, 'iframe-player');
+      savePlayerLock(videoId);
+
+      // Avoid rebroadcasting the same live every five seconds. A state update is
+      // only needed when the video changes, the state was offline, or the prior
+      // source was not the player.
+      if (!state.isLive || state.videoId !== videoId || state.source !== 'iframe-player') {
+        publishProvisionalLive(videoId, 'iframe-player');
+      } else {
+        scheduleDetails(0);
+      }
+    } else if (playerReady) {
+      consecutivePlayerMisses += 1;
+      const age = Date.now() - Number(lastPlayerVideoAt || playerLock?.seenAt || 0);
+
+      if (state.isLive && age >= PLAYER_OFFLINE_AFTER_MS) {
+        publishOfflineFromPlayer(null);
+      }
     }
 
     schedulePlayerProbe(PLAYER_PROBE_MS);
@@ -935,12 +1009,15 @@
 
     debug() {
       return {
-        version: '2.6',
+        version: '2.7',
         instanceId,
         stateLeader,
         chatLeader,
         playerReady,
         playerVideoId: extractPlayerVideoId(),
+        consecutivePlayerMisses,
+        lastPlayerVideoAt,
+        playerLock,
         activeVideoId,
         activeChatId,
         apiBlockedUntil: currentApiBlock(),
@@ -957,7 +1034,7 @@
 
     channelId: CHANNEL_ID,
     channelHandle: CHANNEL_HANDLE,
-    version: '2.6'
+    version: '2.7'
   };
 
   start();
