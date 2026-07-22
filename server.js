@@ -23,7 +23,7 @@ app.use(express.static(path.join(__dirname, 'public')));
 const CONFIG_FILE = path.join(__dirname, 'config.json');
 
 // Fixed public domain URL for Apex Scorpio Stream Tools
-let publicBaseUrl = process.env.PUBLIC_URL || 'https://apexscorpio-stream.loca.lt';
+let publicBaseUrl = process.env.PUBLIC_URL || 'https://highland-hood-answers-steam.trycloudflare.com';
 
 // Global state for multi-platform stream status (Twitch, YouTube, Facebook)
 const streamState = {
