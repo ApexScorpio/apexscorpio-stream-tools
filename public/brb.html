@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>ApexScorpio - Be Right Back / Intervalo</title>
   <link rel="stylesheet" href="css/style.css">
+  <script src="https://cdn.jsdelivr.net/npm/mqtt@5.3.4/dist/mqtt.min.js"></script>
   <style>
     body {
       background: #08080C;
@@ -101,5 +102,32 @@
     <span>•</span>
     <span>STREAM PAUSED</span>
   </div>
+
+  <script>
+    const bc = typeof BroadcastChannel !== 'undefined' ? new BroadcastChannel('apex_scorpio_stream_tools') : null;
+
+    // Multi-Broker Cloud Relay (Port 443 HTTPS + 8000 + 8084)
+    const MQTT_BROKERS = [
+      'wss://broker.emqx.io:443/mqtt',
+      'wss://broker.hivemq.com:8000/mqtt',
+      'wss://broker.emqx.io:8084/mqtt'
+    ];
+
+    if (typeof mqtt !== 'undefined') {
+      MQTT_BROKERS.forEach(url => {
+        try {
+          const mqttClient = mqtt.connect(url, {
+            clientId: 'scorpio_brb_' + Math.random().toString(16).substring(2, 8),
+            connectTimeout: 4000,
+            keepalive: 30
+          });
+          mqttClient.on('connect', () => {
+            mqttClient.subscribe('apexscorpio/streamtools/v1/cfg/#');
+            mqttClient.subscribe('apexscorpio/streamtools/v1/events/#');
+          });
+        } catch(e) {}
+      });
+    }
+  </script>
 </body>
 </html>

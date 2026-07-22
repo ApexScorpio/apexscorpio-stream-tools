@@ -3,8 +3,9 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>ApexScorpio - Technical Issues</title>
+  <title>ApexScorpio - Technical Difficulties</title>
   <link rel="stylesheet" href="css/style.css">
+  <script src="https://cdn.jsdelivr.net/npm/mqtt@5.3.4/dist/mqtt.min.js"></script>
   <style>
     body {
       background: #08080C;
@@ -35,18 +36,18 @@
     }
 
     .as-logo-container img {
-      max-width: 160px;
+      max-width: 220px;
       height: auto;
-      filter: drop-shadow(0 0 25px rgba(245, 158, 11, 0.7));
+      filter: drop-shadow(0 0 25px rgba(245, 158, 11, 0.6));
     }
 
     .scene-title {
       font-family: 'Orbitron', sans-serif;
-      font-size: 34px;
+      font-size: 36px;
       font-weight: 900;
       color: #F59E0B;
       margin-top: 24px;
-      letter-spacing: 3px;
+      letter-spacing: 4px;
       text-transform: uppercase;
       text-shadow: 0 0 20px rgba(245, 158, 11, 0.8);
       z-index: 2;
@@ -54,7 +55,7 @@
 
     .scene-subtitle {
       font-family: 'Outfit', sans-serif;
-      font-size: 18px;
+      font-size: 20px;
       color: #94A3B8;
       margin-top: 8px;
       font-weight: 600;
@@ -65,7 +66,7 @@
     .status-badge {
       margin-top: 24px;
       font-family: 'Outfit', sans-serif;
-      font-size: 15px;
+      font-size: 16px;
       font-weight: 800;
       color: #FFF;
       background: rgba(245, 158, 11, 0.2);
@@ -76,6 +77,7 @@
       align-items: center;
       gap: 10px;
       z-index: 2;
+      box-shadow: 0 0 20px rgba(245, 158, 11, 0.3);
     }
   </style>
 </head>
@@ -94,5 +96,32 @@
     <span>•</span>
     <span>WE WILL BE BACK SHORTLY</span>
   </div>
+
+  <script>
+    const bc = typeof BroadcastChannel !== 'undefined' ? new BroadcastChannel('apex_scorpio_stream_tools') : null;
+
+    // Multi-Broker Cloud Relay (Port 443 HTTPS + 8000 + 8084)
+    const MQTT_BROKERS = [
+      'wss://broker.emqx.io:443/mqtt',
+      'wss://broker.hivemq.com:8000/mqtt',
+      'wss://broker.emqx.io:8084/mqtt'
+    ];
+
+    if (typeof mqtt !== 'undefined') {
+      MQTT_BROKERS.forEach(url => {
+        try {
+          const mqttClient = mqtt.connect(url, {
+            clientId: 'scorpio_tech_' + Math.random().toString(16).substring(2, 8),
+            connectTimeout: 4000,
+            keepalive: 30
+          });
+          mqttClient.on('connect', () => {
+            mqttClient.subscribe('apexscorpio/streamtools/v1/cfg/#');
+            mqttClient.subscribe('apexscorpio/streamtools/v1/events/#');
+          });
+        } catch(e) {}
+      });
+    }
+  </script>
 </body>
 </html>

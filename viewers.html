@@ -129,28 +129,40 @@
       }
     }
 
-    // Public WSS Cloud Relay + Wildcard Retained Message Subscribing
+    // Multi-Broker Cloud Relay (Port 443 HTTPS + 8000 + 8084)
+    const MQTT_BROKERS = [
+      'wss://broker.emqx.io:443/mqtt',
+      'wss://broker.hivemq.com:8000/mqtt',
+      'wss://broker.emqx.io:8084/mqtt'
+    ];
+
     if (typeof mqtt !== 'undefined') {
-      try {
-        const mqttClient = mqtt.connect('wss://broker.emqx.io:8084/mqtt', { clientId: 'scorpio_viewers_' + Math.random().toString(16).substring(2, 8) });
-        mqttClient.on('connect', () => {
-          mqttClient.subscribe('apexscorpio/streamtools/v1/cfg/#');
-          mqttClient.subscribe('apexscorpio/streamtools/v1/events/#');
-        });
-        mqttClient.on('message', (topic, message) => {
-          try {
-            const data = JSON.parse(message.toString());
-            if (topic.includes('clear')) {
-              doResetToRealState();
-            } else if (topic.includes('/cfg/viewers')) {
-              cfg = { ...cfg, ...data };
-              applyConfig();
-            } else if (data && (data.type || data.payload)) {
-              handleIncomingData(data.type || data.payload?.type, data.payload || data);
-            }
-          } catch(err) {}
-        });
-      } catch(e) {}
+      MQTT_BROKERS.forEach(url => {
+        try {
+          const mqttClient = mqtt.connect(url, {
+            clientId: 'scorpio_viewers_' + Math.random().toString(16).substring(2, 8),
+            connectTimeout: 4000,
+            keepalive: 30
+          });
+          mqttClient.on('connect', () => {
+            mqttClient.subscribe('apexscorpio/streamtools/v1/cfg/#');
+            mqttClient.subscribe('apexscorpio/streamtools/v1/events/#');
+          });
+          mqttClient.on('message', (topic, message) => {
+            try {
+              const data = JSON.parse(message.toString());
+              if (topic.includes('clear')) {
+                doResetToRealState();
+              } else if (topic.includes('/cfg/viewers')) {
+                cfg = { ...cfg, ...data };
+                applyConfig();
+              } else if (data && (data.type || data.payload)) {
+                handleIncomingData(data.type || data.payload?.type, data.payload || data);
+              }
+            } catch(err) {}
+          });
+        } catch(e) {}
+      });
     }
 
     if (bc) {
