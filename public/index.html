@@ -192,7 +192,7 @@
     <div style="background: linear-gradient(135deg, rgba(14,10,30,0.98), rgba(8,8,12,0.98)); border: 1px solid rgba(16,185,129,0.5); border-radius: 14px; padding: 16px 20px; margin-bottom: 18px;">
       <div style="font-size: 13px; font-weight: 800; color: #10B981; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 6px;">⚡ Sincronização 100% Pública e URLs Limpos para o Streamlabs OBS</div>
       <div style="font-size: 13px; color: #CBD5E1; line-height: 1.5;">
-        Usa sempre os <strong>URLs fixos e públicos</strong> abaixo no SLOBS. Ao alterares qualquer opção neste Dashboard, as tuas definições guardam-se no servidor Cloud WSS público e atualizam o SLOBS em tempo real!
+        Usa sempre os <strong>URLs fixos e públicos</strong> abaixo no SLOBS. Ao alterares qualquer opção neste Dashboard, as tuas definições guardam-se no servidor Cloud WSS público e atualizam o SLOBS em tempo real! Os testes de simulação duram 8 segundos e restauram automaticamente os valores reais.
       </div>
     </div>
 
@@ -242,8 +242,8 @@
       </div>
 
       <div class="controls-group">
-        <button class="btn" style="background: #10B981;" onclick="simulateViewers()">🎲 Simular Live (50 Twitch / 120 YouTube / 35 FB)</button>
-        <button class="btn" style="background: #64748B;" onclick="resetViewers()">🔄 Resetar Viewers (0)</button>
+        <button class="btn" id="btn-sim-viewers" style="background: #10B981;" onclick="simulateViewers()">🎲 Simular Live (50 Twitch / 120 YouTube / 35 FB por 8s)</button>
+        <button class="btn" style="background: #64748B;" onclick="resetViewers()">🔄 Restaurar Valores Reais Agora</button>
       </div>
 
       <label style="font-weight: 700; font-size: 13px; color: #94A3B8; text-transform: uppercase;">Visualização da Source em Tempo Real:</label>
@@ -720,24 +720,49 @@
       triggerRandomEvent();
     }
 
-    function simulateViewers() {
+    let simTimer = null;
+    function simulateViewers(durationSec = 8) {
+      if (simTimer) clearTimeout(simTimer);
+
       const state = {
         twitch: { isLive: true, viewers: 50 },
         youtube: { isLive: true, viewers: 120 },
         facebook: { isLive: true, viewers: 35 },
-        totalViewers: 205
+        totalViewers: 205,
+        isTest: true,
+        testDuration: durationSec
       };
       broadcastEvent('status_update', state);
+
+      const btn = document.getElementById('btn-sim-viewers');
+      if (btn) btn.innerText = `⏳ Simulação Ativa (${durationSec}s restante)...`;
+
+      let count = durationSec;
+      const interval = setInterval(() => {
+        count--;
+        if (btn && count > 0) btn.innerText = `⏳ Simulação Ativa (${count}s restante)...`;
+        if (count <= 0) clearInterval(interval);
+      }, 1000);
+
+      // Revert back to real values after 8 seconds!
+      simTimer = setTimeout(() => {
+        resetViewers();
+        if (btn) btn.innerText = '🎲 Simular Live (50 Twitch / 120 YouTube / 35 FB por 8s)';
+      }, durationSec * 1000);
     }
 
     function resetViewers() {
+      if (simTimer) clearTimeout(simTimer);
       const state = {
         twitch: { isLive: false, viewers: 0 },
         youtube: { isLive: false, viewers: 0 },
         facebook: { isLive: false, viewers: 0 },
-        totalViewers: 0
+        totalViewers: 0,
+        isTest: false
       };
       broadcastEvent('status_update', state);
+      const btn = document.getElementById('btn-sim-viewers');
+      if (btn) btn.innerText = '🎲 Simular Live (50 Twitch / 120 YouTube / 35 FB por 8s)';
     }
 
     function fitPreviews() {
