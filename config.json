@@ -9,8 +9,12 @@
     "fontSize": 15
   },
   "chat": {
-    "fadeSeconds": 0,
-    "showBg": true,
+    "showTwitch": true,
+    "showYoutube": true,
+    "showFacebook": true,
+    "displayMode": "pill",
+    "fadeSeconds": 5,
+    "showBg": false,
     "showBadges": true,
     "fontSize": 14,
     "maxMessages": 50

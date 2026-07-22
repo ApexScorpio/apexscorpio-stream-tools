@@ -34,7 +34,7 @@
     </div>
 
     <div class="platform-pill total" id="pill-total">
-      <span style="font-size:12px;font-weight:900;font-family:'Outfit',sans-serif;">TOTAL</span>
+      <span style="font-size:11px;font-weight:900;font-family:'Outfit',sans-serif;letter-spacing:1px;">TOTAL</span>
       <span class="count-number" id="count-total">0</span>
     </div>
 
@@ -62,7 +62,10 @@
       total:    document.getElementById('count-total'),
     };
 
-    let cfg = { showTwitch:true, showYoutube:true, showFacebook:true, showTotal:true, showBg:true, layout:'horizontal', fontSize:15 };
+    let cfg = {
+      showTwitch: true, showYoutube: true, showFacebook: true, showTotal: true,
+      showBg: true, layout: 'horizontal', fontSize: 15
+    };
 
     socket.on('config_update', (config) => {
       if (config && config.viewers) {
@@ -71,11 +74,31 @@
       }
     });
 
+    function setPillVisible(pill, visible) {
+      if (visible) {
+        pill.classList.remove('hiding');
+        pill.style.display = 'inline-flex';
+        // Restart the enter animation
+        pill.style.animation = 'none';
+        pill.offsetHeight; // force reflow
+        pill.style.animation = '';
+      } else {
+        // Play exit animation, then hide
+        pill.classList.add('hiding');
+        setTimeout(() => {
+          if (pill.classList.contains('hiding')) {
+            pill.style.display = 'none';
+            pill.classList.remove('hiding');
+          }
+        }, 320);
+      }
+    }
+
     function applyConfig() {
-      pills.twitch.style.display   = cfg.showTwitch   ? 'flex' : 'none';
-      pills.youtube.style.display  = cfg.showYoutube  ? 'flex' : 'none';
-      pills.facebook.style.display = cfg.showFacebook ? 'flex' : 'none';
-      pills.total.style.display    = cfg.showTotal    ? 'flex' : 'none';
+      setPillVisible(pills.twitch,   cfg.showTwitch);
+      setPillVisible(pills.youtube,  cfg.showYoutube);
+      setPillVisible(pills.facebook, cfg.showFacebook);
+      setPillVisible(pills.total,    cfg.showTotal);
 
       // Background toggle
       if (cfg.showBg) {
@@ -86,38 +109,47 @@
         container.classList.add('no-bg');
       }
 
-      // Layout
-      if (cfg.layout === 'vertical') {
-        container.classList.add('layout-vertical');
-      } else {
-        container.classList.remove('layout-vertical');
-      }
+      // Layout direction
+      container.classList.toggle('layout-vertical', cfg.layout === 'vertical');
 
-      // Font size
-      const fs = cfg.fontSize || 15;
-      document.querySelectorAll('.count-number').forEach(el => el.style.fontSize = fs + 'px');
+      // Font size on count numbers
+      const fs = (cfg.fontSize || 15) + 'px';
+      Object.values(counts).forEach(el => el.style.fontSize = fs);
     }
 
     socket.on('status_update', (state) => {
+      const animateCount = (el, newVal) => {
+        const formatted = fmt(newVal);
+        if (el.innerText !== formatted) {
+          el.style.transform = 'scale(1.25)';
+          el.style.color = '#FFFFFF';
+          el.innerText = formatted;
+          setTimeout(() => {
+            el.style.transform = 'scale(1)';
+          }, 200);
+        }
+      };
+
       if (state.twitch) {
-        counts.twitch.innerText = fmt(state.twitch.viewers);
-        dots.twitch.classList.toggle('online', state.twitch.isLive);
+        animateCount(counts.twitch, state.twitch.viewers);
+        dots.twitch.classList.toggle('online', !!state.twitch.isLive);
       }
       if (state.youtube) {
-        counts.youtube.innerText = fmt(state.youtube.viewers);
-        dots.youtube.classList.toggle('online', state.youtube.isLive);
+        animateCount(counts.youtube, state.youtube.viewers);
+        dots.youtube.classList.toggle('online', !!state.youtube.isLive);
       }
       if (state.facebook) {
-        counts.facebook.innerText = fmt(state.facebook.viewers);
-        dots.facebook.classList.toggle('online', state.facebook.isLive);
+        animateCount(counts.facebook, state.facebook.viewers);
+        dots.facebook.classList.toggle('online', !!state.facebook.isLive);
       }
-      counts.total.innerText = fmt(state.totalViewers || 0);
+      animateCount(counts.total, state.totalViewers || 0);
     });
 
     function fmt(n) {
-      if (n >= 1000000) return (n/1000000).toFixed(1)+'M';
-      if (n >= 1000)    return (n/1000).toFixed(1)+'K';
-      return String(n || 0);
+      n = n || 0;
+      if (n >= 1000000) return (n/1000000).toFixed(1) + 'M';
+      if (n >= 1000)    return (n/1000).toFixed(1) + 'K';
+      return String(n);
     }
   </script>
 </body>

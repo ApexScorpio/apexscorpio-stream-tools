@@ -13,7 +13,10 @@
     const socket = io();
     const feed = document.getElementById('event-feed');
 
-    let cfg = { showTwitch:true, showYoutube:true, showFacebook:true, showBg:true, showLogos:true, maxItems:8 };
+    let cfg = {
+      showTwitch: true, showYoutube: true, showFacebook: true,
+      showBg: true, showLogos: true, maxItems: 8
+    };
 
     const svgIcons = {
       twitch:   `<svg width="15" height="15" viewBox="0 0 24 24" fill="#9146FF"><path d="M11.571 4.714h1.715v5.143H11.571V4.714zm4.715 0H18v5.143h-1.714V4.714zM6 0L1.714 4.286v15.428h5.143V24l4.286-4.286h3.428L22.286 12V0H6zm14.571 11.143l-3.428 3.428h-3.429l-3 3v-3H6.857V1.714h13.714v9.429z"/></svg>`,
@@ -36,7 +39,6 @@
         feed.classList.remove('has-bg');
         feed.classList.add('no-bg');
       }
-      // Show/hide logos on existing cards
       feed.querySelectorAll('.platform-logo-badge').forEach(b => {
         b.style.display = cfg.showLogos ? 'flex' : 'none';
       });
@@ -54,8 +56,8 @@
       const platName = { twitch:'Twitch', youtube:'YouTube', facebook:'Facebook' }[platform] || 'Twitch';
 
       let typeEmoji = '🔔', action = `followed on ${platName}`, evtClass = 'follower';
-      if (event.type === 'subscriber') { typeEmoji='⭐'; action=`subscribed on ${platName}`; evtClass='subscriber'; }
-      if (event.type === 'raid')       { typeEmoji='🚀'; action=`raided with ${event.viewers||15} viewers`; evtClass='raid'; }
+      if (event.type === 'subscriber') { typeEmoji = '⭐'; action = `subscribed on ${platName}`; evtClass = 'subscriber'; }
+      if (event.type === 'raid')       { typeEmoji = '🚀'; action = `raided with ${event.viewers||15} viewers`; evtClass = 'raid'; }
 
       const card = document.createElement('div');
       card.className = `event-card ${evtClass}`;
@@ -71,8 +73,14 @@
 
       feed.insertBefore(card, feed.firstChild);
 
+      // Animate out and remove oldest card when over limit
       while (feed.children.length > (cfg.maxItems || 8)) {
-        feed.removeChild(feed.lastChild);
+        const oldest = feed.lastChild;
+        if (oldest) {
+          oldest.classList.add('removing');
+          setTimeout(() => oldest.remove(), 380);
+          break; // only remove one at a time to allow animation
+        }
       }
     }
   </script>
