@@ -30,22 +30,44 @@ const streamState = {
   totalViewers: 0
 };
 
-// Global state for overlay customization
+// Global state for expanded overlay customization options
 let overlayConfig = {
-  chat: {
-    fadeSeconds: 0,        // 0 = permanent
-    showBg: true,
-    fontSize: 14,
-    showBadges: true,
-    maxMessages: 50
-  },
   viewers: {
     showTwitch: true,
     showYoutube: true,
     showFacebook: true,
     showTotal: true,
     showBg: true,
-    layout: 'horizontal'
+    layout: 'horizontal',
+    fontSize: 15,
+    animationStyle: 'pulse'
+  },
+  chat: {
+    fadeSeconds: 0,        // 0 = permanent
+    showBg: true,
+    fontSize: 14,
+    showBadges: true,
+    maxMessages: 50,
+    animationStyle: 'cyberline'
+  },
+  events: {
+    showBg: true,
+    maxItems: 8,
+    showLogos: true,
+    fontSize: 14,
+    language: 'en'
+  },
+  alerts: {
+    playSound: true,
+    volume: 80,
+    durationSeconds: 5,
+    showClipart: true,
+    animationStyle: 'popin'
+  },
+  starting: {
+    timerMinutes: 5,
+    showSocials: true,
+    pulseGlow: true
   }
 };
 
@@ -68,13 +90,11 @@ function saveConfigToFile() {
   }
 }
 
-// Calculate and broadcast status update
 function broadcastStatus() {
   streamState.totalViewers = streamState.twitch.viewers + streamState.youtube.viewers + streamState.facebook.viewers;
   io.emit('status_update', streamState);
 }
 
-// Broadcast configuration updates to connected overlays
 function broadcastConfig() {
   saveConfigToFile();
   io.emit('config_update', overlayConfig);
@@ -87,13 +107,11 @@ const recentEvents = {
   lastRaid: '@StreamMaster (25 espectadores)'
 };
 
-// Handle chat message ingestion
 function handleChatMessage(msg) {
   console.log(`[Unified Chat] [${msg.platform.toUpperCase()}] ${msg.username}: ${msg.message}`);
   io.emit('chat_message', msg);
 }
 
-// Handle status updates from platform services
 function handleStatusUpdate(update) {
   if (update.platform === 'twitch') {
     streamState.twitch.isLive = update.isLive;
@@ -120,12 +138,10 @@ youtubeService.start();
 io.on('connection', (socket) => {
   console.log(`[Socket] Overlay client connected (${socket.id})`);
   
-  // Send initial states upon connection
   socket.emit('status_update', streamState);
   socket.emit('config_update', overlayConfig);
   socket.emit('events_update', recentEvents);
 
-  // Listen for config changes from dashboard
   socket.on('update_config', (newConfig) => {
     overlayConfig = { ...overlayConfig, ...newConfig };
     broadcastConfig();
@@ -136,14 +152,8 @@ io.on('connection', (socket) => {
   });
 });
 
-// REST API Endpoints for Dashboard & Manual Controls
-app.get('/api/status', (req, res) => {
-  res.json(streamState);
-});
-
-app.get('/api/config', (req, res) => {
-  res.json(overlayConfig);
-});
+app.get('/api/status', (req, res) => res.json(streamState));
+app.get('/api/config', (req, res) => res.json(overlayConfig));
 
 app.post('/api/config', (req, res) => {
   overlayConfig = { ...overlayConfig, ...req.body };
@@ -176,7 +186,6 @@ app.post('/api/trigger-alert', (req, res) => {
   res.json({ success: true, eventPayload, recentEvents });
 });
 
-// Test endpoint to trigger fake chat messages for testing in Streamlabs
 app.post('/api/test-message', (req, res) => {
   const { platform, username, message } = req.body;
   const plat = platform || 'twitch';
@@ -185,7 +194,7 @@ app.post('/api/test-message', (req, res) => {
   const testMsg = {
     id: `test-${Date.now()}`,
     platform: plat,
-    username: username || (plat === 'youtube' ? 'YouTubeFan_99' : (plat === 'facebook' ? 'FacebookGamer_77' : 'TwitchGamer_42')),
+    username: username || (plat === 'youtube' ? 'GamerYT_88' : (plat === 'facebook' ? 'ScorpioFB_10' : 'TwitchGamer_99')),
     userColor: colors[plat] || '#E8181F',
     message: message || `Olá @apexscorpio! Mensagem de teste em direto do ${plat.toUpperCase()}! 🔥`,
     badges: { broadcaster: false, mod: Math.random() > 0.5, subscriber: true },
@@ -196,7 +205,6 @@ app.post('/api/test-message', (req, res) => {
   res.json({ success: true, messageSent: testMsg });
 });
 
-// Endpoint to simulate viewer counts for testing overlay visual effects
 app.post('/api/simulate-counts', (req, res) => {
   const { twitchViewers, youtubeViewers, facebookViewers, twitchLive, youtubeLive, facebookLive } = req.body;
   if (twitchViewers !== undefined) streamState.twitch.viewers = Number(twitchViewers);

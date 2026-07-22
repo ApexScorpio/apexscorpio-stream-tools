@@ -3,125 +3,137 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Streamlabs Overlay - Real-Time Viewer Counter</title>
+  <title>ApexScorpio - Multi-Platform Viewer Counter Overlay</title>
   <link rel="stylesheet" href="/css/style.css">
   <script src="/socket.io/socket.io.js"></script>
 </head>
 <body class="viewers-page">
-
-  <div class="viewer-counter-container" id="viewers-container">
-    <!-- Twitch Badge -->
-    <div class="platform-pill twitch" id="twitch-pill">
+  <div class="viewer-counter-container" id="viewer-container">
+    
+    <!-- Twitch Pill -->
+    <div class="platform-pill twitch" id="pill-twitch">
       <span class="platform-icon">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
-          <path d="M11.571 4.714h1.715v5.143H11.571V4.714zm4.715 0H18v5.143h-1.714V4.714zM6 0L1.714 4.286v15.428h5.143V24l4.286-4.286h3.428L22.286 12V0H6zm14.571 11.143l-3.428 3.428h-3.429l-3 3v-3H6.857V1.714h13.714v9.429z"/>
-        </svg>
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M11.571 4.714h1.715v5.143H11.571V4.714zm4.715 0H18v5.143h-1.714V4.714zM6 0L1.714 4.286v15.428h5.143V24l4.286-4.286h3.428L22.286 12V0H6zm14.571 11.143l-3.428 3.428h-3.429l-3 3v-3H6.857V1.714h13.714v9.429z"/></svg>
       </span>
-      <span class="status-dot" id="twitch-dot"></span>
-      <span class="count-number" id="twitch-count">0</span>
+      <span class="status-dot" id="dot-twitch"></span>
+      <span class="count-number" id="count-twitch">0</span>
     </div>
 
-    <!-- YouTube Badge -->
-    <div class="platform-pill youtube" id="youtube-pill">
+    <!-- YouTube Pill -->
+    <div class="platform-pill youtube" id="pill-youtube">
       <span class="platform-icon">
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
-          <path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/>
-        </svg>
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/></svg>
       </span>
-      <span class="status-dot" id="youtube-dot"></span>
-      <span class="count-number" id="youtube-count">0</span>
+      <span class="status-dot" id="dot-youtube"></span>
+      <span class="count-number" id="count-youtube">0</span>
     </div>
 
-    <!-- Total Viewers Badge -->
-    <div class="platform-pill total" id="total-pill">
-      <span style="font-size: 13px; text-transform: uppercase; letter-spacing: 0.5px; opacity: 0.8;">TOTAL:</span>
-      <span class="count-number" id="total-count">0</span>
+    <!-- Facebook Pill -->
+    <div class="platform-pill" id="pill-facebook" style="background: rgba(24, 119, 242, 0.2); border: 1px solid rgba(24, 119, 242, 0.5); color: #93C5FD;">
+      <span class="platform-icon">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/></svg>
+      </span>
+      <span class="status-dot" id="dot-facebook"></span>
+      <span class="count-number" id="count-facebook">0</span>
     </div>
+
+    <!-- Total Pill -->
+    <div class="platform-pill total" id="pill-total">
+      <span style="font-size: 13px; font-weight: 900;">TOTAL</span>
+      <span class="count-number" id="count-total">0</span>
+    </div>
+
   </div>
 
   <script>
     const socket = io();
 
-    const container = document.getElementById('viewers-container');
-    const twitchPill = document.getElementById('twitch-pill');
-    const twitchCount = document.getElementById('twitch-count');
-    const twitchDot = document.getElementById('twitch-dot');
+    const container = document.getElementById('viewer-container');
+    const pillTwitch = document.getElementById('pill-twitch');
+    const pillYoutube = document.getElementById('pill-youtube');
+    const pillFacebook = document.getElementById('pill-facebook');
+    const pillTotal = document.getElementById('pill-total');
 
-    const youtubePill = document.getElementById('youtube-pill');
-    const youtubeCount = document.getElementById('youtube-count');
-    const youtubeDot = document.getElementById('youtube-dot');
+    const dotTwitch = document.getElementById('dot-twitch');
+    const dotYoutube = document.getElementById('dot-youtube');
+    const dotFacebook = document.getElementById('dot-facebook');
 
-    const totalPill = document.getElementById('total-pill');
-    const totalCount = document.getElementById('total-count');
+    const countTwitch = document.getElementById('count-twitch');
+    const countYoutube = document.getElementById('count-youtube');
+    const countFacebook = document.getElementById('count-facebook');
+    const countTotal = document.getElementById('count-total');
 
-    // Parse URL query params
-    const urlParams = new URLSearchParams(window.location.search);
-
-    let activeConfig = {
-      showTwitch: urlParams.has('twitch') ? urlParams.get('twitch') !== 'false' : true,
-      showYoutube: urlParams.has('yt') ? urlParams.get('yt') !== 'false' : true,
-      showTotal: urlParams.has('total') ? urlParams.get('total') !== 'false' : true,
-      showBg: urlParams.has('bg') ? urlParams.get('bg') !== 'false' : true,
-      layout: urlParams.get('layout') || 'horizontal'
+    let currentConfig = {
+      showTwitch: true,
+      showYoutube: true,
+      showFacebook: true,
+      showTotal: true,
+      showBg: true,
+      layout: 'horizontal',
+      fontSize: 15
     };
 
     socket.on('config_update', (config) => {
       if (config && config.viewers) {
-        if (!urlParams.has('twitch')) activeConfig.showTwitch = config.viewers.showTwitch;
-        if (!urlParams.has('yt')) activeConfig.showYoutube = config.viewers.showYoutube;
-        if (!urlParams.has('total')) activeConfig.showTotal = config.viewers.showTotal;
-        if (!urlParams.has('bg')) activeConfig.showBg = config.viewers.showBg;
-        if (!urlParams.has('layout')) activeConfig.layout = config.viewers.layout;
-        applyConfig();
+        currentConfig = { ...currentConfig, ...config.viewers };
+        applyConfigToDOM();
       }
     });
 
-    function applyConfig() {
-      twitchPill.style.display = activeConfig.showTwitch ? 'flex' : 'none';
-      youtubePill.style.display = activeConfig.showYoutube ? 'flex' : 'none';
-      totalPill.style.display = activeConfig.showTotal ? 'flex' : 'none';
+    function applyConfigToDOM() {
+      pillTwitch.style.display = currentConfig.showTwitch ? 'flex' : 'none';
+      pillYoutube.style.display = currentConfig.showYoutube ? 'flex' : 'none';
+      pillFacebook.style.display = currentConfig.showFacebook ? 'flex' : 'none';
+      pillTotal.style.display = currentConfig.showTotal ? 'flex' : 'none';
 
-      if (activeConfig.showBg) {
-        container.style.background = 'rgba(15, 23, 42, 0.85)';
-        container.style.border = '1px solid var(--card-border)';
-        container.style.boxShadow = '0 8px 32px rgba(0, 0, 0, 0.4)';
+      if (currentConfig.layout === 'vertical') {
+        container.style.flexDirection = 'column';
+        container.style.alignItems = 'stretch';
+        container.style.borderRadius = '24px';
       } else {
+        container.style.flexDirection = 'row';
+        container.style.alignItems = 'center';
+        container.style.borderRadius = '50px';
+      }
+
+      if (!currentConfig.showBg) {
         container.style.background = 'transparent';
+        container.style.backdropFilter = 'none';
         container.style.border = 'none';
         container.style.boxShadow = 'none';
       }
 
-      if (activeConfig.layout === 'vertical') {
-        container.style.flexDirection = 'column';
-        container.style.borderRadius = '20px';
-      } else {
-        container.style.flexDirection = 'row';
-        container.style.borderRadius = '50px';
-      }
+      const fontSz = currentConfig.fontSize || 15;
+      document.querySelectorAll('.count-number').forEach(el => el.style.fontSize = `${fontSz}px`);
     }
 
-    socket.on('status_update', (data) => {
-      // Twitch Update
-      twitchCount.innerText = data.twitch.viewers.toLocaleString();
-      if (data.twitch.isLive) {
-        twitchDot.classList.add('online');
-      } else {
-        twitchDot.classList.remove('online');
+    socket.on('status_update', (state) => {
+      if (state.twitch) {
+        countTwitch.innerText = formatNumber(state.twitch.viewers || 0);
+        if (state.twitch.isLive) dotTwitch.classList.add('online');
+        else dotTwitch.classList.remove('online');
       }
 
-      // YouTube Update
-      youtubeCount.innerText = data.youtube.viewers.toLocaleString();
-      if (data.youtube.isLive) {
-        youtubeDot.classList.add('online');
-      } else {
-        youtubeDot.classList.remove('online');
+      if (state.youtube) {
+        countYoutube.innerText = formatNumber(state.youtube.viewers || 0);
+        if (state.youtube.isLive) dotYoutube.classList.add('online');
+        else dotYoutube.classList.remove('online');
       }
 
-      // Total Update
-      totalCount.innerText = data.totalViewers.toLocaleString();
+      if (state.facebook) {
+        countFacebook.innerText = formatNumber(state.facebook.viewers || 0);
+        if (state.facebook.isLive) dotFacebook.classList.add('online');
+        else dotFacebook.classList.remove('online');
+      }
+
+      countTotal.innerText = formatNumber(state.totalViewers || 0);
     });
 
-    applyConfig();
+    function formatNumber(num) {
+      if (num >= 1000000) return (num / 1000000).toFixed(1) + 'M';
+      if (num >= 1000) return (num / 1000).toFixed(1) + 'K';
+      return num.toString();
+    }
   </script>
 </body>
 </html>

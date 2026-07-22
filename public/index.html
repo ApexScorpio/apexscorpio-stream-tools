@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>ApexScorpio - Painel de Gestão & Central de Overlays</title>
+  <title>ApexScorpio - Central de Overlays & Opções Avançadas</title>
   <link rel="stylesheet" href="/css/style.css">
   <script src="/socket.io/socket.io.js"></script>
   <style>
@@ -50,11 +50,11 @@
       font-family: 'Outfit', sans-serif;
       font-size: 22px;
       font-weight: 800;
-      margin-bottom: 12px;
+      margin-bottom: 8px;
       color: #E8181F;
       display: flex;
       align-items: center;
-      gap: 10px;
+      justify-content: space-between;
     }
     .card-desc {
       color: #94A3B8;
@@ -79,10 +79,20 @@
       transform: translateY(-2px);
       box-shadow: 0 4px 15px rgba(232, 24, 31, 0.4);
     }
+    .btn-options {
+      background: rgba(255, 255, 255, 0.1);
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      font-size: 13px;
+      padding: 6px 14px;
+    }
+    .btn-options:hover {
+      background: #E8181F;
+      border-color: #E8181F;
+    }
     .btn-twitch { background: #9146FF; }
     .btn-youtube { background: #E8181F; }
     .btn-facebook { background: #1877F2; }
-    
+
     .url-box {
       background: #08080C;
       border: 1px solid rgba(255, 255, 255, 0.15);
@@ -115,6 +125,50 @@
       flex-wrap: wrap;
       margin-bottom: 16px;
     }
+
+    /* Expandable Options Drawer */
+    .options-drawer {
+      display: none;
+      background: #0D1017;
+      border: 1px solid rgba(232, 24, 31, 0.4);
+      border-radius: 12px;
+      padding: 20px;
+      margin-bottom: 20px;
+      animation: fadeIn 0.3s ease;
+    }
+    .options-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 16px;
+    }
+    .opt-group {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+    .opt-group label {
+      font-size: 13px;
+      font-weight: 700;
+      color: #94A3B8;
+      text-transform: uppercase;
+    }
+    .opt-input, .opt-select {
+      background: #141722;
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      color: #FFF;
+      padding: 8px 12px;
+      border-radius: 6px;
+      font-family: 'Inter', sans-serif;
+      font-size: 14px;
+    }
+    .checkbox-label {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+    }
   </style>
 </head>
 <body>
@@ -129,9 +183,44 @@
 
     <!-- CARD 1: CONTADOR DE ESPECTADORES -->
     <div class="card">
-      <h2>📊 1. Contador de Espectadores (Viewers Counter)</h2>
+      <h2>
+        <span>📊 1. Contador de Espectadores (Viewers Counter)</span>
+        <button class="btn btn-options" onclick="toggleDrawer('drawer-viewers')">⚙️ Opções do Overlay</button>
+      </h2>
       <p class="card-desc">Combina espectadores da Twitch, YouTube e Facebook Live num pill elegante com o estilo oficial do Brandkit v9.</p>
       
+      <!-- Expandable Options Panel -->
+      <div class="options-drawer" id="drawer-viewers">
+        <div style="font-weight: 800; font-size: 15px; margin-bottom: 14px; color: #E8181F;">⚙️ Personalização do Contador de Viewers:</div>
+        <div class="options-grid">
+          <div class="opt-group">
+            <label>Plataformas Visíveis:</label>
+            <label class="checkbox-label"><input type="checkbox" id="vw-twitch" checked onchange="saveViewersConfig()"> 🟣 Twitch</label>
+            <label class="checkbox-label"><input type="checkbox" id="vw-youtube" checked onchange="saveViewersConfig()"> 🔴 YouTube</label>
+            <label class="checkbox-label"><input type="checkbox" id="vw-facebook" checked onchange="saveViewersConfig()"> 🔵 Facebook</label>
+            <label class="checkbox-label"><input type="checkbox" id="vw-total" checked onchange="saveViewersConfig()"> ⚡ Total Geral</label>
+          </div>
+          <div class="opt-group">
+            <label>Estilo do Fundo & Layout:</label>
+            <label class="checkbox-label"><input type="checkbox" id="vw-bg" checked onchange="saveViewersConfig()"> Fundo Vidro Fosco (Glass)</label>
+            <label style="margin-top: 6px;">Layout das Pills:</label>
+            <select class="opt-select" id="vw-layout" onchange="saveViewersConfig()">
+              <option value="horizontal">Horizontal (Lado a lado)</option>
+              <option value="vertical">Vertical (Empilhado)</option>
+            </select>
+          </div>
+          <div class="opt-group">
+            <label>Tamanho da Fonte:</label>
+            <select class="opt-select" id="vw-fontsize" onchange="saveViewersConfig()">
+              <option value="13">Pequeno (13px)</option>
+              <option value="15" selected>Médio (15px)</option>
+              <option value="18">Grande (18px)</option>
+              <option value="22">Extra Grande (22px)</option>
+            </select>
+          </div>
+        </div>
+      </div>
+
       <label style="font-weight: 700; font-size: 13px; color: #94A3B8; text-transform: uppercase;">URL para o Streamlabs OBS (Browser Source):</label>
       <input type="text" readonly class="url-box" id="url-viewers">
 
@@ -142,15 +231,56 @@
 
       <label style="font-weight: 700; font-size: 13px; color: #94A3B8; text-transform: uppercase;">Visualização da Source em Tempo Real:</label>
       <div class="preview-frame">
-        <iframe src="/viewers.html"></iframe>
+        <iframe id="iframe-viewers" src="/viewers.html"></iframe>
       </div>
     </div>
 
     <!-- CARD 2: CHAT UNIFICADO -->
     <div class="card">
-      <h2>💬 2. Chat Unificado (Twitch + YouTube + Facebook)</h2>
+      <h2>
+        <span>💬 2. Chat Unificado (Twitch + YouTube + Facebook)</span>
+        <button class="btn btn-options" onclick="toggleDrawer('drawer-chat')">⚙️ Opções do Overlay</button>
+      </h2>
       <p class="card-desc">Chat em direto com retenção permanente, logótipos SVG oficiais sem texto e animações Cyberpunk.</p>
       
+      <!-- Expandable Options Panel -->
+      <div class="options-drawer" id="drawer-chat">
+        <div style="font-weight: 800; font-size: 15px; margin-bottom: 14px; color: #E8181F;">⚙️ Personalização do Chat Unificado:</div>
+        <div class="options-grid">
+          <div class="opt-group">
+            <label>Retenção de Mensagens:</label>
+            <select class="opt-select" id="chat-fade" onchange="saveChatConfig()">
+              <option value="0" selected>Permanente (Nunca desaparece)</option>
+              <option value="5">Desaparece em 5 segundos</option>
+              <option value="10">Desaparece em 10 segundos</option>
+              <option value="15">Desaparece em 15 segundos</option>
+              <option value="30">Desaparece em 30 segundos</option>
+            </select>
+          </div>
+          <div class="opt-group">
+            <label>Badges & Fundo:</label>
+            <label class="checkbox-label"><input type="checkbox" id="chat-bg" checked onchange="saveChatConfig()"> Fundo Vidro Fosco</label>
+            <label class="checkbox-label"><input type="checkbox" id="chat-badges" checked onchange="saveChatConfig()"> Mostrar Badges SVG</label>
+          </div>
+          <div class="opt-group">
+            <label>Tamanho da Fonte & Limite:</label>
+            <select class="opt-select" id="chat-fontsize" onchange="saveChatConfig()">
+              <option value="12">Pequeno (12px)</option>
+              <option value="14" selected>Médio (14px)</option>
+              <option value="16">Grande (16px)</option>
+              <option value="18">Extra Grande (18px)</option>
+            </select>
+            <label style="margin-top: 6px;">Máximo de Mensagens:</label>
+            <select class="opt-select" id="chat-maxmsg" onchange="saveChatConfig()">
+              <option value="30">30 mensagens</option>
+              <option value="50" selected>50 mensagens</option>
+              <option value="100">100 mensagens</option>
+              <option value="200">200 mensagens</option>
+            </select>
+          </div>
+        </div>
+      </div>
+
       <label style="font-weight: 700; font-size: 13px; color: #94A3B8; text-transform: uppercase;">URL para o Streamlabs OBS (Browser Source):</label>
       <input type="text" readonly class="url-box" id="url-chat">
 
@@ -163,15 +293,39 @@
 
       <label style="font-weight: 700; font-size: 13px; color: #94A3B8; text-transform: uppercase;">Visualização da Source em Tempo Real:</label>
       <div class="preview-frame" style="height: 280px;">
-        <iframe src="/chat.html"></iframe>
+        <iframe id="iframe-chat" src="/chat.html"></iframe>
       </div>
     </div>
 
     <!-- CARD 3: EVENT LIST (HISTÓRICO VERTICAL DE EVENTOS) -->
     <div class="card">
-      <h2>📋 3. Event List (Histórico Vertical de Eventos)</h2>
+      <h2>
+        <span>📋 3. Event List (Histórico Vertical de Eventos)</span>
+        <button class="btn btn-options" onclick="toggleDrawer('drawer-events')">⚙️ Opções do Overlay</button>
+      </h2>
       <p class="card-desc">Lista vertical de eventos com logótipo SVG da plataforma antes de cada entrada em inglês.</p>
       
+      <!-- Expandable Options Panel -->
+      <div class="options-drawer" id="drawer-events">
+        <div style="font-weight: 800; font-size: 15px; margin-bottom: 14px; color: #E8181F;">⚙️ Personalização do Event List:</div>
+        <div class="options-grid">
+          <div class="opt-group">
+            <label>Exibição de Logótipos:</label>
+            <label class="checkbox-label"><input type="checkbox" id="evt-logos" checked onchange="saveEventsConfig()"> Mostrar Logótipos SVG</label>
+            <label class="checkbox-label"><input type="checkbox" id="evt-bg" checked onchange="saveEventsConfig()"> Fundo Vidro Fosco</label>
+          </div>
+          <div class="opt-group">
+            <label>Limite de Eventos Guardados:</label>
+            <select class="opt-select" id="evt-max" onchange="saveEventsConfig()">
+              <option value="5">5 últimos eventos</option>
+              <option value="8" selected>8 últimos eventos</option>
+              <option value="12">12 últimos eventos</option>
+              <option value="15">15 últimos eventos</option>
+            </select>
+          </div>
+        </div>
+      </div>
+
       <label style="font-weight: 700; font-size: 13px; color: #94A3B8; text-transform: uppercase;">URL para o Streamlabs OBS (Browser Source):</label>
       <input type="text" readonly class="url-box" id="url-events">
 
@@ -184,15 +338,38 @@
 
       <label style="font-weight: 700; font-size: 13px; color: #94A3B8; text-transform: uppercase;">Visualização da Source em Tempo Real:</label>
       <div class="preview-frame" style="height: 260px;">
-        <iframe src="/events.html"></iframe>
+        <iframe id="iframe-events" src="/events.html"></iframe>
       </div>
     </div>
 
     <!-- CARD 4: ALERT BOX OVERLAY -->
     <div class="card">
-      <h2>🔔 4. Alert Box Overlay (Follower, Sub, Raid Alerts)</h2>
+      <h2>
+        <span>🔔 4. Alert Box Overlay (Follower, Sub, Raid Alerts)</span>
+        <button class="btn btn-options" onclick="toggleDrawer('drawer-alerts')">⚙️ Opções do Overlay</button>
+      </h2>
       <p class="card-desc">Alertas pop-up em direto com clipart exclusivo por tipo de alerta e som sintetizado.</p>
       
+      <!-- Expandable Options Panel -->
+      <div class="options-drawer" id="drawer-alerts">
+        <div style="font-weight: 800; font-size: 15px; margin-bottom: 14px; color: #E8181F;">⚙️ Personalização do Alert Box:</div>
+        <div class="options-grid">
+          <div class="opt-group">
+            <label>Áudio Sintetizado:</label>
+            <label class="checkbox-label"><input type="checkbox" id="alt-sound" checked onchange="saveAlertsConfig()"> Ativar Efeito Sonoro</label>
+          </div>
+          <div class="opt-group">
+            <label>Duração do Alerta no Ecrã:</label>
+            <select class="opt-select" id="alt-duration" onchange="saveAlertsConfig()">
+              <option value="3">3 Segundos</option>
+              <option value="5" selected>5 Segundos</option>
+              <option value="7">7 Segundos</option>
+              <option value="10">10 Segundos</option>
+            </select>
+          </div>
+        </div>
+      </div>
+
       <label style="font-weight: 700; font-size: 13px; color: #94A3B8; text-transform: uppercase;">URL para o Streamlabs OBS (Browser Source):</label>
       <input type="text" readonly class="url-box" id="url-alerts">
 
@@ -205,16 +382,35 @@
 
       <label style="font-weight: 700; font-size: 13px; color: #94A3B8; text-transform: uppercase;">Visualização da Source em Tempo Real:</label>
       <div class="preview-frame" style="height: 280px;">
-        <iframe src="/alerts.html"></iframe>
+        <iframe id="iframe-alerts" src="/alerts.html"></iframe>
       </div>
     </div>
 
     <!-- CARD 5: CENAS DE ECRÃ ANIMADAS -->
     <div class="card">
-      <h2>🎬 5. Cenas de Ecrã Animadas (Full Stream Scenes)</h2>
+      <h2>
+        <span>🎬 5. Cenas de Ecrã Animadas (Full Stream Scenes)</span>
+        <button class="btn btn-options" onclick="toggleDrawer('drawer-starting')">⚙️ Opções do Overlay</button>
+      </h2>
       <p class="card-desc">Ecrãs de cena completa para o Streamlabs OBS com temporizadores, brilho do Escorpião e redes sociais.</p>
 
-      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 16px; margin-bottom: 16px;">
+      <!-- Expandable Options Panel -->
+      <div class="options-drawer" id="drawer-starting">
+        <div style="font-weight: 800; font-size: 15px; margin-bottom: 14px; color: #E8181F;">⚙️ Personalização das Cenas Animadas:</div>
+        <div class="options-grid">
+          <div class="opt-group">
+            <label>Temporizador (Starting Soon):</label>
+            <select class="opt-select" id="st-timer" onchange="saveStartingConfig()">
+              <option value="3">3 Minutos</option>
+              <option value="5" selected>5 Minutos</option>
+              <option value="10">10 Minutos</option>
+              <option value="15">15 Minutos</option>
+            </select>
+          </div>
+        </div>
+      </div>
+
+      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 16px; margin-bottom: 16px;">
         <div>
           <label style="font-weight: 700; font-size: 13px; color: #E8181F;">🎬 Stream Starting Soon:</label>
           <input type="text" readonly class="url-box" id="url-starting">
@@ -248,6 +444,7 @@
   </div>
 
   <script>
+    const socket = io();
     const baseUrl = window.location.origin;
 
     document.getElementById('url-viewers').value = `${baseUrl}/viewers.html`;
@@ -260,8 +457,99 @@
     document.getElementById('url-technical').value = `${baseUrl}/technical.html`;
     document.getElementById('url-ending').value = `${baseUrl}/ending.html`;
 
+    function toggleDrawer(id) {
+      const el = document.getElementById(id);
+      el.style.display = el.style.display === 'block' ? 'none' : 'block';
+    }
+
     function switchScene(url) {
       document.getElementById('scene-preview').src = url;
+    }
+
+    // Save Viewers Config
+    async function saveViewersConfig() {
+      const cfg = {
+        viewers: {
+          showTwitch: document.getElementById('vw-twitch').checked,
+          showYoutube: document.getElementById('vw-youtube').checked,
+          showFacebook: document.getElementById('vw-facebook').checked,
+          showTotal: document.getElementById('vw-total').checked,
+          showBg: document.getElementById('vw-bg').checked,
+          layout: document.getElementById('vw-layout').value,
+          fontSize: Number(document.getElementById('vw-fontsize').value)
+        }
+      };
+      await fetch('/api/config', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(cfg)
+      });
+      document.getElementById('iframe-viewers').src = '/viewers.html';
+    }
+
+    // Save Chat Config
+    async function saveChatConfig() {
+      const cfg = {
+        chat: {
+          fadeSeconds: Number(document.getElementById('chat-fade').value),
+          showBg: document.getElementById('chat-bg').checked,
+          showBadges: document.getElementById('chat-badges').checked,
+          fontSize: Number(document.getElementById('chat-fontsize').value),
+          maxMessages: Number(document.getElementById('chat-maxmsg').value)
+        }
+      };
+      await fetch('/api/config', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(cfg)
+      });
+      document.getElementById('iframe-chat').src = '/chat.html';
+    }
+
+    // Save Events Config
+    async function saveEventsConfig() {
+      const cfg = {
+        events: {
+          showLogos: document.getElementById('evt-logos').checked,
+          showBg: document.getElementById('evt-bg').checked,
+          maxItems: Number(document.getElementById('evt-max').value)
+        }
+      };
+      await fetch('/api/config', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(cfg)
+      });
+      document.getElementById('iframe-events').src = '/events.html';
+    }
+
+    // Save Alerts Config
+    async function saveAlertsConfig() {
+      const cfg = {
+        alerts: {
+          playSound: document.getElementById('alt-sound').checked,
+          durationSeconds: Number(document.getElementById('alt-duration').value)
+        }
+      };
+      await fetch('/api/config', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(cfg)
+      });
+    }
+
+    // Save Starting Config
+    async function saveStartingConfig() {
+      const cfg = {
+        starting: {
+          timerMinutes: Number(document.getElementById('st-timer').value)
+        }
+      };
+      await fetch('/api/config', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(cfg)
+      });
     }
 
     async function sendTestChat(platform) {
