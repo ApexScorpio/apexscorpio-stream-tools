@@ -105,19 +105,26 @@
       margin-top: 6px;
       margin-bottom: 16px;
     }
+    /* Preview frame: clips to fit, inner iframe is native size but CSS-scaled down */
     .preview-frame {
       width: 100%;
-      height: 250px;
-      background: #000;
+      background: #060810;
       border-radius: 12px;
-      border: 1px solid rgba(232, 24, 31, 0.25);
+      border: 1px solid rgba(232, 24, 31, 0.3);
       overflow: hidden;
       margin-top: 14px;
+      position: relative;
+      /* height is set per-frame via data attribute + JS */
     }
-    .preview-frame iframe {
-      width: 100%;
-      height: 100%;
+    .preview-frame .preview-scale-wrap {
+      position: relative;
+      transform-origin: top left;
+      /* transform and height set by JS based on source dimensions */
+    }
+    .preview-frame .preview-scale-wrap iframe {
+      display: block;
       border: none;
+      background: transparent;
     }
     .controls-group {
       display: flex;
@@ -231,8 +238,10 @@
       </div>
 
       <label style="font-weight: 700; font-size: 13px; color: #94A3B8; text-transform: uppercase;">Visualização da Source em Tempo Real:</label>
-      <div class="preview-frame">
-        <iframe id="iframe-viewers" src="viewers.html"></iframe>
+      <div class="preview-frame" id="pf-viewers" data-src-w="700" data-src-h="70">
+        <div class="preview-scale-wrap" id="wrap-viewers">
+          <iframe id="iframe-viewers" src="viewers.html" width="700" height="70"></iframe>
+        </div>
       </div>
     </div>
 
@@ -296,8 +305,10 @@
       </div>
 
       <label style="font-weight: 700; font-size: 13px; color: #94A3B8; text-transform: uppercase;">Visualização da Source em Tempo Real:</label>
-      <div class="preview-frame" style="height: 280px;">
-        <iframe id="iframe-chat" src="chat.html"></iframe>
+      <div class="preview-frame" id="pf-chat" data-src-w="440" data-src-h="580">
+        <div class="preview-scale-wrap" id="wrap-chat">
+          <iframe id="iframe-chat" src="chat.html" width="440" height="580"></iframe>
+        </div>
       </div>
     </div>
 
@@ -348,8 +359,10 @@
       </div>
 
       <label style="font-weight: 700; font-size: 13px; color: #94A3B8; text-transform: uppercase;">Visualização da Source em Tempo Real:</label>
-      <div class="preview-frame" style="height: 260px;">
-        <iframe id="iframe-events" src="events.html"></iframe>
+      <div class="preview-frame" id="pf-events" data-src-w="380" data-src-h="460">
+        <div class="preview-scale-wrap" id="wrap-events">
+          <iframe id="iframe-events" src="events.html" width="380" height="460"></iframe>
+        </div>
       </div>
     </div>
 
@@ -398,8 +411,10 @@
       </div>
 
       <label style="font-weight: 700; font-size: 13px; color: #94A3B8; text-transform: uppercase;">Visualização da Source em Tempo Real:</label>
-      <div class="preview-frame" style="height: 280px;">
-        <iframe id="iframe-alerts" src="alerts.html"></iframe>
+      <div class="preview-frame" id="pf-alerts" data-src-w="800" data-src-h="600">
+        <div class="preview-scale-wrap" id="wrap-alerts">
+          <iframe id="iframe-alerts" src="alerts.html" width="800" height="600"></iframe>
+        </div>
       </div>
     </div>
 
@@ -460,8 +475,10 @@
       </div>
 
       <label style="font-weight: 700; font-size: 13px; color: #94A3B8; text-transform: uppercase;">Visualização da Cena em Tempo Real:</label>
-      <div class="preview-frame" style="height: 320px;">
-        <iframe id="scene-preview" src="starting.html"></iframe>
+      <div class="preview-frame" id="pf-scene" data-src-w="1920" data-src-h="1080">
+        <div class="preview-scale-wrap" id="wrap-scene">
+          <iframe id="scene-preview" src="starting.html" width="1920" height="1080"></iframe>
+        </div>
       </div>
     </div>
   </div>
@@ -538,9 +555,7 @@
       el.style.display = el.style.display === 'block' ? 'none' : 'block';
     }
 
-    function switchScene(url) {
-      document.getElementById('scene-preview').src = url;
-    }
+
 
     // Save Viewers Config
     async function saveViewersConfig() {
@@ -782,6 +797,44 @@
         totalViewers: 0
       };
       broadcastData('status_update', state);
+    }
+
+    // ─── Scale previews to fit their native source dimensions ───────────────
+    // Each .preview-frame has data-src-w and data-src-h (the real OBS source size).
+    // We compute a CSS scale so the iframe fits exactly inside the card width.
+    function fitPreviews() {
+      document.querySelectorAll('.preview-frame[data-src-w]').forEach(frame => {
+        const srcW = parseInt(frame.dataset.srcW, 10);
+        const srcH = parseInt(frame.dataset.srcH, 10);
+        const containerW = frame.offsetWidth;
+        const scale = containerW / srcW;
+        const scaledH = Math.ceil(srcH * scale);
+
+        frame.style.height = scaledH + 'px';
+
+        const wrap = frame.querySelector('.preview-scale-wrap');
+        if (wrap) {
+          wrap.style.width = srcW + 'px';
+          wrap.style.height = srcH + 'px';
+          wrap.style.transform = `scale(${scale})`;
+          wrap.style.transformOrigin = 'top left';
+        }
+      });
+    }
+
+    // Run on load and on every resize
+    window.addEventListener('load', fitPreviews);
+    window.addEventListener('resize', fitPreviews);
+    // Also run now (fonts/layout already loaded at parse time)
+    document.addEventListener('DOMContentLoaded', fitPreviews);
+    setTimeout(fitPreviews, 200); // safety re-run after iframes settle
+
+    // ─── switchScene: update scene-preview iframe src AND its data-src dimensions ─
+    function switchScene(url) {
+      const iframe = document.getElementById('scene-preview');
+      if (iframe) iframe.src = url;
+      // All scene overlays are 1920×1080, no dimension change needed
+      setTimeout(fitPreviews, 100);
     }
   </script>
 </body>
