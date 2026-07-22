@@ -4,8 +4,8 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>ApexScorpio - Stream Starting Soon</title>
-  <link rel="stylesheet" href="/css/style.css">
-  <script src="/socket.io/socket.io.js"></script>
+  <link rel="stylesheet" href="css/style.css">
+  <script src="socket.io/socket.io.js"></script>
   <style>
     body {
       background: #08080C;
@@ -114,7 +114,7 @@
   <div class="bg-grid"></div>
 
   <div class="as-logo-container">
-    <img src="/brandkit/Apex_Scorpio_Brand_Assets/01_Primary/Apex_Scorpio_Primary_Full_Colour.png" alt="Apex Scorpio">
+    <img src="brandkit/Apex_Scorpio_Brand_Assets/01_Primary/Apex_Scorpio_Primary_Full_Colour.png" alt="Apex Scorpio">
   </div>
 
   <div class="scene-title" style="z-index: 2;">A INICIAR EM BREVE</div>
@@ -129,16 +129,18 @@
   </div>
 
   <script>
-    const socket = io();
+    const socket = typeof io !== 'undefined' ? io() : null;
     let secondsLeft = 300;
     const timerEl = document.getElementById('timer');
 
-    socket.on('config_update', (config) => {
-      if (config && config.starting && config.starting.timerMinutes) {
-        secondsLeft = Number(config.starting.timerMinutes) * 60;
-        updateTimerDisplay();
-      }
-    });
+    if (socket) {
+      socket.on('config_update', (config) => {
+        if (config && config.starting && config.starting.timerMinutes) {
+          secondsLeft = Number(config.starting.timerMinutes) * 60;
+          updateTimerDisplay();
+        }
+      });
+    }
 
     setInterval(() => {
       if (secondsLeft > 0) {

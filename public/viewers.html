@@ -3,8 +3,8 @@
 <head>
   <meta charset="UTF-8">
   <title>ApexScorpio - Viewers Counter</title>
-  <link rel="stylesheet" href="/css/style.css">
-  <script src="/socket.io/socket.io.js"></script>
+  <link rel="stylesheet" href="css/style.css">
+  <script src="socket.io/socket.io.js"></script>
 </head>
 <body class="viewers-page">
   <div class="viewer-counter-container has-bg" id="viewer-container">
@@ -41,7 +41,7 @@
   </div>
 
   <script>
-    const socket = io();
+    const socket = typeof io !== 'undefined' ? io() : null;
     const container = document.getElementById('viewer-container');
 
     const pills = {
@@ -67,12 +67,14 @@
       showBg: true, layout: 'horizontal', fontSize: 15
     };
 
-    socket.on('config_update', (config) => {
-      if (config && config.viewers) {
-        cfg = { ...cfg, ...config.viewers };
-        applyConfig();
-      }
-    });
+    if (socket) {
+      socket.on('config_update', (config) => {
+        if (config && config.viewers) {
+          cfg = { ...cfg, ...config.viewers };
+          applyConfig();
+        }
+      });
+    }
 
     function setPillVisible(pill, visible) {
       if (visible) {
@@ -117,33 +119,35 @@
       Object.values(counts).forEach(el => el.style.fontSize = fs);
     }
 
-    socket.on('status_update', (state) => {
-      const animateCount = (el, newVal) => {
-        const formatted = fmt(newVal);
-        if (el.innerText !== formatted) {
-          el.style.transform = 'scale(1.25)';
-          el.style.color = '#FFFFFF';
-          el.innerText = formatted;
-          setTimeout(() => {
-            el.style.transform = 'scale(1)';
-          }, 200);
-        }
-      };
+    if (socket) {
+      socket.on('status_update', (state) => {
+        const animateCount = (el, newVal) => {
+          const formatted = fmt(newVal);
+          if (el.innerText !== formatted) {
+            el.style.transform = 'scale(1.25)';
+            el.style.color = '#FFFFFF';
+            el.innerText = formatted;
+            setTimeout(() => {
+              el.style.transform = 'scale(1)';
+            }, 200);
+          }
+        };
 
-      if (state.twitch) {
-        animateCount(counts.twitch, state.twitch.viewers);
-        dots.twitch.classList.toggle('online', !!state.twitch.isLive);
-      }
-      if (state.youtube) {
-        animateCount(counts.youtube, state.youtube.viewers);
-        dots.youtube.classList.toggle('online', !!state.youtube.isLive);
-      }
-      if (state.facebook) {
-        animateCount(counts.facebook, state.facebook.viewers);
-        dots.facebook.classList.toggle('online', !!state.facebook.isLive);
-      }
-      animateCount(counts.total, state.totalViewers || 0);
-    });
+        if (state.twitch) {
+          animateCount(counts.twitch, state.twitch.viewers);
+          dots.twitch.classList.toggle('online', !!state.twitch.isLive);
+        }
+        if (state.youtube) {
+          animateCount(counts.youtube, state.youtube.viewers);
+          dots.youtube.classList.toggle('online', !!state.youtube.isLive);
+        }
+        if (state.facebook) {
+          animateCount(counts.facebook, state.facebook.viewers);
+          dots.facebook.classList.toggle('online', !!state.facebook.isLive);
+        }
+        animateCount(counts.total, state.totalViewers || 0);
+      });
+    }
 
     function fmt(n) {
       n = n || 0;

@@ -3,14 +3,14 @@
 <head>
   <meta charset="UTF-8">
   <title>ApexScorpio - Unified Chat Overlay</title>
-  <link rel="stylesheet" href="/css/style.css">
-  <script src="/socket.io/socket.io.js"></script>
+  <link rel="stylesheet" href="css/style.css">
+  <script src="socket.io/socket.io.js"></script>
 </head>
 <body class="chat-page">
   <div class="chat-container has-bg" id="chat-container"></div>
 
   <script>
-    const socket = io();
+    const socket = typeof io !== 'undefined' ? io() : null;
     const chatContainer = document.getElementById('chat-container');
 
     let cfg = {
@@ -27,12 +27,21 @@
 
     const platformColors = { twitch: '#9146FF', youtube: '#E8181F', facebook: '#1877F2' };
 
-    socket.on('config_update', (config) => {
-      if (config && config.chat) {
-        cfg = { ...cfg, ...config.chat };
-        applyConfig();
-      }
-    });
+    if (socket) {
+      socket.on('config_update', (config) => {
+        if (config && config.chat) {
+          cfg = { ...cfg, ...config.chat };
+          applyConfig();
+        }
+      });
+      socket.on('chat_message', (msg) => {
+        const platform = (msg.platform || 'twitch').toLowerCase();
+        if (platform === 'twitch'   && !cfg.showTwitch)   return;
+        if (platform === 'youtube'  && !cfg.showYoutube)  return;
+        if (platform === 'facebook' && !cfg.showFacebook) return;
+        addMsg(msg, platform);
+      });
+    }
 
     function applyConfig() {
       // Background
@@ -55,13 +64,7 @@
       });
     }
 
-    socket.on('chat_message', (msg) => {
-      const platform = (msg.platform || 'twitch').toLowerCase();
-      if (platform === 'twitch'   && !cfg.showTwitch)   return;
-      if (platform === 'youtube'  && !cfg.showYoutube)  return;
-      if (platform === 'facebook' && !cfg.showFacebook) return;
-      addMsg(msg, platform);
-    });
+
 
     function addMsg(msg, platform) {
       const el = document.createElement('div');

@@ -4,8 +4,8 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>ApexScorpio - Central de Overlays & Opções Avançadas</title>
-  <link rel="stylesheet" href="/css/style.css">
-  <script src="/socket.io/socket.io.js"></script>
+  <link rel="stylesheet" href="css/style.css">
+  <script src="socket.io/socket.io.js"></script>
   <style>
     body {
       background: #08080C;
@@ -174,7 +174,7 @@
   <div class="dashboard-container">
     <div class="header">
       <div class="brand-title">
-        <img src="/brandkit/Apex_Scorpio_Brand_Assets/01_Primary/Apex_Scorpio_Primary_Full_Colour.png" alt="Apex Scorpio">
+        <img src="brandkit/Apex_Scorpio_Brand_Assets/01_Primary/Apex_Scorpio_Primary_Full_Colour.png" alt="Apex Scorpio">
         <span>CENTRAL DE OVERLAYS & STREAMTOOLS</span>
       </div>
       <div style="font-size: 13px; color: #10B981; font-weight: 700;">● ONLINE (HTTPS)</div>
@@ -220,7 +220,10 @@
       </div>
 
       <label style="font-weight: 700; font-size: 13px; color: #94A3B8; text-transform: uppercase;">URL para o Streamlabs OBS (Browser Source):</label>
-      <input type="text" readonly class="url-box" id="url-viewers">
+      <div style="display: flex; gap: 8px; align-items: center; margin-top: 6px; margin-bottom: 16px;">
+        <input type="text" readonly class="url-box" id="url-viewers" style="margin-top: 0; margin-bottom: 0;">
+        <button class="btn" style="padding: 8px 14px; font-size: 12px; white-space: nowrap; height: 38px;" onclick="copyUrl('url-viewers', this)">📋 Copiar URL</button>
+      </div>
 
       <div class="controls-group">
         <button class="btn" style="background: #10B981;" onclick="simulateViewers()">🎲 Simular Live (50 Twitch / 120 YouTube / 35 FB)</button>
@@ -280,7 +283,10 @@
       </div>
 
       <label style="font-weight: 700; font-size: 13px; color: #94A3B8; text-transform: uppercase;">URL para o Streamlabs OBS (Browser Source):</label>
-      <input type="text" readonly class="url-box" id="url-chat">
+      <div style="display: flex; gap: 8px; align-items: center; margin-top: 6px; margin-bottom: 16px;">
+        <input type="text" readonly class="url-box" id="url-chat" style="margin-top: 0; margin-bottom: 0;">
+        <button class="btn" style="padding: 8px 14px; font-size: 12px; white-space: nowrap; height: 38px;" onclick="copyUrl('url-chat', this)">📋 Copiar URL</button>
+      </div>
 
       <div class="controls-group">
         <button class="btn btn-twitch" onclick="sendTestChat('twitch')">💬 Chat Twitch</button>
@@ -329,7 +335,10 @@
       </div>
 
       <label style="font-weight: 700; font-size: 13px; color: #94A3B8; text-transform: uppercase;">URL para o Streamlabs OBS (Browser Source):</label>
-      <input type="text" readonly class="url-box" id="url-events">
+      <div style="display: flex; gap: 8px; align-items: center; margin-top: 6px; margin-bottom: 16px;">
+        <input type="text" readonly class="url-box" id="url-events" style="margin-top: 0; margin-bottom: 0;">
+        <button class="btn" style="padding: 8px 14px; font-size: 12px; white-space: nowrap; height: 38px;" onclick="copyUrl('url-events', this)">📋 Copiar URL</button>
+      </div>
 
       <div class="controls-group">
         <button class="btn" style="background: #38BDF8;" onclick="triggerAlert('follower')">🔔 Testar Follower Event</button>
@@ -376,7 +385,10 @@
       </div>
 
       <label style="font-weight: 700; font-size: 13px; color: #94A3B8; text-transform: uppercase;">URL para o Streamlabs OBS (Browser Source):</label>
-      <input type="text" readonly class="url-box" id="url-alerts">
+      <div style="display: flex; gap: 8px; align-items: center; margin-top: 6px; margin-bottom: 16px;">
+        <input type="text" readonly class="url-box" id="url-alerts" style="margin-top: 0; margin-bottom: 0;">
+        <button class="btn" style="padding: 8px 14px; font-size: 12px; white-space: nowrap; height: 38px;" onclick="copyUrl('url-alerts', this)">📋 Copiar URL</button>
+      </div>
 
       <div class="controls-group">
         <button class="btn" style="background: #38BDF8;" onclick="triggerAlert('follower')">🔔 Alerta Follower</button>
@@ -412,19 +424,31 @@
       <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 16px; margin-bottom: 16px;">
         <div>
           <label style="font-weight: 700; font-size: 13px; color: #E8181F;">🎬 Stream Starting Soon:</label>
-          <input type="text" readonly class="url-box" id="url-starting">
+          <div style="display: flex; gap: 6px; align-items: center; margin-top: 6px; margin-bottom: 16px;">
+            <input type="text" readonly class="url-box" id="url-starting" style="margin-top: 0; margin-bottom: 0;">
+            <button class="btn" style="padding: 8px 10px; font-size: 11px; white-space: nowrap; height: 38px;" onclick="copyUrl('url-starting', this)">📋 Copiar</button>
+          </div>
         </div>
         <div>
           <label style="font-weight: 700; font-size: 13px; color: #E8181F;">☕ Be Right Back (BRB):</label>
-          <input type="text" readonly class="url-box" id="url-brb">
+          <div style="display: flex; gap: 6px; align-items: center; margin-top: 6px; margin-bottom: 16px;">
+            <input type="text" readonly class="url-box" id="url-brb" style="margin-top: 0; margin-bottom: 0;">
+            <button class="btn" style="padding: 8px 10px; font-size: 11px; white-space: nowrap; height: 38px;" onclick="copyUrl('url-brb', this)">📋 Copiar</button>
+          </div>
         </div>
         <div>
           <label style="font-weight: 700; font-size: 13px; color: #F59E0B;">⚠️ Technical Issues:</label>
-          <input type="text" readonly class="url-box" id="url-technical">
+          <div style="display: flex; gap: 6px; align-items: center; margin-top: 6px; margin-bottom: 16px;">
+            <input type="text" readonly class="url-box" id="url-technical" style="margin-top: 0; margin-bottom: 0;">
+            <button class="btn" style="padding: 8px 10px; font-size: 11px; white-space: nowrap; height: 38px;" onclick="copyUrl('url-technical', this)">📋 Copiar</button>
+          </div>
         </div>
         <div>
           <label style="font-weight: 700; font-size: 13px; color: #9146FF;">🏁 Stream Ending:</label>
-          <input type="text" readonly class="url-box" id="url-ending">
+          <div style="display: flex; gap: 6px; align-items: center; margin-top: 6px; margin-bottom: 16px;">
+            <input type="text" readonly class="url-box" id="url-ending" style="margin-top: 0; margin-bottom: 0;">
+            <button class="btn" style="padding: 8px 10px; font-size: 11px; white-space: nowrap; height: 38px;" onclick="copyUrl('url-ending', this)">📋 Copiar</button>
+          </div>
         </div>
       </div>
 
@@ -443,14 +467,35 @@
   </div>
 
   <script>
-    const socket = io();
+    const socket = typeof io !== 'undefined' ? io() : null;
+
+    function copyUrl(inputId, btnEl) {
+      const input = document.getElementById(inputId);
+      if (!input || !input.value) return;
+      navigator.clipboard.writeText(input.value).then(() => {
+        const orig = btnEl.innerText;
+        btnEl.innerText = '✅ Copiado!';
+        setTimeout(() => btnEl.innerText = orig, 2000);
+      }).catch(err => {
+        input.select();
+        document.execCommand('copy');
+        const orig = btnEl.innerText;
+        btnEl.innerText = '✅ Copiado!';
+        setTimeout(() => btnEl.innerText = orig, 2000);
+      });
+    }
+
     async function updatePublicUrls() {
-      let baseUrl = window.location.origin;
+      let basePath = window.location.pathname.substring(0, window.location.pathname.lastIndexOf('/'));
+      let baseUrl = window.location.origin + (basePath === '/' ? '' : basePath);
+
       try {
         const res = await fetch('/api/public-url');
-        const data = await res.json();
-        if (data && data.publicBaseUrl) {
-          baseUrl = data.publicBaseUrl;
+        if (res.ok) {
+          const data = await res.json();
+          if (data && data.publicBaseUrl) {
+            baseUrl = data.publicBaseUrl;
+          }
         }
       } catch (e) {}
 
