@@ -203,11 +203,25 @@
         }
       } catch(e) {}
 
-      // Se ainda estiver vazio (primeira utilização), povoar com os últimos eventos
+      // Se a lista estiver vazia, povoar com X eventos com base no limite maxItems configurado
       if (feed.children.length === 0) {
-        addCard({ username: 'ApexFanatic', type: 'follower', platform: 'twitch' }, 'twitch');
-        addCard({ username: 'GamerGurl_99', type: 'subscriber', platform: 'youtube' }, 'youtube');
-        addCard({ username: 'StreamMaster', type: 'raid', viewers: 25, platform: 'twitch' }, 'twitch');
+        const defaultEvents = [
+          { username: 'GamerGurl_99', type: 'subscriber', platform: 'youtube' },
+          { username: 'ApexFanatic', type: 'follower', platform: 'twitch' },
+          { username: 'StreamMaster', type: 'raid', viewers: 25, platform: 'twitch' },
+          { username: 'PedroPro_007', type: 'follower', platform: 'twitch' },
+          { username: 'ScorpioFan_PT', type: 'subscriber', platform: 'twitch' },
+          { username: 'Racer_X', type: 'follower', platform: 'youtube' },
+          { username: 'SpeedRunner', type: 'follower', platform: 'twitch' },
+          { username: 'ProStreamer99', type: 'subscriber', platform: 'youtube' },
+          { username: 'VIP_Member', type: 'subscriber', platform: 'twitch' },
+          { username: 'GamerZone', type: 'raid', viewers: 18, platform: 'twitch' }
+        ];
+
+        const targetCount = Math.min(cfg.maxItems || 8, defaultEvents.length);
+        for (let i = 0; i < targetCount; i++) {
+          addCard(defaultEvents[i], defaultEvents[i].platform);
+        }
         saveEventsToStorage();
       }
     }
