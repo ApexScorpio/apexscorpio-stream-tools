@@ -22,8 +22,8 @@ app.use(express.static(path.join(__dirname, 'public')));
 
 const CONFIG_FILE = path.join(__dirname, 'config.json');
 
-// Fixed public domain URL for Apex Scorpio Stream Tools
-let publicBaseUrl = process.env.PUBLIC_URL || 'https://highland-hood-answers-steam.trycloudflare.com';
+// Active public domain URL
+let publicBaseUrl = process.env.PUBLIC_URL || 'https://montana-favour-dialogue-programme.trycloudflare.com';
 
 // Global state for multi-platform stream status (Twitch, YouTube, Facebook)
 const streamState = {
@@ -160,7 +160,12 @@ app.get('/api/status', (req, res) => res.json(streamState));
 app.get('/api/config', (req, res) => res.json(overlayConfig));
 
 app.get('/api/public-url', (req, res) => {
-  res.json({ publicBaseUrl });
+  const host = req.get('host');
+  let detectedUrl = publicBaseUrl;
+  if (host && !host.includes('localhost') && !host.includes('127.0.0.1')) {
+    detectedUrl = `https://${host}`;
+  }
+  res.json({ publicBaseUrl: detectedUrl });
 });
 
 app.post('/api/public-url', (req, res) => {
@@ -237,6 +242,6 @@ app.post('/api/simulate-counts', (req, res) => {
 server.listen(PORT, () => {
   console.log(`=======================================================`);
   console.log(`🚀 ApexScorpio Streamlabs Overlay Suite is LIVE!`);
-  console.log(`👉 Fixed Domain URL: ${publicBaseUrl}`);
+  console.log(`👉 Active Tunnel URL: ${publicBaseUrl}`);
   console.log(`=======================================================`);
 });
