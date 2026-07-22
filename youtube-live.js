@@ -1,5 +1,5 @@
 /**
- * ApexScorpio YouTube Live Module v2
+ * ApexScorpio YouTube Live Module v2.1
  *
  * Uses the official YouTube Data / Live Streaming API only.
  * - search.list discovers the active video (limited separate daily bucket)
@@ -15,25 +15,27 @@
   const API_KEY = global.APEX_YOUTUBE_API_KEY || 'AIzaSyD_tdt10TzQhoM1-PRhTXORBOPVRgqLJUI';
   const CHANNEL_ID = 'UCF3aydfOlV88XVqW8vpdKEw';
   const CHANNEL_HANDLE = '@apexscorpio';
+  const UPLOADS_PLAYLIST_ID = CHANNEL_ID.replace(/^UC/, 'UU');
 
-  const STATE_KEY = 'apex_yt_live_state_v2';
-  const VIDEO_KEY = 'apex_yt_live_video_id_v2';
-  const LEADER_KEY = 'apex_yt_live_leader_v2';
-  const BUS_KEY = 'apex_yt_live_bus_v2';
-  const LAST_SEARCH_KEY = 'apex_yt_last_search_v2';
+  const STATE_KEY = 'apex_yt_live_state_v3';
+  const VIDEO_KEY = 'apex_yt_live_video_id_v3';
+  const LEADER_KEY = 'apex_yt_live_leader_v3';
+  const BUS_KEY = 'apex_yt_live_bus_v3';
+  const LAST_SEARCH_KEY = 'apex_yt_last_search_v3';
 
   const LEADER_TTL_MS = 15000;
   const LEADER_HEARTBEAT_MS = 5000;
   const VIDEO_POLL_MS = 5000;
-  // 15 min = at most 96 search.list calls/day if the overlays stay open 24/7.
-  const OFFLINE_DISCOVERY_MS = 15 * 60 * 1000;
-  const MIN_SEARCH_GAP_MS = 60000;
+  // Offline discovery uses the channel uploads playlist instead of search.list.
+  // This avoids the small daily search.list bucket and notices a new live quickly.
+  const OFFLINE_DISCOVERY_MS = 30 * 1000;
+  const MIN_SEARCH_GAP_MS = 10000;
   const MIN_CHAT_POLL_MS = 1000;
   const MAX_CHAT_POLL_MS = 15000;
 
   const instanceId = `yt-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
   const channel = typeof BroadcastChannel !== 'undefined'
-    ? new BroadcastChannel('apex_youtube_live_v2')
+    ? new BroadcastChannel('apex_youtube_live_v3')
     : null;
 
   const messageHandlers = new Set();
@@ -268,25 +270,64 @@
     }
   }
 
+  async function discoverFromUploadsPlaylist() {
+    const playlist = await apiGet('playlistItems', {
+      part: 'contentDetails,snippet',
+      playlistId: UPLOADS_PLAYLIST_ID,
+      maxResults: '10'
+    });
+
+    const ids = [...new Set((playlist?.items || [])
+      .map(item => item?.contentDetails?.videoId || item?.snippet?.resourceId?.videoId)
+      .filter(Boolean))];
+    if (!ids.length) return null;
+
+    const videos = await apiGet('videos', {
+      part: 'snippet,liveStreamingDetails',
+      id: ids.join(','),
+      maxResults: String(ids.length)
+    });
+
+    const live = (videos?.items || []).find(video => {
+      const details = video?.liveStreamingDetails;
+      const content = video?.snippet?.liveBroadcastContent || 'none';
+      return Boolean(details && !details.actualEndTime &&
+        (content === 'live' || details.actualStartTime));
+    });
+    return live?.id || null;
+  }
+
+  async function discoverFromOEmbed() {
+    try {
+      const liveUrl = `https://www.youtube.com/${CHANNEL_HANDLE}/live`;
+      const response = await fetch(`https://www.youtube.com/oembed?format=json&url=${encodeURIComponent(liveUrl)}`, {
+        cache: 'no-store'
+      });
+      if (!response.ok) return null;
+      const data = await response.json();
+      const match = String(data?.html || '').match(/youtube(?:-nocookie)?\.com\/embed\/([a-zA-Z0-9_-]{11})/);
+      return match?.[1] || null;
+    } catch (_) {
+      return null;
+    }
+  }
+
   async function discoverLive(force) {
     if (!isLeader) return;
     const now = Date.now();
     const lastSearchAt = Number(safeGet(LAST_SEARCH_KEY) || 0);
     if (!force && lastSearchAt && now - lastSearchAt < MIN_SEARCH_GAP_MS) {
-      scheduleDiscovery(OFFLINE_DISCOVERY_MS);
+      scheduleDiscovery(Math.max(1000, MIN_SEARCH_GAP_MS - (now - lastSearchAt)));
       return;
     }
 
     safeSet(LAST_SEARCH_KEY, String(now));
     try {
-      const data = await apiGet('search', {
-        part: 'snippet',
-        channelId: CHANNEL_ID,
-        eventType: 'live',
-        type: 'video',
-        maxResults: '1'
-      });
-      const videoId = data?.items?.[0]?.id?.videoId || null;
+      // No-quota attempt first. If oEmbed does not resolve the channel live URL,
+      // use the official uploads playlist + videos.list path (no search.list).
+      let videoId = await discoverFromOEmbed();
+      if (!videoId) videoId = await discoverFromUploadsPlaylist();
+
       if (videoId) {
         activeVideoId = videoId;
         liveChatPageToken = null;
@@ -294,10 +335,11 @@
       } else {
         activeVideoId = null;
         stopChatPolling();
-        publishState({ isLive: false, viewers: 0, videoId: null, liveChatId: null, title: '' });
+        publishState({ isLive: false, viewers: 0, videoId: null, liveChatId: null, title: '', error: null });
         scheduleDiscovery(OFFLINE_DISCOVERY_MS);
       }
     } catch (error) {
+      console.warn('[YouTube Live] discovery failed:', error);
       publishState({ ...state, error: error.message });
       scheduleDiscovery(OFFLINE_DISCOVERY_MS);
     }
