@@ -129,6 +129,13 @@
       return false;
     }
 
+    function doClearAlerts() {
+      alertQueue = [];
+      alertBox.style.display = 'none';
+      isShowingAlert = false;
+      _seenIds.clear();
+    }
+
     function handleIncomingData(type, payload) {
       if (!type) return;
       if (type === 'config_update') {
@@ -138,9 +145,7 @@
         }
       }
       if (type === 'clear_alerts') {
-        alertQueue = [];
-        alertBox.style.display = 'none';
-        isShowingAlert = false;
+        doClearAlerts();
         return;
       }
       if ((type === 'new_event' || type === 'trigger_alert') && payload) {
@@ -162,12 +167,15 @@
         const mqttClient = mqtt.connect('wss://broker.emqx.io:8084/mqtt', { clientId: 'scorpio_alerts_' + Math.random().toString(16).substring(2, 8) });
         mqttClient.on('connect', () => {
           mqttClient.subscribe('apexscorpio/streamtools/v1/cfg/alerts');
+          mqttClient.subscribe('apexscorpio/streamtools/v1/cfg/clear_alerts');
           mqttClient.subscribe('apexscorpio/streamtools/v1/events');
         });
         mqttClient.on('message', (topic, message) => {
           try {
             const data = JSON.parse(message.toString());
-            if (topic.includes('/cfg/alerts')) {
+            if (topic.includes('/cfg/clear_alerts')) {
+              doClearAlerts();
+            } else if (topic.includes('/cfg/alerts')) {
               currentConfig = { ...currentConfig, ...data };
             } else if (data && data.type) {
               handleIncomingData(data.type, data.payload);
