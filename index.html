@@ -7,7 +7,7 @@
   <meta http-equiv="Pragma" content="no-cache">
   <meta http-equiv="Expires" content="0">
   <title>ApexScorpio - Central de Overlays & Opções Avançadas</title>
-  <link rel="stylesheet" href="css/style.css?v=3.0">
+  <link rel="stylesheet" href="css/style.css?v=4.0">
   <script src="https://cdn.jsdelivr.net/npm/mqtt@5.3.4/dist/mqtt.min.js"></script>
   <style>
     body {
@@ -206,14 +206,14 @@
         <img src="brandkit/Apex_Scorpio_Brand_Assets/01_Primary/Apex_Scorpio_Primary_Full_Colour.png" alt="Apex Scorpio">
         <span>CENTRAL DE OVERLAYS & STREAMTOOLS</span>
       </div>
-      <div style="font-size: 13px; color: #10B981; font-weight: 700;">● ONLINE (HTTPS + Cloud WSS Relay)</div>
+      <div id="cloud-status-badge" style="font-size: 13px; color: #F59E0B; font-weight: 700;">● A Ligar Cloud Relay (Porta 443 WSS)...</div>
     </div>
 
     <!-- SLOBS Public Sync Banner -->
     <div style="background: linear-gradient(135deg, rgba(14,10,30,0.98), rgba(8,8,12,0.98)); border: 1px solid rgba(16,185,129,0.5); border-radius: 14px; padding: 16px 20px; margin-bottom: 18px;">
       <div style="font-size: 13px; font-weight: 800; color: #10B981; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 6px;">⚡ Sincronização 100% Pública e URLs Limpos para o Streamlabs OBS</div>
       <div style="font-size: 13px; color: #CBD5E1; line-height: 1.5;">
-        Usa sempre os <strong>URLs fixos e públicos</strong> abaixo no SLOBS. Todos os testes têm botões dedicados de <strong>🛑 Limpar / Parar Teste</strong> e auto-revertem após 8 segundos!
+        Usa sempre os <strong>URLs fixos e públicos</strong> abaixo no SLOBS. Todos os testes têm botões dedicados de <strong>🛑 Limpar / Parar Teste</strong> e restauram os valores reais!
       </div>
     </div>
 
@@ -264,7 +264,7 @@
 
       <div class="controls-group">
         <button class="btn" id="btn-sim-viewers" style="background: #10B981;" onclick="simulateViewers()">🎲 Simular Live (50 Twitch / 120 YouTube / 35 FB por 8s)</button>
-        <button class="btn" style="background: #DC2626;" onclick="resetViewers()">🧹 Limpar teste</button>
+        <button class="btn" style="background: #DC2626;" onclick="resetViewers()">🛑 Terminar Teste & Restaurar Valores Reais</button>
       </div>
 
       <label style="font-weight: 700; font-size: 13px; color: #94A3B8; text-transform: uppercase;">Visualização da Source em Tempo Real:</label>
@@ -328,11 +328,11 @@
       </div>
 
       <div class="controls-group">
-        <button class="btn btn-twitch" onclick="sendTestChat('twitch')">💬 Chat Twitch</button>
-        <button class="btn btn-youtube" onclick="sendTestChat('youtube')">💬 Chat YouTube</button>
-        <button class="btn btn-facebook" onclick="sendTestChat('facebook')">💬 Chat Facebook</button>
-        <button class="btn" style="background: linear-gradient(135deg, #9146FF, #E8181F);" onclick="triggerRandomChat()">🎲 Testar Chat Aleatório</button>
-        <button class="btn" style="background: #DC2626;" onclick="clearChat()">🧹 Limpar teste</button>
+        <button class="btn btn-twitch" onclick="sendTestChat('twitch')">💬 Chat Twitch (8s)</button>
+        <button class="btn btn-youtube" onclick="sendTestChat('youtube')">💬 Chat YouTube (8s)</button>
+        <button class="btn btn-facebook" onclick="sendTestChat('facebook')">💬 Chat Facebook (8s)</button>
+        <button class="btn" style="background: linear-gradient(135deg, #9146FF, #E8181F);" onclick="triggerRandomChat()">🎲 Testar Chat Aleatório (8s)</button>
+        <button class="btn" style="background: #DC2626;" onclick="clearChat()">🛑 Limpar Chat de Teste</button>
       </div>
 
       <label style="font-weight: 700; font-size: 13px; color: #94A3B8; text-transform: uppercase;">Visualização da Source em Tempo Real:</label>
@@ -387,7 +387,7 @@
         <button class="btn" style="background: #F59E0B;" onclick="triggerAlert('subscriber')">⭐ Testar Subscriber Event</button>
         <button class="btn" style="background: #9146FF;" onclick="triggerAlert('raid')">🚀 Testar Raid Event</button>
         <button class="btn" style="background: linear-gradient(135deg, #38BDF8, #9146FF);" onclick="triggerRandomEvent()">🎲 Disparar Evento Aleatório</button>
-        <button class="btn" style="background: #DC2626;" onclick="clearEvents()">🧹 Limpar teste</button>
+        <button class="btn" style="background: #DC2626;" onclick="clearEvents()">🛑 Limpar Eventos de Teste</button>
       </div>
 
       <label style="font-weight: 700; font-size: 13px; color: #94A3B8; text-transform: uppercase;">Visualização da Source em Tempo Real:</label>
@@ -440,7 +440,7 @@
         <button class="btn" style="background: #F59E0B;" onclick="triggerAlert('subscriber')">⭐ Alerta Subscriber</button>
         <button class="btn" style="background: #9146FF;" onclick="triggerAlert('raid')">🚀 Alerta Raid</button>
         <button class="btn" style="background: linear-gradient(135deg, #E8181F, #F59E0B);" onclick="triggerRandomAlert()">🎲 Disparar Alerta Aleatório com Som</button>
-        <button class="btn" style="background: #DC2626;" onclick="clearAlerts()">🧹 Limpar teste</button>
+        <button class="btn" style="background: #DC2626;" onclick="clearAlerts()">🛑 Parar Alerta & Limpar Queue</button>
       </div>
 
       <label style="font-weight: 700; font-size: 13px; color: #94A3B8; text-transform: uppercase;">Visualização da Source em Tempo Real:</label>
@@ -505,7 +505,6 @@
         <button class="btn" style="background: #9146FF;" onclick="switchScene('brb.html')">☕ Ver BRB</button>
         <button class="btn" style="background: #F59E0B;" onclick="switchScene('technical.html')">⚠️ Ver Technical Issues</button>
         <button class="btn" style="background: #38BDF8;" onclick="switchScene('ending.html')">🏁 Ver Stream Ending</button>
-        <button class="btn" style="background: #64748B;" onclick="clearScenes()">🧹 Limpar teste</button>
       </div>
 
       <label style="font-weight: 700; font-size: 13px; color: #94A3B8; text-transform: uppercase;">Visualização da Cena em Tempo Real:</label>
@@ -518,11 +517,32 @@
   </div>
 
   <script>
-    let mqttClient = null;
+    // Multi-Broker Redundancy over Port 443 / 8000
+    const MQTT_BROKERS = [
+      'wss://broker.emqx.io:443/mqtt',
+      'wss://broker.hivemq.com:8000/mqtt',
+      'wss://broker.emqx.io:8084/mqtt'
+    ];
+    let activeClients = [];
+
     if (typeof mqtt !== 'undefined') {
-      try {
-        mqttClient = mqtt.connect('wss://broker.emqx.io:8084/mqtt', { clientId: 'scorpio_dash_' + Math.random().toString(16).substring(2, 8) });
-      } catch(e) {}
+      MQTT_BROKERS.forEach(url => {
+        try {
+          const client = mqtt.connect(url, {
+            clientId: 'scorpio_dash_' + Math.random().toString(16).substring(2, 8),
+            connectTimeout: 4000,
+            keepalive: 30
+          });
+          client.on('connect', () => {
+            const badge = document.getElementById('cloud-status-badge');
+            if (badge) {
+              badge.style.color = '#10B981';
+              badge.innerText = '● CLOUD RELAY ATIVO (Porta 443 WSS)';
+            }
+          });
+          activeClients.push(client);
+        } catch(e) {}
+      });
     }
 
     const bc = typeof BroadcastChannel !== 'undefined' ? new BroadcastChannel('apex_scorpio_stream_tools') : null;
@@ -535,15 +555,18 @@
       setTimeout(() => el.style.display = 'none', 2500);
     }
 
+    function publishCloudMessage(topic, payload, opts = {}) {
+      const str = typeof payload === 'string' ? payload : JSON.stringify(payload);
+      activeClients.forEach(client => {
+        try { client.publish(topic, str, opts); } catch(e) {}
+      });
+    }
+
     function publishConfig(overlayName, configData) {
       const payload = { type: 'config_update', overlay: overlayName, config: configData, timestamp: Date.now() };
 
-      if (mqttClient) {
-        try {
-          mqttClient.publish(`apexscorpio/streamtools/v1/cfg/${overlayName}`, JSON.stringify(configData), { retain: true, qos: 1 });
-          mqttClient.publish('apexscorpio/streamtools/v1/events', JSON.stringify({ type: 'config_update', payload: { [overlayName]: configData } }));
-        } catch(e) {}
-      }
+      publishCloudMessage(`apexscorpio/streamtools/v1/cfg/${overlayName}`, configData, { retain: true, qos: 1 });
+      publishCloudMessage('apexscorpio/streamtools/v1/events', { type: 'config_update', payload: { [overlayName]: configData } });
 
       if (bc) {
         try { bc.postMessage({ type: 'config_update', data: { [overlayName]: configData } }); } catch(e) {}
@@ -573,9 +596,7 @@
     function broadcastEvent(type, payload) {
       const data = { type, payload, timestamp: Date.now() };
 
-      if (mqttClient) {
-        try { mqttClient.publish('apexscorpio/streamtools/v1/events', JSON.stringify(data)); } catch(e) {}
-      }
+      publishCloudMessage('apexscorpio/streamtools/v1/events', data);
 
       if (bc) {
         try { bc.postMessage({ type, data: payload }); } catch(e) {}
@@ -597,15 +618,11 @@
 
     function broadcastClear(target) {
       const type = `clear_${target}`;
-      const payload = { timestamp: Date.now() };
+      const payload = { timestamp: Date.now(), type };
       const data = { type, payload, timestamp: Date.now() };
 
-      if (mqttClient) {
-        try {
-          mqttClient.publish('apexscorpio/streamtools/v1/events', JSON.stringify(data));
-          mqttClient.publish(`apexscorpio/streamtools/v1/cfg/${type}`, JSON.stringify(payload), { retain: true, qos: 1 });
-        } catch(e) {}
-      }
+      publishCloudMessage('apexscorpio/streamtools/v1/events', data);
+      publishCloudMessage(`apexscorpio/streamtools/v1/cfg/${type}`, payload, { retain: true, qos: 1 });
 
       if (bc) {
         try { bc.postMessage({ type, data: payload }); } catch(e) {}
@@ -735,7 +752,7 @@
         timestamp: new Date().toISOString()
       };
       broadcastEvent('chat_message', testMsg);
-      showToast('💬 Mensagem de teste enviada. Usa “Limpar teste” para a remover.');
+      showToast('💬 Mensagem de teste enviada (Auto-reverte após 8s)!');
     }
 
     function triggerRandomChat() {
@@ -805,12 +822,6 @@
       showToast('🛑 Alertas & Queue limpos!');
     }
 
-    function clearScenes() {
-      broadcastClear('scenes');
-      switchScene('starting.html');
-      showToast('🧹 Teste das cenas limpo e Starting Soon reiniciado!');
-    }
-
     let simTimer = null;
     function simulateViewers(durationSec = 8) {
       if (simTimer) clearTimeout(simTimer);
@@ -852,6 +863,7 @@
         totalViewers: 0,
         isTest: false
       };
+      broadcastClear('viewers');
       broadcastEvent('status_update', state);
       showToast('🛑 Teste do contador terminado. Valores reais restaurados!');
       const btn = document.getElementById('btn-sim-viewers');
