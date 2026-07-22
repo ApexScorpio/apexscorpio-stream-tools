@@ -7,7 +7,7 @@
   <link rel="stylesheet" href="/css/style.css">
   <script src="/socket.io/socket.io.js"></script>
 </head>
-<body>
+<body class="chat-page">
 
   <div class="chat-container" id="chat-container">
     <!-- Chat messages dynamically append here -->
@@ -17,10 +17,10 @@
     const socket = io();
     const chatContainer = document.getElementById('chat-container');
 
-    // Parse query params (e.g., ?fade=20 or ?fade=false)
+    // Parse query params (messages remain PERMANENT by default, or fade if ?fade=20)
     const urlParams = new URLSearchParams(window.location.search);
-    const fadeSeconds = urlParams.get('fade') === 'false' ? 0 : parseInt(urlParams.get('fade') || '20', 10);
-    const maxMessages = parseInt(urlParams.get('max') || '25', 10);
+    const fadeSeconds = parseInt(urlParams.get('fade') || '0', 10);
+    const maxMessages = parseInt(urlParams.get('max') || '30', 10);
 
     socket.on('chat_message', (data) => {
       renderChatMessage(data);

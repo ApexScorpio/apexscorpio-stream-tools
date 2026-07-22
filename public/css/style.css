@@ -110,15 +110,32 @@ body {
 /* =======================================
    UNIFIED CHAT WIDGET OVERLAY
 ======================================= */
-.chat-container {
-  width: 100%;
-  max-width: 450px;
-  height: 100vh;
+body.chat-page {
   display: flex;
   flex-direction: column;
   justify-content: flex-end;
-  padding: 16px;
-  gap: 10px;
+  height: 100vh;
+  width: 100vw;
+  padding: 10px;
+}
+
+body.viewers-page {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  padding: 6px;
+  width: 100vw;
+  height: 100vh;
+}
+
+.chat-container {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  padding: 6px;
+  gap: 8px;
   overflow: hidden;
 }
 
