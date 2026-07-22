@@ -6,94 +6,9 @@
   <title>ApexScorpio - Event List Overlay (Platform SVG Logos)</title>
   <link rel="stylesheet" href="/css/style.css">
   <script src="/socket.io/socket.io.js"></script>
-  <style>
-    body {
-      background: transparent;
-      overflow: hidden;
-      display: flex;
-      flex-direction: column;
-      justify-content: flex-start;
-      width: 100vw;
-      height: 100vh;
-      padding: 12px;
-    }
-    .event-list-container {
-      display: flex;
-      flex-direction: column;
-      gap: 10px;
-      width: 100%;
-      max-width: 380px;
-      max-height: 90vh;
-      overflow: hidden;
-    }
-    .event-card {
-      background: rgba(8, 8, 12, 0.94);
-      backdrop-filter: blur(16px);
-      -webkit-backdrop-filter: blur(16px);
-      border: 1px solid rgba(232, 24, 31, 0.35);
-      border-left: 4px solid #E8181F;
-      border-radius: 0 12px 12px 0;
-      padding: 10px 14px;
-      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.6);
-      animation: slideInFromLeft 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
-      display: flex;
-      align-items: center;
-      gap: 10px;
-    }
-    .event-card.no-bg {
-      background: transparent !important;
-      backdrop-filter: none !important;
-      -webkit-backdrop-filter: none !important;
-      border-top: none !important;
-      border-right: none !important;
-      border-bottom: none !important;
-      box-shadow: none !important;
-    }
-    .event-card.follower { border-left-color: #E8181F; }
-    .event-card.subscriber { border-left-color: #F59E0B; }
-    .event-card.raid { border-left-color: #9146FF; }
-
-    .platform-logo-badge {
-      width: 28px;
-      height: 28px;
-      border-radius: 6px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      flex-shrink: 0;
-    }
-    .platform-logo-badge.twitch { background: rgba(145, 70, 255, 0.25); border: 1px solid rgba(145, 70, 255, 0.5); }
-    .platform-logo-badge.youtube { background: rgba(232, 24, 31, 0.25); border: 1px solid rgba(232, 24, 31, 0.5); }
-    .platform-logo-badge.facebook { background: rgba(24, 119, 242, 0.25); border: 1px solid rgba(24, 119, 242, 0.5); }
-
-    .event-info {
-      display: flex;
-      flex-direction: column;
-    }
-    .event-user {
-      font-family: 'Outfit', sans-serif;
-      font-weight: 800;
-      font-size: 15px;
-      color: #FFFFFF;
-      display: flex;
-      align-items: center;
-      gap: 6px;
-    }
-    .event-action {
-      font-family: 'Inter', sans-serif;
-      font-size: 13px;
-      color: #94A3B8;
-      font-weight: 600;
-    }
-
-    @keyframes slideInFromLeft {
-      0% { opacity: 0; transform: translateX(-30px); }
-      100% { opacity: 1; transform: translateX(0); }
-    }
-  </style>
 </head>
 <body>
-  <div class="event-list-container" id="event-feed"></div>
+  <div class="event-list-container has-bg" id="event-feed"></div>
 
   <script>
     const socket = io();
@@ -120,11 +35,16 @@
     });
 
     function applyConfigToDOM() {
+      if (currentConfig.showBg) {
+        feed.classList.add('has-bg');
+        feed.classList.remove('no-bg');
+      } else {
+        feed.classList.add('no-bg');
+        feed.classList.remove('has-bg');
+      }
+
       const cards = document.querySelectorAll('.event-card');
       cards.forEach(card => {
-        if (!currentConfig.showBg) card.classList.add('no-bg');
-        else card.classList.remove('no-bg');
-
         const badge = card.querySelector('.platform-logo-badge');
         if (badge) {
           badge.style.display = currentConfig.showLogos ? 'flex' : 'none';
@@ -164,10 +84,9 @@
         eventClass = 'raid';
       }
 
-      const noBgClass = currentConfig.showBg ? '' : 'no-bg';
       const logoDisplay = currentConfig.showLogos ? 'flex' : 'none';
 
-      card.className = `event-card ${eventClass} ${noBgClass}`;
+      card.className = `event-card ${eventClass}`;
       card.innerHTML = `
         <div class="platform-logo-badge ${platform}" style="display: ${logoDisplay}">
           ${svgIcon}

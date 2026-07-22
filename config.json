@@ -16,6 +16,9 @@
     "maxMessages": 50
   },
   "events": {
+    "showTwitch": true,
+    "showYoutube": true,
+    "showFacebook": true,
     "showLogos": true,
     "showBg": true,
     "maxItems": 8
@@ -28,6 +31,6 @@
     "animationStyle": "popin"
   },
   "starting": {
-    "timerMinutes": 15
+    "timerMinutes": 1
   }
 }

@@ -39,7 +39,6 @@ body {
   overflow: hidden;
 }
 
-/* Page Bounds for OBS Browser Sources */
 body.chat-page {
   width: 100vw;
   height: 100vh;
@@ -56,25 +55,31 @@ body.viewers-page {
 }
 
 /* =======================================
-   APEX SCORPIO - VIEWER COUNTER WIDGET
+   1. VIEWER COUNTER CONTAINER (FIXED BOX)
 ======================================= */
 .viewer-counter-container {
   display: inline-flex;
   align-items: center;
   gap: 12px;
+  min-width: 420px;
+  min-height: 60px;
   padding: 10px 22px;
-  background: var(--dark-bg);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
-  border: 1px solid var(--glass-border);
   border-radius: 50px;
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.8), 0 0 20px rgba(232, 24, 31, 0.25);
-  animation: fadeIn 0.5s ease-out;
   position: relative;
   overflow: hidden;
+  transition: all 0.3s ease;
 }
 
-.viewer-counter-container::after {
+/* Background Active Mode: Fills the entire fixed box */
+.viewer-counter-container.has-bg {
+  background: var(--dark-bg) !important;
+  backdrop-filter: blur(16px) !important;
+  -webkit-backdrop-filter: blur(16px) !important;
+  border: 1px solid var(--glass-border) !important;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.8), 0 0 20px rgba(232, 24, 31, 0.25) !important;
+}
+
+.viewer-counter-container.has-bg::after {
   content: '';
   position: absolute;
   right: -5px;
@@ -87,7 +92,7 @@ body.viewers-page {
   pointer-events: none;
 }
 
-.viewer-counter-container::before {
+.viewer-counter-container.has-bg::before {
   content: '';
   position: absolute;
   top: 0; left: 0; right: 0;
@@ -95,14 +100,17 @@ body.viewers-page {
   background: linear-gradient(90deg, #E8181F, #9146FF, #E8181F);
 }
 
-/* No-Background Mode */
+/* No-Background Mode: Removes outline, border, background, shadow 100% */
 .viewer-counter-container.no-bg {
   background: transparent !important;
   backdrop-filter: none !important;
   -webkit-backdrop-filter: none !important;
   border: none !important;
+  outline: none !important;
   box-shadow: none !important;
   padding: 0 !important;
+  min-width: auto !important;
+  min-height: auto !important;
 }
 
 .viewer-counter-container.no-bg::before,
@@ -172,29 +180,27 @@ body.viewers-page {
 }
 
 /* =======================================
-   APEX SCORPIO - UNIFIED LIVE CHAT WIDGET
+   2. UNIFIED CHAT CONTAINER (FIXED BOX)
 ======================================= */
-/* Outer Container with optional full viewport background */
 .chat-container {
   display: flex;
   flex-direction: column;
   gap: 10px;
-  width: 100%;
-  max-width: 480px;
-  max-height: 85vh;
+  width: 440px;
+  height: 520px;
   overflow-y: auto;
   scroll-behavior: smooth;
-  padding: 14px;
+  padding: 16px;
   border-radius: 16px;
   transition: all 0.3s ease;
 }
 
 .chat-container.has-bg {
-  background: var(--dark-bg);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
-  border: 1px solid var(--glass-border);
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.8), 0 0 20px rgba(232, 24, 31, 0.2);
+  background: var(--dark-bg) !important;
+  backdrop-filter: blur(16px) !important;
+  -webkit-backdrop-filter: blur(16px) !important;
+  border: 1px solid var(--glass-border) !important;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.8), 0 0 20px rgba(232, 24, 31, 0.2) !important;
 }
 
 .chat-container.no-bg {
@@ -202,6 +208,7 @@ body.viewers-page {
   backdrop-filter: none !important;
   -webkit-backdrop-filter: none !important;
   border: none !important;
+  outline: none !important;
   box-shadow: none !important;
   padding: 0 !important;
 }
@@ -215,9 +222,8 @@ body.viewers-page {
   border-radius: 4px;
 }
 
-/* Chat Message Modes: Pill vs Compact */
 .chat-message {
-  background: rgba(20, 23, 34, 0.7);
+  background: rgba(20, 23, 34, 0.75);
   border: 1px solid rgba(255, 255, 255, 0.1);
   border-left: 4px solid var(--apex-red);
   padding: 10px 14px;
@@ -228,13 +234,11 @@ body.viewers-page {
   position: relative;
 }
 
-/* Pill Mode (Default) */
 .chat-message.mode-pill {
   border-radius: 0 14px 14px 0;
   box-shadow: 0 4px 15px rgba(0, 0, 0, 0.5);
 }
 
-/* Compact Mode (Minimal Line) */
 .chat-message.mode-compact {
   border-radius: 0;
   background: transparent !important;
@@ -245,17 +249,9 @@ body.viewers-page {
   box-shadow: none !important;
 }
 
-.chat-message.twitch {
-  border-left-color: var(--twitch-color);
-}
-
-.chat-message.youtube {
-  border-left-color: var(--youtube-color);
-}
-
-.chat-message.facebook {
-  border-left-color: var(--facebook-color);
-}
+.chat-message.twitch { border-left-color: var(--twitch-color); }
+.chat-message.youtube { border-left-color: var(--youtube-color); }
+.chat-message.facebook { border-left-color: var(--facebook-color); }
 
 .chat-message.exiting {
   animation: lineGrowAndSlideOutReverse 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards !important;
@@ -304,7 +300,40 @@ body.viewers-page {
   color: #F1F5F9;
 }
 
-/* Cyberpunk Animation: Entry */
+/* =======================================
+   3. EVENT LIST CONTAINER (FIXED BOX)
+======================================= */
+.event-list-container {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  width: 380px;
+  height: 440px;
+  overflow: hidden;
+  padding: 14px;
+  border-radius: 16px;
+  transition: all 0.3s ease;
+}
+
+.event-list-container.has-bg {
+  background: var(--dark-bg) !important;
+  backdrop-filter: blur(16px) !important;
+  -webkit-backdrop-filter: blur(16px) !important;
+  border: 1px solid var(--glass-border) !important;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.8), 0 0 20px rgba(232, 24, 31, 0.2) !important;
+}
+
+.event-list-container.no-bg {
+  background: transparent !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+  border: none !important;
+  outline: none !important;
+  box-shadow: none !important;
+  padding: 0 !important;
+}
+
+/* Animations */
 @keyframes lineGrowAndSlideOut {
   0% {
     opacity: 0;
@@ -323,7 +352,6 @@ body.viewers-page {
   }
 }
 
-/* Cyberpunk Animation: Exit (REVERSE) */
 @keyframes lineGrowAndSlideOutReverse {
   0% {
     opacity: 1;
