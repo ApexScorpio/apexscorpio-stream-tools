@@ -178,7 +178,13 @@
     function beginAlertExit() {
       exitInProgress = true;
       alertBox.removeEventListener('animationend', finishAlertExit);
+
+      // Removing the completed entrance animation and forcing layout makes
+      // Chromium/SLOBS start a fresh reversed run of the same keyframes.
+      alertBox.className = 'alert-box';
+      void alertBox.offsetWidth;
       alertBox.className = 'alert-box pop-out';
+
       alertBox.addEventListener('animationend', finishAlertExit);
       exitFallbackTimer = setTimeout(finishAlertExit, 700);
     }
