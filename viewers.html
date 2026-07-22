@@ -303,22 +303,36 @@
         let videoIdFound = null;
         let countFound = 0;
 
-        // 1. Tentar scraping do HTML publico da live do canal @apexscorpio
-        try {
-          const resp = await fetch('https://www.youtube.com/@apexscorpio/live', { cache: 'no-store' });
-          const html = await resp.text();
-          
-          // Deteção 1: Canonical link ou watchEndpoint
+        // Tentar obter o HTML da Live usando proxy CORS (necessário para requisições client-side no browser)
+        const targetLiveUrl = 'https://www.youtube.com/@apexscorpio/live';
+        const proxyUrls = [
+          `https://api.allorigins.win/raw?url=${encodeURIComponent(targetLiveUrl)}`,
+          `https://corsproxy.io/?${encodeURIComponent(targetLiveUrl)}`
+        ];
+
+        let html = '';
+        for (const pUrl of proxyUrls) {
+          try {
+            const resp = await fetch(pUrl, { cache: 'no-store' });
+            if (resp.ok) {
+              html = await resp.text();
+              if (html && html.length > 500) break;
+            }
+          } catch(e) {}
+        }
+
+        if (html) {
+          // Extrair Video ID da Live
           const matchVid = html.match(/<link rel="canonical" href="https:\/\/www\.youtube\.com\/watch\?v=([a-zA-Z0-9_-]{11})">/) ||
-                           html.match(/"watchEndpoint":\{"videoId":"([a-zA-Z0-9_-]{11})"/);
+                           html.match(/"videoId":"([a-zA-Z0-9_-]{11})"/);
           if (matchVid && matchVid[1]) {
             videoIdFound = matchVid[1];
           }
 
-          // Deteção 2: Presença de tags de emissão ao vivo
-          const hasLiveFlag = html.includes('"isLiveBroadcast":true') || 
+          // Confirmar estado LIVE
+          const hasLiveFlag = html.includes('"isLiveNow":true') || 
+                              html.includes('"isLiveBroadcast":true') || 
                               html.includes('"isLive":true') || 
-                              html.includes('"isLiveContent":true') ||
                               html.includes('"is_viewed_live":"True"') ||
                               html.includes('"status":"LIVE"');
 
@@ -328,10 +342,11 @@
             isLiveFound = true;
           }
 
-          // Deteção 3: Contagem de espectadores
+          // Extrair Espectadores
           const viewerPatterns = [
             /"viewCount":\s*\{\s*"runs":\s*\[\s*\{\s*"text":\s*"([\d,\.\s]+)"/,
             /"shortViewCount":\s*\{\s*"runs":\s*\[\s*\{\s*"text":\s*"([\d,\.\s]+)"/,
+            /"viewCount":"(\d+)"/,
             /([\d,\.]+)\s*(?:a assistir|watching now|espectadores|espectadores ao vivo)/i
           ];
 
@@ -345,9 +360,9 @@
               }
             }
           }
-        } catch(e) {}
+        }
 
-        // 2. Atualizar estado do YouTube
+        // Atualizar estado
         if (isLiveFound) {
           realState.youtube = { isLive: true, viewers: countFound || 1 };
           ytLiveVideoId = videoIdFound;
