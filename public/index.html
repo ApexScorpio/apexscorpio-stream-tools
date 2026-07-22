@@ -1,0 +1,271 @@
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ApexScorpio - Streamlabs Overlays Dashboard</title>
+  <link rel="stylesheet" href="/css/style.css">
+  <style>
+    body {
+      background: #0B0F19;
+      color: #E2E8F0;
+      overflow-y: auto;
+      min-height: 100vh;
+      padding: 30px 20px;
+    }
+    .dashboard-container {
+      max-width: 1000px;
+      margin: 0 auto;
+    }
+    .header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 30px;
+      padding-bottom: 20px;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    }
+    .header h1 {
+      font-family: 'Outfit', sans-serif;
+      font-size: 28px;
+      background: linear-gradient(135deg, #38BDF8, #9146FF, #FF0000);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+      gap: 20px;
+      margin-bottom: 30px;
+    }
+    .card {
+      background: rgba(30, 41, 59, 0.7);
+      backdrop-filter: blur(10px);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: 16px;
+      padding: 24px;
+    }
+    .card h2 {
+      font-family: 'Outfit', sans-serif;
+      font-size: 20px;
+      margin-bottom: 16px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .url-box {
+      display: flex;
+      gap: 10px;
+      background: rgba(15, 23, 42, 0.8);
+      padding: 10px;
+      border-radius: 8px;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      margin-top: 10px;
+    }
+    .url-input {
+      flex: 1;
+      background: transparent;
+      border: none;
+      color: #38BDF8;
+      font-family: monospace;
+      font-size: 14px;
+    }
+    .btn {
+      background: #3B82F6;
+      color: #FFF;
+      border: none;
+      padding: 8px 16px;
+      border-radius: 8px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+    .btn:hover { background: #2563EB; }
+    .btn-twitch { background: var(--twitch-color); }
+    .btn-twitch:hover { background: #772CE8; }
+    .btn-youtube { background: var(--youtube-color); }
+    .btn-youtube:hover { background: #CC0000; }
+    
+    .status-badge {
+      display: inline-block;
+      padding: 4px 10px;
+      border-radius: 20px;
+      font-size: 12px;
+      font-weight: 700;
+    }
+    .status-live { background: rgba(34, 197, 94, 0.2); color: #4ADE80; border: 1px solid rgba(34, 197, 94, 0.4); }
+    .status-offline { background: rgba(148, 163, 184, 0.2); color: #94A3B8; border: 1px solid rgba(148, 163, 184, 0.4); }
+
+    .instructions {
+      background: rgba(15, 23, 42, 0.6);
+      border-radius: 12px;
+      padding: 20px;
+      margin-top: 20px;
+      border-left: 4px solid #38BDF8;
+    }
+    .instructions ol {
+      margin-left: 20px;
+      margin-top: 10px;
+      line-height: 1.6;
+    }
+  </style>
+</head>
+<body>
+  <div class="dashboard-container">
+    <div class="header">
+      <h1>🎮 ApexScorpio - Streamlabs Overlays</h1>
+      <div>
+        <span class="status-badge status-live">ONLINE DASHBOARD</span>
+      </div>
+    </div>
+
+    <!-- Status Overview Cards -->
+    <div class="grid">
+      <!-- Twitch Card -->
+      <div class="card">
+        <h2>
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="var(--twitch-color)"><path d="M11.571 4.714h1.715v5.143H11.571V4.714zm4.715 0H18v5.143h-1.714V4.714zM6 0L1.714 4.286v15.428h5.143V24l4.286-4.286h3.428L22.286 12V0H6zm14.571 11.143l-3.428 3.428h-3.429l-3 3v-3H6.857V1.714h13.714v9.429z"/></svg>
+          Twitch (apexscorpio)
+        </h2>
+        <p>Status: <span id="dash-twitch-status" class="status-badge status-offline">OFFLINE</span></p>
+        <p style="margin-top: 8px;">Espectadores: <strong id="dash-twitch-viewers">0</strong></p>
+      </div>
+
+      <!-- YouTube Card -->
+      <div class="card">
+        <h2>
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="var(--youtube-color)"><path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/></svg>
+          YouTube (@apexscorpio)
+        </h2>
+        <p>Status: <span id="dash-yt-status" class="status-badge status-offline">OFFLINE</span></p>
+        <p style="margin-top: 8px;">Espectadores: <strong id="dash-yt-viewers">0</strong></p>
+        <p style="font-size: 12px; color: #94A3B8; margin-top: 4px;" id="dash-yt-videoid">Video ID: --</p>
+      </div>
+
+      <!-- Total Viewers -->
+      <div class="card">
+        <h2>🔥 Espectadores Totais</h2>
+        <h3 id="dash-total-viewers" style="font-size: 36px; color: #38BDF8; margin-top: 10px;">0</h3>
+        <p style="font-size: 13px; color: #94A3B8;">Soma simultânea de Twitch + YouTube</p>
+      </div>
+    </div>
+
+    <!-- Streamlabs Browser Sources Section -->
+    <div class="card" style="margin-bottom: 30px;">
+      <h2>📺 Links para Adicionar no Streamlabs OBS</h2>
+      <p style="color: #94A3B8; font-size: 14px;">No Streamlabs OBS, adicione uma nova fonte do tipo <strong>Browser (Navegador)</strong> e cole um dos links abaixo:</p>
+
+      <div style="margin-top: 20px;">
+        <label style="font-weight: 600; font-size: 14px;">1. Viewer Counter (Contador de Viewers em Tempo Real)</label>
+        <div class="url-box">
+          <input type="text" readonly id="url-viewers" class="url-input">
+          <button class="btn" onclick="copyUrl('url-viewers')">Copiar Link</button>
+        </div>
+      </div>
+
+      <div style="margin-top: 20px;">
+        <label style="font-weight: 600; font-size: 14px;">2. Unified Live Chat (Chat Unificado Twitch + YouTube)</label>
+        <div class="url-box">
+          <input type="text" readonly id="url-chat" class="url-input">
+          <button class="btn" onclick="copyUrl('url-chat')">Copiar Link</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Test Controls Card -->
+    <div class="card">
+      <h2>🧪 Testar Overlays no Streamlabs</h2>
+      <p style="color: #94A3B8; font-size: 14px; margin-bottom: 15px;">Clique nos botões para enviar mensagens de teste e simular a entrada de viewers:</p>
+      
+      <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+        <button class="btn btn-twitch" onclick="sendTestChat('twitch')">Testar Chat Twitch</button>
+        <button class="btn btn-youtube" onclick="sendTestChat('youtube')">Testar Chat YouTube</button>
+        <button class="btn" style="background: #10B981;" onclick="simulateViewers()">Simular Live (50 Twitch / 120 YouTube)</button>
+        <button class="btn" style="background: #64748B;" onclick="resetViewers()">Resetar Espectadores (0)</button>
+      </div>
+    </div>
+
+    <!-- Instructions -->
+    <div class="instructions">
+      <h3 style="font-size: 16px; font-weight: 700; color: #38BDF8;">📋 Como Configurar no Streamlabs OBS:</h3>
+      <ol>
+        <li>Abra o <strong>Streamlabs OBS</strong> e escolha a sua Cena de Transmissão.</li>
+        <li>Em <strong>Fontes (Sources)</strong>, clique no botão <strong>+</strong> e selecione <strong>Browser Source (Navegador)</strong>.</li>
+        <li>Nomeie a fonte (ex: <code>Contador Viewers</code> ou <code>Chat Unificado</code>).</li>
+        <li>Cole o link copiado acima no campo <strong>URL</strong>.</li>
+        <li>Recomendado para o Chat: Largura <strong>450px</strong>, Altura <strong>700px</strong>.</li>
+        <li>Recomendado para o Contador: Largura <strong>500px</strong>, Altura <strong>100px</strong>.</li>
+      </ol>
+    </div>
+
+  </div>
+
+  <script src="/socket.io/socket.io.js"></script>
+  <script>
+    const baseUrl = window.location.origin;
+    document.getElementById('url-viewers').value = `${baseUrl}/viewers.html`;
+    document.getElementById('url-chat').value = `${baseUrl}/chat.html`;
+
+    const socket = io();
+
+    socket.on('status_update', (data) => {
+      // Twitch
+      const twitchStatus = document.getElementById('dash-twitch-status');
+      twitchStatus.innerText = data.twitch.isLive ? 'ONLINE' : 'OFFLINE';
+      twitchStatus.className = `status-badge ${data.twitch.isLive ? 'status-live' : 'status-offline'}`;
+      document.getElementById('dash-twitch-viewers').innerText = data.twitch.viewers;
+
+      // YouTube
+      const ytStatus = document.getElementById('dash-yt-status');
+      ytStatus.innerText = data.youtube.isLive ? 'ONLINE' : 'OFFLINE';
+      ytStatus.className = `status-badge ${data.youtube.isLive ? 'status-live' : 'status-offline'}`;
+      document.getElementById('dash-yt-viewers').innerText = data.youtube.viewers;
+      document.getElementById('dash-yt-videoid').innerText = `Video ID: ${data.youtube.videoId || 'Sem live ativa'}`;
+
+      // Total
+      document.getElementById('dash-total-viewers').innerText = data.totalViewers;
+    });
+
+    function copyUrl(inputId) {
+      const input = document.getElementById(inputId);
+      input.select();
+      document.execCommand('copy');
+      alert('Link copiado para a área de transferência! Pode colar no Streamlabs.');
+    }
+
+    async function sendTestChat(platform) {
+      await fetch('/api/test-message', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ platform })
+      });
+    }
+
+    async function simulateViewers() {
+      await fetch('/api/simulate-counts', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          twitchViewers: 54,
+          youtubeViewers: 128,
+          twitchLive: true,
+          youtubeLive: true
+        })
+      });
+    }
+
+    async function resetViewers() {
+      await fetch('/api/simulate-counts', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          twitchViewers: 0,
+          youtubeViewers: 0,
+          twitchLive: false,
+          youtubeLive: false
+        })
+      });
+    }
+  </script>
+</body>
+</html>

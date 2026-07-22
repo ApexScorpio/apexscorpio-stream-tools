@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Streamlabs Overlay - Unified Live Chat</title>
+  <link rel="stylesheet" href="/css/style.css">
+  <script src="/socket.io/socket.io.js"></script>
+</head>
+<body>
+
+  <div class="chat-container" id="chat-container">
+    <!-- Chat messages dynamically append here -->
+  </div>
+
+  <script>
+    const socket = io();
+    const chatContainer = document.getElementById('chat-container');
+
+    // Parse query params (e.g., ?fade=20 or ?fade=false)
+    const urlParams = new URLSearchParams(window.location.search);
+    const fadeSeconds = urlParams.get('fade') === 'false' ? 0 : parseInt(urlParams.get('fade') || '20', 10);
+    const maxMessages = parseInt(urlParams.get('max') || '25', 10);
+
+    socket.on('chat_message', (data) => {
+      renderChatMessage(data);
+    });
+
+    function renderChatMessage(data) {
+      const msgElement = document.createElement('div');
+      msgElement.className = `chat-message ${data.platform}`;
+      msgElement.id = `msg-${data.id}`;
+
+      // Build role badges
+      let roleBadgesHtml = '';
+      if (data.badges) {
+        if (data.badges.broadcaster) roleBadgesHtml += `<span class="role-badge" style="background:#EF4444;">STREAMER</span>`;
+        if (data.badges.mod) roleBadgesHtml += `<span class="role-badge" style="background:#22C55E;">MOD</span>`;
+        if (data.badges.subscriber) roleBadgesHtml += `<span class="role-badge" style="background:#F59E0B;">SUB</span>`;
+      }
+
+      // Platform badge
+      const platformLabel = data.platform === 'twitch' ? 'Twitch' : 'YouTube';
+      const platformBadge = `<span class="platform-badge ${data.platform}">${platformLabel}</span>`;
+
+      // HTML Structure
+      msgElement.innerHTML = `
+        <div class="chat-header">
+          ${platformBadge}
+          <span class="user-name" style="color: ${data.userColor || '#F8FAFC'};">${escapeHtml(data.username)}</span>
+          ${roleBadgesHtml}
+        </div>
+        <div class="chat-text">${escapeHtml(data.message)}</div>
+      `;
+
+      chatContainer.appendChild(msgElement);
+
+      // Limit max messages in DOM
+      while (chatContainer.children.length > maxMessages) {
+        chatContainer.removeChild(chatContainer.firstChild);
+      }
+
+      // Auto-fadeout timer
+      if (fadeSeconds > 0) {
+        setTimeout(() => {
+          msgElement.style.opacity = '0';
+          setTimeout(() => {
+            if (msgElement.parentNode) {
+              msgElement.parentNode.removeChild(msgElement);
+            }
+          }, 500);
+        }, fadeSeconds * 1000);
+      }
+    }
+
+    function escapeHtml(str) {
+      if (!str) return '';
+      return str
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#039;");
+    }
+  </script>
+</body>
+</html>

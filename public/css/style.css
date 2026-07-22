@@ -1,0 +1,210 @@
+@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;700;800&family=Inter:wght@400;500;600;700&display=swap');
+
+:root {
+  --twitch-color: #9146FF;
+  --twitch-bg: rgba(145, 70, 255, 0.15);
+  --twitch-border: rgba(145, 70, 255, 0.4);
+
+  --youtube-color: #FF0000;
+  --youtube-bg: rgba(255, 0, 0, 0.15);
+  --youtube-border: rgba(255, 0, 0, 0.4);
+
+  --total-color: #38BDF8;
+  --total-bg: rgba(56, 189, 248, 0.15);
+  --total-border: rgba(56, 189, 248, 0.4);
+
+  --dark-bg: rgba(15, 23, 42, 0.85);
+  --card-border: rgba(255, 255, 255, 0.1);
+  --text-main: #F8FAFC;
+  --text-muted: #94A3B8;
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  font-family: 'Inter', sans-serif;
+  background-color: transparent;
+  color: var(--text-main);
+  overflow: hidden;
+}
+
+/* =======================================
+   VIEWER COUNTER WIDGET OVERLAY
+======================================= */
+.viewer-counter-container {
+  display: inline-flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 18px;
+  background: rgba(15, 23, 42, 0.85);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid var(--card-border);
+  border-radius: 50px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+  animation: fadeIn 0.5s ease-out;
+}
+
+.platform-pill {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 14px;
+  border-radius: 30px;
+  font-family: 'Outfit', sans-serif;
+  font-weight: 700;
+  font-size: 15px;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.platform-pill.twitch {
+  background: var(--twitch-bg);
+  border: 1px solid var(--twitch-border);
+  color: #D8B4FE;
+}
+
+.platform-pill.youtube {
+  background: var(--youtube-bg);
+  border: 1px solid var(--youtube-border);
+  color: #FCA5A5;
+}
+
+.platform-pill.total {
+  background: linear-gradient(135deg, rgba(99, 102, 241, 0.2), rgba(236, 72, 153, 0.2));
+  border: 1px solid rgba(236, 72, 153, 0.4);
+  color: #FFFFFF;
+}
+
+.platform-icon {
+  width: 18px;
+  height: 18px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.status-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #64748B;
+  display: inline-block;
+}
+
+.status-dot.online {
+  background: #22C55E;
+  box-shadow: 0 0 10px #22C55E;
+  animation: pulse 2s infinite;
+}
+
+.count-number {
+  font-size: 18px;
+  font-weight: 800;
+  letter-spacing: -0.5px;
+}
+
+/* =======================================
+   UNIFIED CHAT WIDGET OVERLAY
+======================================= */
+.chat-container {
+  width: 100%;
+  max-width: 450px;
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  padding: 16px;
+  gap: 10px;
+  overflow: hidden;
+}
+
+.chat-message {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 10px 14px;
+  background: rgba(15, 23, 42, 0.88);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border-left: 4px solid var(--twitch-color);
+  border-radius: 0 14px 14px 0;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+  animation: slideIn 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  transition: opacity 0.5s ease;
+}
+
+.chat-message.youtube {
+  border-left-color: var(--youtube-color);
+}
+
+.chat-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+}
+
+.platform-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 8px;
+  border-radius: 12px;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.platform-badge.twitch {
+  background: var(--twitch-color);
+  color: #FFF;
+}
+
+.platform-badge.youtube {
+  background: var(--youtube-color);
+  color: #FFF;
+}
+
+.user-name {
+  font-weight: 700;
+  font-size: 14px;
+}
+
+.role-badge {
+  font-size: 10px;
+  padding: 1px 5px;
+  border-radius: 4px;
+  background: rgba(255, 255, 255, 0.15);
+  color: #F1F5F9;
+  font-weight: 600;
+}
+
+.chat-text {
+  font-size: 14px;
+  line-height: 1.45;
+  color: #F8FAFC;
+  word-break: break-word;
+  font-weight: 500;
+}
+
+/* Keyframes */
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(-10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes slideIn {
+  from { opacity: 0; transform: translateX(-20px); }
+  to { opacity: 1; transform: translateX(0); }
+}
+
+@keyframes pulse {
+  0% { transform: scale(1); opacity: 1; }
+  50% { transform: scale(1.2); opacity: 0.7; }
+  100% { transform: scale(1); opacity: 1; }
+}
