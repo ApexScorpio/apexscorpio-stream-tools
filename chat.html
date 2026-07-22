@@ -23,23 +23,23 @@
     };
 
     function loadSavedConfig() {
+      try {
+        const saved = localStorage.getItem('apex_cfg_chat');
+        if (saved) {
+          cfg = { ...cfg, ...JSON.parse(saved) };
+        }
+      } catch(e) {}
+
       const p = new URLSearchParams(window.location.search);
       if (p.has('tw')) cfg.showTwitch = p.get('tw') === '1' || p.get('tw') === 'true';
       if (p.has('yt')) cfg.showYoutube = p.get('yt') === '1' || p.get('yt') === 'true';
       if (p.has('fb')) cfg.showFacebook = p.get('fb') === '1' || p.get('fb') === 'true';
       if (p.has('mode')) cfg.displayMode = p.get('mode');
-      if (p.has('fade')) cfg.fadeSeconds = Number(p.get('fade')) || 0;
+      if (p.has('fade')) cfg.fadeSeconds = Number(p.get('fade'));
       if (p.has('bg')) cfg.showBg = p.get('bg') === '1' || p.get('bg') === 'true';
       if (p.has('bdg')) cfg.showBadges = p.get('bdg') === '1' || p.get('bdg') === 'true';
       if (p.has('fs')) cfg.fontSize = Number(p.get('fs')) || 14;
       if (p.has('max')) cfg.maxMessages = Number(p.get('max')) || 50;
-
-      try {
-        const saved = localStorage.getItem('apex_cfg_chat');
-        if (saved && [...p.keys()].length === 0) {
-          cfg = { ...cfg, ...JSON.parse(saved) };
-        }
-      } catch(e) {}
     }
 
     const icons = {

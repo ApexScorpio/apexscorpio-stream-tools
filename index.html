@@ -711,6 +711,7 @@
         facebook: 'Stream brutal no Facebook Live! Força nisso Scorpio! 💣'
       };
       const colors = { twitch: '#9146FF', youtube: '#E8181F', facebook: '#1877F2' };
+      const currentFade = Number(document.getElementById('chat-fade').value) || 0;
       const testMsg = {
         id: `test-${Date.now()}`,
         platform: platform,
@@ -718,11 +719,11 @@
         userColor: colors[platform] || '#E8181F',
         message: msgs[platform] || 'Test chat message',
         badges: { broadcaster: false, mod: Math.random() > 0.5, subscriber: true },
-        isTest: true,
+        isTest: false,
         timestamp: new Date().toISOString()
       };
       broadcastEvent('chat_message', testMsg);
-      showToast('💬 Mensagem de teste enviada (Auto-reverte após 8s)!');
+      showToast(currentFade > 0 ? `💬 Mensagem de teste enviada (Desaparece em ${currentFade}s)` : '💬 Mensagem de teste enviada (PERMANENTE no ecrã)!');
     }
 
     function triggerRandomChat() {
