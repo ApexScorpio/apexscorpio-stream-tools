@@ -182,11 +182,13 @@
         chatContainer.removeChild(chatContainer.firstChild);
       }
 
-      if (cfg.fadeSeconds > 0) {
+      // Auto-expire test messages after 8 seconds, or follow fadeSeconds setting
+      const fadeDur = msg.isTest ? 8 : (cfg.fadeSeconds || 0);
+      if (fadeDur > 0) {
         setTimeout(() => {
           el.classList.add('exiting');
           setTimeout(() => el.remove(), 380);
-        }, cfg.fadeSeconds * 1000);
+        }, fadeDur * 1000);
       }
     }
 

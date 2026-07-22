@@ -167,6 +167,14 @@
           break;
         }
       }
+
+      // Auto-expire test events after 8 seconds
+      if (event.isTest) {
+        setTimeout(() => {
+          card.classList.add('removing');
+          setTimeout(() => card.remove(), 380);
+        }, 8000);
+      }
     }
 
     loadSavedConfig();
