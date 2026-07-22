@@ -184,7 +184,10 @@
         <img src="brandkit/Apex_Scorpio_Brand_Assets/01_Primary/Apex_Scorpio_Primary_Full_Colour.png" alt="Apex Scorpio">
         <span>CENTRAL DE OVERLAYS & STREAMTOOLS</span>
       </div>
-      <div style="font-size: 13px; color: #10B981; font-weight: 700;">● ONLINE (HTTPS)</div>
+      <div style="display: flex; flex-direction: column; gap: 4px; text-align: right;">
+        <div style="font-size: 13px; color: #10B981; font-weight: 700;">● ONLINE (HTTPS)</div>
+        <div id="server-status-badge" style="font-size: 11px; font-weight: 700; color: #F59E0B;">🔴 A verificar servidor local...</div>
+      </div>
     </div>
 
     <!-- CARD 1: CONTADOR DE ESPECTADORES -->
@@ -238,9 +241,10 @@
       </div>
 
       <label style="font-weight: 700; font-size: 13px; color: #94A3B8; text-transform: uppercase;">Visualização da Source em Tempo Real:</label>
-      <div class="preview-frame" id="pf-viewers" data-src-w="700" data-src-h="70">
+      <!-- viewers pill is auto-width but typical OBS source is 600x90 -->
+      <div class="preview-frame" id="pf-viewers" data-src-w="600" data-src-h="90">
         <div class="preview-scale-wrap" id="wrap-viewers">
-          <iframe id="iframe-viewers" src="viewers.html" width="700" height="70"></iframe>
+          <iframe id="iframe-viewers" src="viewers.html" width="600" height="90"></iframe>
         </div>
       </div>
     </div>
@@ -305,6 +309,7 @@
       </div>
 
       <label style="font-weight: 700; font-size: 13px; color: #94A3B8; text-transform: uppercase;">Visualização da Source em Tempo Real:</label>
+      <!-- chat OBS source: 440x580 -->
       <div class="preview-frame" id="pf-chat" data-src-w="440" data-src-h="580">
         <div class="preview-scale-wrap" id="wrap-chat">
           <iframe id="iframe-chat" src="chat.html" width="440" height="580"></iframe>
@@ -359,6 +364,7 @@
       </div>
 
       <label style="font-weight: 700; font-size: 13px; color: #94A3B8; text-transform: uppercase;">Visualização da Source em Tempo Real:</label>
+      <!-- events OBS source: 380x460 -->
       <div class="preview-frame" id="pf-events" data-src-w="380" data-src-h="460">
         <div class="preview-scale-wrap" id="wrap-events">
           <iframe id="iframe-events" src="events.html" width="380" height="460"></iframe>
@@ -411,9 +417,10 @@
       </div>
 
       <label style="font-weight: 700; font-size: 13px; color: #94A3B8; text-transform: uppercase;">Visualização da Source em Tempo Real:</label>
-      <div class="preview-frame" id="pf-alerts" data-src-w="800" data-src-h="600">
+      <!-- alerts OBS source typically 600x300: popup centered in transparent area -->
+      <div class="preview-frame" id="pf-alerts" data-src-w="600" data-src-h="300">
         <div class="preview-scale-wrap" id="wrap-alerts">
-          <iframe id="iframe-alerts" src="alerts.html" width="800" height="600"></iframe>
+          <iframe id="iframe-alerts" src="alerts.html" width="600" height="300"></iframe>
         </div>
       </div>
     </div>
@@ -484,21 +491,64 @@
   </div>
 
   <script>
+    // Try to connect to local Socket.IO server (for SLOBS relay)
+    // If not available (GitHub Pages), gracefully skip
     const socket = typeof io !== 'undefined' ? io() : null;
     const bc = typeof BroadcastChannel !== 'undefined' ? new BroadcastChannel('apex_scorpio_stream_tools') : null;
 
-    function broadcastData(type, payload) {
-      // 1. BroadcastChannel (real-time for Streamlabs OBS & other windows/tabs)
+    // Check if local server is running and update status badge
+    let localServerActive = false;
+    async function checkLocalServer() {
+      try {
+        const res = await fetch('http://localhost:3000/api/health', { signal: AbortSignal.timeout(1500) });
+        localServerActive = res.ok;
+      } catch { localServerActive = false; }
+      const badge = document.getElementById('server-status-badge');
+      if (badge) {
+        badge.textContent = localServerActive ? '🟢 Servidor Local ATIVO — Testes chegam ao SLOBS' : '🔴 GitHub Pages — Abrir Dashboard no SLOBS para testes';
+        badge.style.color = localServerActive ? '#10B981' : '#F59E0B';
+      }
+    }
+    checkLocalServer();
+    setInterval(checkLocalServer, 10000);
+
+    async function broadcastData(type, payload) {
+      // 1. Socket.IO (local server — reaches SLOBS browser sources)
+      if (socket) {
+        try { socket.emit(type, payload); } catch(e) {}
+      }
+
+      // 2. Relay via local server REST API (if running on localhost:3000)
+      if (localServerActive) {
+        const endpointMap = {
+          'status_update': '/api/simulate-counts',
+          'chat_message':  '/api/test-message',
+          'new_event':     '/api/trigger-alert',
+          'config_update': '/api/config',
+        };
+        const endpoint = endpointMap[type];
+        if (endpoint) {
+          try {
+            await fetch(`http://localhost:3000${endpoint}`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify(payload)
+            });
+          } catch(e) {}
+        }
+      }
+
+      // 3. BroadcastChannel (same-browser tabs — works if dashboard & overlays open in same Chrome)
       if (bc) {
         try { bc.postMessage({ type, data: payload, timestamp: Date.now() }); } catch(e) {}
       }
 
-      // 2. localStorage fallback (triggers storage event across all tabs/OBS)
+      // 4. localStorage (same-browser tabs fallback)
       try {
         localStorage.setItem(`apex_event_${type}`, JSON.stringify({ payload, timestamp: Date.now() }));
       } catch(e) {}
 
-      // 3. PostMessage to local iframe previews in dashboard
+      // 5. postMessage to iframe previews inside dashboard
       const iframes = ['iframe-viewers', 'iframe-chat', 'iframe-events', 'iframe-alerts', 'scene-preview'];
       iframes.forEach(id => {
         const iframe = document.getElementById(id);
