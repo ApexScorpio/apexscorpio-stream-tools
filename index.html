@@ -511,7 +511,7 @@
     function publishConfig(overlayName, configData) {
       const payload = { type: 'config_update', overlay: overlayName, config: configData, timestamp: Date.now() };
 
-      if (mqttClient && mqttClient.connected) {
+      if (mqttClient) {
         try {
           mqttClient.publish(`apexscorpio/streamtools/v1/cfg/${overlayName}`, JSON.stringify(configData), { retain: true, qos: 1 });
           mqttClient.publish('apexscorpio/streamtools/v1/events', JSON.stringify({ type: 'config_update', payload: { [overlayName]: configData } }));
@@ -546,7 +546,7 @@
     function broadcastEvent(type, payload) {
       const data = { type, payload, timestamp: Date.now() };
 
-      if (mqttClient && mqttClient.connected) {
+      if (mqttClient) {
         try { mqttClient.publish('apexscorpio/streamtools/v1/events', JSON.stringify(data)); } catch(e) {}
       }
 
