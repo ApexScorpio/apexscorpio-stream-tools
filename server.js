@@ -22,8 +22,8 @@ app.use(express.static(path.join(__dirname, 'public')));
 
 const CONFIG_FILE = path.join(__dirname, 'config.json');
 
-// Permanent Local Base URL for OBS / Streamlabs OBS
-const localBaseUrl = `http://localhost:${PORT}`;
+// Permanent Online Cloud URL
+let publicBaseUrl = process.env.PUBLIC_URL || 'https://apexscorpio-stream-tools.onrender.com';
 
 // Global state for multi-platform stream status (Twitch, YouTube, Facebook)
 const streamState = {
@@ -160,7 +160,12 @@ app.get('/api/status', (req, res) => res.json(streamState));
 app.get('/api/config', (req, res) => res.json(overlayConfig));
 
 app.get('/api/public-url', (req, res) => {
-  res.json({ publicBaseUrl: localBaseUrl });
+  const host = req.get('host');
+  let detectedUrl = publicBaseUrl;
+  if (host && !host.includes('localhost') && !host.includes('127.0.0.1')) {
+    detectedUrl = `https://${host}`;
+  }
+  res.json({ publicBaseUrl: detectedUrl });
 });
 
 app.post('/api/config', (req, res) => {
@@ -230,6 +235,6 @@ app.post('/api/simulate-counts', (req, res) => {
 server.listen(PORT, () => {
   console.log(`=======================================================`);
   console.log(`🚀 ApexScorpio Streamlabs Overlay Suite is LIVE!`);
-  console.log(`👉 Permanent OBS Localhost URL: http://localhost:${PORT}`);
+  console.log(`👉 Permanent Online Base URL: ${publicBaseUrl}`);
   console.log(`=======================================================`);
 });
