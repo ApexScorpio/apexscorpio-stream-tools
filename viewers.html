@@ -303,49 +303,30 @@
         let videoIdFound = null;
         let countFound = 0;
 
-        // Tentar obter o HTML da Live usando proxies leves e consulta oEmbed oficial
         const targetLiveUrl = 'https://www.youtube.com/@apexscorpio/live';
         const proxyUrls = [
-          `https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(targetLiveUrl)}`,
-          `https://api.allorigins.win/raw?url=${encodeURIComponent(targetLiveUrl)}`
+          `https://api.allorigins.win/raw?url=${encodeURIComponent(targetLiveUrl)}`,
+          `https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(targetLiveUrl)}`
         ];
 
         let html = '';
-
-        // Método 1: Deteção usando a API oEmbed com a URL de Embed do canal (Channel ID: UCF3aydfOlV88XVqW8vpdKEw)
-        try {
-          const liveEmbedUrl = 'https://www.youtube.com/embed/live?channel=UCF3aydfOlV88XVqW8vpdKEw';
-          const oembedResp = await fetch(`https://www.youtube.com/oembed?format=json&url=${encodeURIComponent(liveEmbedUrl)}`);
-          if (oembedResp.ok) {
-            const oembedData = await oembedResp.json();
-            if (oembedData && oembedData.title) {
-              isLiveFound = true;
-              const htmlMatch = oembedData.html?.match(/embed\/([a-zA-Z0-9_-]{11})/);
-              if (htmlMatch) videoIdFound = htmlMatch[1];
-            }
-          }
-        } catch(e) {}
-
-        // Método 2: Teste de iFrame Live Image/Thumbnail de Alta Velocidade (inofensivo para CORS)
-        if (!isLiveFound) {
+        for (const pUrl of proxyUrls) {
           try {
-            const liveImg = new Image();
-            liveImg.src = `https://i.ytimg.com/vi/0bDpBd_HZsk/hqdefault.jpg?t=${Date.now()}`;
-            isLiveFound = true;
-            videoIdFound = '0bDpBd_HZsk';
-            countFound = 1;
+            const resp = await fetch(pUrl, { cache: 'no-store' });
+            if (resp.ok) {
+              html = await resp.text();
+              if (html && html.length > 500) break;
+            }
           } catch(e) {}
         }
 
         if (html) {
-          // Extrair Video ID da Live
           const matchVid = html.match(/<link rel="canonical" href="https:\/\/www\.youtube\.com\/watch\?v=([a-zA-Z0-9_-]{11})">/) ||
                            html.match(/"videoId":"([a-zA-Z0-9_-]{11})"/);
           if (matchVid && matchVid[1]) {
             videoIdFound = matchVid[1];
           }
 
-          // Confirmar estado LIVE
           const hasLiveFlag = html.includes('"isLiveNow":true') || 
                               html.includes('"isLiveBroadcast":true') || 
                               html.includes('"isLive":true') || 
@@ -358,7 +339,6 @@
             isLiveFound = true;
           }
 
-          // Extrair Espectadores
           const viewerPatterns = [
             /"viewCount":\s*\{\s*"runs":\s*\[\s*\{\s*"text":\s*"([\d,\.\s]+)"/,
             /"shortViewCount":\s*\{\s*"runs":\s*\[\s*\{\s*"text":\s*"([\d,\.\s]+)"/,
@@ -378,7 +358,6 @@
           }
         }
 
-        // Atualizar estado
         if (isLiveFound) {
           realState.youtube = { isLive: true, viewers: countFound || 1 };
           ytLiveVideoId = videoIdFound;
@@ -399,8 +378,8 @@
     applyConfig();
     checkPublicTwitchLive();
     checkYoutubeLive();
-    setInterval(checkPublicTwitchLive, 10000);  // Twitch: every 10s
-    setInterval(checkYoutubeLive, 60000);        // YouTube: every 60s (quota: ~100 units/call)
+    setInterval(checkPublicTwitchLive, 5000);  // Twitch: a cada 5 segundos
+    setInterval(checkYoutubeLive, 5000);       // YouTube: a cada 5 segundos (via Scraping sem quota)
   </script>
 </body>
 </html>
