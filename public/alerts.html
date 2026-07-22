@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>ApexScorpio - Alert Box Overlay</title>
+  <title>ApexScorpio - Alert Box Overlay (v9 Brandkit)</title>
   <link rel="stylesheet" href="/css/style.css">
   <script src="/socket.io/socket.io.js"></script>
   <style>
@@ -22,21 +22,21 @@
       align-items: center;
       justify-content: center;
       text-align: center;
-      padding: 24px 44px;
-      background: rgba(8, 8, 12, 0.95);
-      backdrop-filter: blur(20px);
-      -webkit-backdrop-filter: blur(20px);
+      padding: 28px 48px;
+      background: rgba(8, 8, 12, 0.96);
+      backdrop-filter: blur(24px);
+      -webkit-backdrop-filter: blur(24px);
       border: 2px solid #E8181F;
       border-radius: 24px;
-      box-shadow: 0 10px 40px rgba(0, 0, 0, 0.9), 0 0 35px rgba(232, 24, 31, 0.45);
+      box-shadow: 0 10px 45px rgba(0, 0, 0, 0.95), 0 0 40px rgba(232, 24, 31, 0.5);
       animation: alertPopIn 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.275);
       position: relative;
     }
     .as-jewel-header {
-      width: 65px;
-      height: 65px;
-      margin-bottom: 12px;
-      filter: drop-shadow(0 0 12px rgba(232, 24, 31, 0.6));
+      max-width: 220px;
+      height: auto;
+      margin-bottom: 14px;
+      filter: drop-shadow(0 0 15px rgba(232, 24, 31, 0.6));
     }
     .platform-logo-container {
       display: flex;
@@ -47,15 +47,15 @@
     }
     .alert-title {
       font-family: 'Orbitron', 'Outfit', sans-serif;
-      font-size: 15px;
-      font-weight: 800;
+      font-size: 16px;
+      font-weight: 900;
       color: #E8181F;
       text-transform: uppercase;
       letter-spacing: 2px;
     }
     .alert-message {
       font-family: 'Outfit', sans-serif;
-      font-size: 28px;
+      font-size: 30px;
       font-weight: 900;
       color: #FFFFFF;
       margin-top: 6px;
@@ -78,7 +78,7 @@
 </head>
 <body>
   <div class="alert-box" id="alert-box">
-    <img src="/brandkit/Apex_Scorpio_Brand_Assets/02_Jewel/AS_Jewel_Full_Metallic.png" class="as-jewel-header" alt="AS Jewel">
+    <img src="/brandkit/Apex_Scorpio_Brand_Assets/01_Primary/Apex_Scorpio_Primary_Full_Colour.png" class="as-jewel-header" alt="Apex Scorpio Primary Logo">
     <div class="platform-logo-container" id="logo-box"></div>
     <div class="alert-title" id="alert-title">NOVO SEGUIDOR!</div>
     <div class="alert-message" id="alert-message">GamerScorpio</div>
