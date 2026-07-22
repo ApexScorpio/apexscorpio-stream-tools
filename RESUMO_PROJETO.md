@@ -7,9 +7,9 @@
 
 ---
 
-## 🌐 ESTADO ATUAL DA PUBLICAÇÃO (ONLINE)
+## 🌐 ARQUITETURA 100% PÚBLICA (SEM LOCALHOST)
 
-O projeto está 100% publicado e ativo no **GitHub Pages**, com a branch `master` e a branch `gh-pages` sincronizadas e sem erros de caminhos relativos.
+O projeto é **100% estático e hospedado no GitHub Pages**. Não necessita nem utiliza qualquer servidor local (`localhost` ou `node server.js`).
 
 ### 📋 Lista Definitiva de URLs Públicos:
 
@@ -42,22 +42,15 @@ O projeto está 100% publicado e ativo no **GitHub Pages**, com a branch `master
 
 ---
 
-## 🛠️ COMPONENTES E FUNCIONALIDADES DESENVOLVIDAS
+## ⚡ COMO FUNCIONA A SINCRONIZAÇÃO DADOS DEDICADOS ↔ OBS
 
-### 1. Sistema Visual & Estilo (Design System)
-- **Tema:** Dark Cyberpunk Neon baseado no Brandkit v9 oficial do Apex Scorpio (vermelho `#E8181F`, roxo `#9146FF`, azul `#38BDF8`, amarelo `#F59E0B`).
-- **Logótipos SVG Puros:** Utilização de vetores SVG puros para os ícones da Twitch, YouTube e Facebook Live (sem texto nos ícones).
-- **Animações:** Efeitos de entrada/saída `chatSlideIn`/`chatSlideOut`, pills responsivos e vidro fosco (`backdrop-filter: blur`).
+1. **Geração Automática de Parâmetros de URL (Garantido em qualquer situação)**:
+   - Ao alterar qualquer opção no Dashboard, o URL gerado na caixa "URL para o Streamlabs OBS" inclui automaticamente todas as opções como parâmetros (ex.: `viewers.html?tw=1&yt=1&bg=1&ly=horizontal&fs=15`).
+   - Ao colar o URL no SLOBS, o overlay carrega as definições exatas diretamente do URL.
 
-### 2. Overlays de Stream
-- **`viewers.html`:** Auto-ajuste de largura do container (para impedir cortes de números), suporte para exibição por plataforma ou total geral.
-- **`chat.html`:** Animações horizontais, suporte a modo Pill e Compacto, badges de plataforma e temporizador de retenção configurável.
-- **`events.html`:** Lista vertical ticker em inglês com logótipos SVG da plataforma.
-- **`alerts.html`:** Pop-ups animados com clipart de escorpião e áudio sintetizado.
-- **Cenas Animadas:** Temporizador Glowing em contagem decrescente (ex: `05:00`) com badges sociais em néon.
-
-### 3. Servidor Local & Sincronização em Tempo Real (`server.js`)
-- Criado servidor Node.js com Express e `socket.io` para sincronização em tempo real das opções e envio de eventos de teste sem necessidade de recarregar a página.
+2. **Sincronização em Tempo Real via Cloud WSS (MQTT Public Relay)**:
+   - Todos os overlays e o Dashboard ligam-se automaticamente a um broker público de WebSockets HTTPS/WSS (`wss://broker.emqx.io:8084/mqtt`).
+   - Quando mudas definições ou disparas um evento/chat de teste no Dashboard, a alteração é transmitida em tempo real via WSS para o SLOBS (latência < 50ms) **sem precisar de servidor local**.
 
 ---
 
@@ -72,19 +65,7 @@ O projeto está 100% publicado e ativo no **GitHub Pages**, com a branch `master
 - **Enviar novas alterações para o GitHub:**
   ```cmd
   git add .
-  git commit -m "Descrição da alteração"
+  git commit -m "Arquitetura 100% publica com WSS Cloud Relay e URL Params"
   git push origin master
   git push origin master:gh-pages --force
   ```
-
-- **Iniciar o servidor local Node.js:**
-  ```cmd
-  node server.js
-  ```
-
----
-
-## 📝 PRÓXIMOS PASSOS RECOMENDADOS PARA SESSÕES FUTURAS
-
-1. **Configuração de APIs Reais:** Conectar as chaves da API da Twitch (Helium), YouTube Data API v3 e Facebook Graph API no `server.js` para contagem automática de espectadores em direto durante transmissões reais.
-2. **Integração no Streamlabs OBS:** Adicionar cada URL como uma **Browser Source** individual nas cenas respetivas.

@@ -4,13 +4,12 @@
   <meta charset="UTF-8">
   <title>ApexScorpio - Unified Chat Overlay</title>
   <link rel="stylesheet" href="css/style.css">
-  <script src="socket.io/socket.io.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/mqtt@5.3.4/dist/mqtt.min.js"></script>
 </head>
 <body class="chat-page">
   <div class="chat-container has-bg" id="chat-container"></div>
 
   <script>
-    const socket = typeof io !== 'undefined' ? io() : null;
     const chatContainer = document.getElementById('chat-container');
 
     let cfg = {
@@ -18,6 +17,19 @@
       fadeSeconds: 0, showBg: true, displayMode: 'pill',
       fontSize: 14, showBadges: true, maxMessages: 50
     };
+
+    function loadConfigFromUrl() {
+      const p = new URLSearchParams(window.location.search);
+      if (p.has('tw')) cfg.showTwitch = p.get('tw') === '1' || p.get('tw') === 'true';
+      if (p.has('yt')) cfg.showYoutube = p.get('yt') === '1' || p.get('yt') === 'true';
+      if (p.has('fb')) cfg.showFacebook = p.get('fb') === '1' || p.get('fb') === 'true';
+      if (p.has('mode')) cfg.displayMode = p.get('mode');
+      if (p.has('fade')) cfg.fadeSeconds = Number(p.get('fade')) || 0;
+      if (p.has('bg')) cfg.showBg = p.get('bg') === '1' || p.get('bg') === 'true';
+      if (p.has('bdg')) cfg.showBadges = p.get('bdg') === '1' || p.get('bdg') === 'true';
+      if (p.has('fs')) cfg.fontSize = Number(p.get('fs')) || 14;
+      if (p.has('max')) cfg.maxMessages = Number(p.get('max')) || 50;
+    }
 
     const icons = {
       twitch:   `<svg width="13" height="13" viewBox="0 0 24 24" fill="#FFF"><path d="M11.571 4.714h1.715v5.143H11.571V4.714zm4.715 0H18v5.143h-1.714V4.714zM6 0L1.714 4.286v15.428h5.143V24l4.286-4.286h3.428L22.286 12V0H6zm14.571 11.143l-3.428 3.428h-3.429l-3 3v-3H6.857V1.714h13.714v9.429z"/></svg>`,
@@ -29,6 +41,15 @@
 
     const bc = typeof BroadcastChannel !== 'undefined' ? new BroadcastChannel('apex_scorpio_stream_tools') : null;
 
+    const _seenIds = new Set();
+    function _isDuplicate(type, payload) {
+      const key = type + '|' + (payload?.id || '') + '|' + (payload?.username || '') + '|' + (payload?.message || payload?.msg?.message || '');
+      if (_seenIds.has(key)) return true;
+      _seenIds.add(key);
+      setTimeout(() => _seenIds.delete(key), 3000);
+      return false;
+    }
+
     function handleIncomingData(type, payload) {
       if (!type || !payload) return;
       if (type === 'config_update') {
@@ -39,6 +60,7 @@
         }
       }
       if (type === 'chat_message') {
+        if (_isDuplicate(type, payload?.msg || payload)) return;
         const msg = payload.msg || payload;
         const platform = (msg.platform || 'twitch').toLowerCase();
         if (platform === 'twitch'   && !cfg.showTwitch)   return;
@@ -48,9 +70,22 @@
       }
     }
 
-    if (socket) {
-      socket.on('config_update', (config) => handleIncomingData('config_update', config));
-      socket.on('chat_message', (msg) => handleIncomingData('chat_message', msg));
+    // Public WSS Cloud Relay
+    if (typeof mqtt !== 'undefined') {
+      try {
+        const mqttClient = mqtt.connect('wss://broker.emqx.io:8084/mqtt', { clientId: 'scorpio_chat_' + Math.random().toString(16).substring(2, 8) });
+        mqttClient.on('connect', () => {
+          mqttClient.subscribe('apexscorpio/streamtools/v1');
+        });
+        mqttClient.on('message', (topic, message) => {
+          try {
+            const data = JSON.parse(message.toString());
+            if (data && data.type) {
+              handleIncomingData(data.type, data.payload);
+            }
+          } catch(err) {}
+        });
+      } catch(e) {}
     }
 
     if (bc) {
@@ -74,7 +109,6 @@
     });
 
     function applyConfig() {
-      // Background
       if (cfg.showBg) {
         chatContainer.classList.add('has-bg');
         chatContainer.classList.remove('no-bg');
@@ -83,7 +117,6 @@
         chatContainer.classList.add('no-bg');
       }
 
-      // Apply font size + mode to all existing messages
       chatContainer.querySelectorAll('.chat-message').forEach(msg => {
         msg.style.fontSize = (cfg.fontSize || 14) + 'px';
         msg.classList.toggle('mode-pill', cfg.displayMode !== 'compact');
@@ -93,8 +126,6 @@
         el.style.fontSize = (cfg.fontSize || 14) + 'px';
       });
     }
-
-
 
     function addMsg(msg, platform) {
       const el = document.createElement('div');
@@ -124,12 +155,10 @@
       chatContainer.appendChild(el);
       chatContainer.scrollTop = chatContainer.scrollHeight;
 
-      // Trim old messages
       while (chatContainer.children.length > (cfg.maxMessages || 50)) {
         chatContainer.removeChild(chatContainer.firstChild);
       }
 
-      // Auto-fade with reverse animation
       if (cfg.fadeSeconds > 0) {
         setTimeout(() => {
           el.classList.add('exiting');
@@ -143,6 +172,9 @@
       d.innerText = str;
       return d.innerHTML;
     }
+
+    loadConfigFromUrl();
+    applyConfig();
   </script>
 </body>
 </html>

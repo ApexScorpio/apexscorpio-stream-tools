@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <title>ApexScorpio - Viewers Counter</title>
   <link rel="stylesheet" href="css/style.css">
-  <script src="socket.io/socket.io.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/mqtt@5.3.4/dist/mqtt.min.js"></script>
 </head>
 <body class="viewers-page">
   <div class="viewer-counter-container has-bg" id="viewer-container">
@@ -41,7 +41,6 @@
   </div>
 
   <script>
-    const socket = typeof io !== 'undefined' ? io() : null;
     const container = document.getElementById('viewer-container');
 
     const pills = {
@@ -67,6 +66,17 @@
       showBg: true, layout: 'horizontal', fontSize: 15
     };
 
+    function loadConfigFromUrl() {
+      const p = new URLSearchParams(window.location.search);
+      if (p.has('tw')) cfg.showTwitch = p.get('tw') === '1' || p.get('tw') === 'true';
+      if (p.has('yt')) cfg.showYoutube = p.get('yt') === '1' || p.get('yt') === 'true';
+      if (p.has('fb')) cfg.showFacebook = p.get('fb') === '1' || p.get('fb') === 'true';
+      if (p.has('tot')) cfg.showTotal = p.get('tot') === '1' || p.get('tot') === 'true';
+      if (p.has('bg')) cfg.showBg = p.get('bg') === '1' || p.get('bg') === 'true';
+      if (p.has('ly')) cfg.layout = p.get('ly');
+      if (p.has('fs')) cfg.fontSize = Number(p.get('fs')) || 15;
+    }
+
     const bc = typeof BroadcastChannel !== 'undefined' ? new BroadcastChannel('apex_scorpio_stream_tools') : null;
 
     function handleIncomingData(type, payload) {
@@ -83,9 +93,22 @@
       }
     }
 
-    if (socket) {
-      socket.on('config_update', (config) => handleIncomingData('config_update', config));
-      socket.on('status_update', (state) => handleIncomingData('status_update', state));
+    // Public WSS Cloud Relay
+    if (typeof mqtt !== 'undefined') {
+      try {
+        const mqttClient = mqtt.connect('wss://broker.emqx.io:8084/mqtt', { clientId: 'scorpio_viewers_' + Math.random().toString(16).substring(2, 8) });
+        mqttClient.on('connect', () => {
+          mqttClient.subscribe('apexscorpio/streamtools/v1');
+        });
+        mqttClient.on('message', (topic, message) => {
+          try {
+            const data = JSON.parse(message.toString());
+            if (data && data.type) {
+              handleIncomingData(data.type, data.payload);
+            }
+          } catch(err) {}
+        });
+      } catch(e) {}
     }
 
     if (bc) {
@@ -116,7 +139,7 @@
           pill.classList.remove('hiding');
           pill.style.display = 'inline-flex';
           pill.classList.remove('animate-enter');
-          void pill.offsetWidth; // force DOM reflow
+          void pill.offsetWidth;
           pill.classList.add('animate-enter');
         }
       } else {
@@ -139,7 +162,6 @@
       setPillVisible(pills.facebook, cfg.showFacebook);
       setPillVisible(pills.total,    cfg.showTotal);
 
-      // Background toggle
       if (cfg.showBg) {
         container.classList.add('has-bg');
         container.classList.remove('no-bg');
@@ -148,10 +170,8 @@
         container.classList.add('no-bg');
       }
 
-      // Layout direction
       container.classList.toggle('layout-vertical', cfg.layout === 'vertical');
 
-      // Font size on count numbers
       const fs = (cfg.fontSize || 15) + 'px';
       Object.values(counts).forEach(el => el.style.fontSize = fs);
     }
@@ -162,7 +182,7 @@
         if (el.innerText !== formatted) {
           el.innerText = formatted;
           el.classList.remove('bump');
-          void el.offsetWidth; // force DOM reflow
+          void el.offsetWidth;
           el.classList.add('bump');
         }
       };
@@ -182,13 +202,14 @@
       animateCount(counts.total, state.totalViewers || 0);
     }
 
-
     function fmt(n) {
       n = n || 0;
       if (n >= 1000000) return (n/1000000).toFixed(1) + 'M';
       if (n >= 1000)    return (n/1000).toFixed(1) + 'K';
       return String(n);
     }
+
+    loadConfigFromUrl();
     applyConfig();
   </script>
 </body>

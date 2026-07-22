@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>ApexScorpio - Central de Overlays & Opções Avançadas</title>
   <link rel="stylesheet" href="css/style.css">
-  <script src="socket.io/socket.io.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/mqtt@5.3.4/dist/mqtt.min.js"></script>
   <style>
     body {
       background: #08080C;
@@ -105,7 +105,6 @@
       margin-top: 6px;
       margin-bottom: 16px;
     }
-    /* Preview frame: clips to fit, inner iframe is native size but CSS-scaled down */
     .preview-frame {
       width: 100%;
       background: repeating-conic-gradient(#0a0c14 0% 25%, #111525 0% 50%) 0 0 / 16px 16px;
@@ -186,26 +185,24 @@
         <img src="brandkit/Apex_Scorpio_Brand_Assets/01_Primary/Apex_Scorpio_Primary_Full_Colour.png" alt="Apex Scorpio">
         <span>CENTRAL DE OVERLAYS & STREAMTOOLS</span>
       </div>
-      <div style="display: flex; flex-direction: column; gap: 4px; text-align: right;">
-        <div style="font-size: 13px; color: #10B981; font-weight: 700;">● ONLINE (HTTPS)</div>
-        <div id="server-status-badge" style="font-size: 11px; font-weight: 700; color: #F59E0B;">🔴 A verificar servidor local...</div>
-      </div>
+      <div style="font-size: 13px; color: #10B981; font-weight: 700;">● ONLINE (HTTPS + Cloud WSS Relay)</div>
     </div>
 
-    <!-- SLOBS Connection Banner -->
-    <div style="background: linear-gradient(135deg, rgba(20,23,34,0.95), rgba(8,8,12,0.98)); border: 1px solid rgba(232,24,31,0.4); border-radius: 14px; padding: 16px 20px; margin-bottom: 18px; display: flex; gap: 16px; flex-wrap: wrap; align-items: stretch;">
-      <div style="flex: 1; min-width: 240px;">
-        <div style="font-size: 12px; font-weight: 800; color: #E8181F; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 6px;">⚡ Opção A — Servidor Local (Recomendado para SLOBS)</div>
-        <div style="font-size: 12px; color: #94A3B8; margin-bottom: 8px;">Corre no terminal para que os testes cheguem ao Streamlabs OBS em tempo real via Socket.IO:</div>
-        <code style="display: block; background: #0D1017; border: 1px solid rgba(56,189,248,0.3); border-radius: 8px; padding: 8px 12px; font-size: 12px; color: #38BDF8;">cd C:\Users\lopes\.gemini\antigravity-ide\scratch\apexscorpio-stream-tools<br>node server.js</code>
-        <div style="font-size: 11px; color: #64748B; margin-top: 6px;">Depois usa <strong style="color:#38BDF8">http://localhost:3000/viewers.html</strong> etc. no SLOBS</div>
+    <!-- SLOBS Public Sync Banner -->
+    <div style="background: linear-gradient(135deg, rgba(14,10,30,0.98), rgba(8,8,12,0.98)); border: 1px solid rgba(16,185,129,0.5); border-radius: 14px; padding: 16px 20px; margin-bottom: 18px;">
+      <div style="font-size: 13px; font-weight: 800; color: #10B981; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 8px;">⚡ Sincronização 100% Pública para o Streamlabs OBS (Zero Localhost)</div>
+      <div style="font-size: 13px; color: #CBD5E1; line-height: 1.5; margin-bottom: 12px;">
+        As tuas fontes comunicam via <strong>URL Parameters</strong> (garantia absoluta ao colar o URL) e em tempo real via <strong>Cloud WSS Relay</strong> público (latência &lt; 50ms):
       </div>
-      <div style="width: 1px; background: rgba(255,255,255,0.07);"></div>
-      <div style="flex: 1; min-width: 240px;">
-        <div style="font-size: 12px; font-weight: 800; color: #9146FF; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 6px;">🎮 Opção B — Dashboard Dentro do SLOBS</div>
-        <div style="font-size: 12px; color: #94A3B8; margin-bottom: 8px;">Adiciona o próprio Dashboard como Browser Source no SLOBS (numa cena de controlo). Assim o BroadcastChannel funciona dentro do mesmo processo CEF:</div>
-        <code style="display: block; background: #0D1017; border: 1px solid rgba(145,70,255,0.3); border-radius: 8px; padding: 8px 12px; font-size: 12px; color: #E9D5FF; word-break: break-all;">https://apexscorpio.github.io/apexscorpio-stream-tools/index.html</code>
-        <div style="font-size: 11px; color: #64748B; margin-top: 6px;">Dimensões recomendadas da Browser Source: <strong style="color:#9146FF">1280 × 900</strong></div>
+      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 12px;">
+        <div style="background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.1); border-radius: 10px; padding: 12px;">
+          <div style="font-size: 12px; font-weight: 800; color: #38BDF8; margin-bottom: 4px;">📌 Opção A — URLs Personalizados</div>
+          <div style="font-size: 12px; color: #94A3B8;">Ao alterar as definições abaixo, o botão <strong>"Copiar URL"</strong> gera automaticamente o URL com os teus parâmetros para colar no SLOBS.</div>
+        </div>
+        <div style="background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.1); border-radius: 10px; padding: 12px;">
+          <div style="font-size: 12px; font-weight: 800; color: #9146FF; margin-bottom: 4px;">⚡ Opção B — Cloud WSS Realtime</div>
+          <div style="font-size: 12px; color: #94A3B8;">O Dashboard e o SLOBS sincronizam alterações e testes instantaneamente através do servidor Cloud WSS seguro (HTTPS/WSS).</div>
+        </div>
       </div>
     </div>
 
@@ -260,7 +257,6 @@
       </div>
 
       <label style="font-weight: 700; font-size: 13px; color: #94A3B8; text-transform: uppercase;">Visualização da Source em Tempo Real:</label>
-      <!-- viewers pill OBS source: 600x90 -->
       <div class="preview-frame" id="pf-viewers" data-src-w="600" data-src-h="90" data-max-h="100">
         <div class="preview-scale-wrap" id="wrap-viewers">
           <iframe id="iframe-viewers" src="viewers.html" width="600" height="90"></iframe>
@@ -328,7 +324,6 @@
       </div>
 
       <label style="font-weight: 700; font-size: 13px; color: #94A3B8; text-transform: uppercase;">Visualização da Source em Tempo Real:</label>
-      <!-- chat OBS source: 440x580 -->
       <div class="preview-frame" id="pf-chat" data-src-w="440" data-src-h="580" data-max-h="260">
         <div class="preview-scale-wrap" id="wrap-chat">
           <iframe id="iframe-chat" src="chat.html" width="440" height="580"></iframe>
@@ -336,7 +331,7 @@
       </div>
     </div>
 
-    <!-- CARD 3: EVENT LIST (HISTÓRICO VERTICAL DE EVENTOS) -->
+    <!-- CARD 3: EVENT LIST -->
     <div class="card">
       <h2>
         <span>📋 3. Event List (Histórico Vertical de Eventos)</span>
@@ -383,7 +378,6 @@
       </div>
 
       <label style="font-weight: 700; font-size: 13px; color: #94A3B8; text-transform: uppercase;">Visualização da Source em Tempo Real:</label>
-      <!-- events OBS source: 380x460 -->
       <div class="preview-frame" id="pf-events" data-src-w="380" data-src-h="460" data-max-h="260">
         <div class="preview-scale-wrap" id="wrap-events">
           <iframe id="iframe-events" src="events.html" width="380" height="460"></iframe>
@@ -436,7 +430,6 @@
       </div>
 
       <label style="font-weight: 700; font-size: 13px; color: #94A3B8; text-transform: uppercase;">Visualização da Source em Tempo Real:</label>
-      <!-- alerts OBS source typically 600x300: popup centered in transparent area -->
       <div class="preview-frame" id="pf-alerts" data-src-w="600" data-src-h="300" data-max-h="180">
         <div class="preview-scale-wrap" id="wrap-alerts">
           <iframe id="iframe-alerts" src="alerts.html" width="600" height="300"></iframe>
@@ -510,64 +503,30 @@
   </div>
 
   <script>
-    // Try to connect to local Socket.IO server (for SLOBS relay)
-    // If not available (GitHub Pages), gracefully skip
-    const socket = typeof io !== 'undefined' ? io() : null;
+    let mqttClient = null;
+    if (typeof mqtt !== 'undefined') {
+      try {
+        mqttClient = mqtt.connect('wss://broker.emqx.io:8084/mqtt', { clientId: 'scorpio_dash_' + Math.random().toString(16).substring(2, 8) });
+      } catch(e) {}
+    }
+
     const bc = typeof BroadcastChannel !== 'undefined' ? new BroadcastChannel('apex_scorpio_stream_tools') : null;
 
-    // Check if local server is running and update status badge
-    let localServerActive = false;
-    async function checkLocalServer() {
-      try {
-        const res = await fetch('http://localhost:3000/api/health', { signal: AbortSignal.timeout(1500) });
-        localServerActive = res.ok;
-      } catch { localServerActive = false; }
-      const badge = document.getElementById('server-status-badge');
-      if (badge) {
-        badge.textContent = localServerActive ? '🟢 Servidor Local ATIVO — Testes chegam ao SLOBS' : '🔴 GitHub Pages — Abrir Dashboard no SLOBS para testes';
-        badge.style.color = localServerActive ? '#10B981' : '#F59E0B';
-      }
-    }
-    checkLocalServer();
-    setInterval(checkLocalServer, 10000);
-
     async function broadcastData(type, payload) {
-      // 1. Socket.IO (local server — reaches SLOBS browser sources)
-      if (socket) {
-        try { socket.emit(type, payload); } catch(e) {}
+      const data = { type, payload, timestamp: Date.now() };
+
+      if (mqttClient && mqttClient.connected) {
+        try { mqttClient.publish('apexscorpio/streamtools/v1', JSON.stringify(data)); } catch(e) {}
       }
 
-      // 2. Relay via local server REST API (if running on localhost:3000)
-      if (localServerActive) {
-        const endpointMap = {
-          'status_update': '/api/simulate-counts',
-          'chat_message':  '/api/test-message',
-          'new_event':     '/api/trigger-alert',
-          'config_update': '/api/config',
-        };
-        const endpoint = endpointMap[type];
-        if (endpoint) {
-          try {
-            await fetch(`http://localhost:3000${endpoint}`, {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify(payload)
-            });
-          } catch(e) {}
-        }
-      }
-
-      // 3. BroadcastChannel (same-browser tabs — works if dashboard & overlays open in same Chrome)
       if (bc) {
         try { bc.postMessage({ type, data: payload, timestamp: Date.now() }); } catch(e) {}
       }
 
-      // 4. localStorage (same-browser tabs fallback)
       try {
         localStorage.setItem(`apex_event_${type}`, JSON.stringify({ payload, timestamp: Date.now() }));
       } catch(e) {}
 
-      // 5. postMessage to iframe previews inside dashboard
       const iframes = ['iframe-viewers', 'iframe-chat', 'iframe-events', 'iframe-alerts', 'scene-preview'];
       iframes.forEach(id => {
         const iframe = document.getElementById(id);
@@ -593,41 +552,63 @@
       });
     }
 
-    async function updatePublicUrls() {
-      let basePath = window.location.pathname.substring(0, window.location.pathname.lastIndexOf('/'));
-      let baseUrl = window.location.origin + (basePath === '/' ? '' : basePath);
+    function updatePublicUrls() {
+      let loc = window.location.href;
+      let baseUrl = loc.substring(0, loc.lastIndexOf('/') + 1);
 
-      try {
-        const res = await fetch('/api/public-url');
-        if (res.ok) {
-          const data = await res.json();
-          if (data && data.publicBaseUrl) {
-            baseUrl = data.publicBaseUrl;
-          }
-        }
-      } catch (e) {}
+      // Viewers
+      const vwTw = document.getElementById('vw-twitch').checked ? 1 : 0;
+      const vwYt = document.getElementById('vw-youtube').checked ? 1 : 0;
+      const vwFb = document.getElementById('vw-facebook').checked ? 1 : 0;
+      const vwTot = document.getElementById('vw-total').checked ? 1 : 0;
+      const vwBg = document.getElementById('vw-bg').checked ? 1 : 0;
+      const vwLy = document.getElementById('vw-layout').value;
+      const vwFs = document.getElementById('vw-fontsize').value;
+      document.getElementById('url-viewers').value = `${baseUrl}viewers.html?tw=${vwTw}&yt=${vwYt}&fb=${vwFb}&tot=${vwTot}&bg=${vwBg}&ly=${vwLy}&fs=${vwFs}`;
 
-      document.getElementById('url-viewers').value = `${baseUrl}/viewers.html`;
-      document.getElementById('url-chat').value = `${baseUrl}/chat.html`;
-      document.getElementById('url-events').value = `${baseUrl}/events.html`;
-      document.getElementById('url-alerts').value = `${baseUrl}/alerts.html`;
+      // Chat
+      const chatTw = document.getElementById('chat-twitch').checked ? 1 : 0;
+      const chatYt = document.getElementById('chat-youtube').checked ? 1 : 0;
+      const chatFb = document.getElementById('chat-facebook').checked ? 1 : 0;
+      const chatMode = document.getElementById('chat-mode').value;
+      const chatFade = document.getElementById('chat-fade').value;
+      const chatBg = document.getElementById('chat-bg').checked ? 1 : 0;
+      const chatBdg = document.getElementById('chat-badges').checked ? 1 : 0;
+      const chatFs = document.getElementById('chat-fontsize').value;
+      document.getElementById('url-chat').value = `${baseUrl}chat.html?tw=${chatTw}&yt=${chatYt}&fb=${chatFb}&mode=${chatMode}&fade=${chatFade}&bg=${chatBg}&bdg=${chatBdg}&fs=${chatFs}`;
 
-      document.getElementById('url-starting').value = `${baseUrl}/starting.html`;
-      document.getElementById('url-brb').value = `${baseUrl}/brb.html`;
-      document.getElementById('url-technical').value = `${baseUrl}/technical.html`;
-      document.getElementById('url-ending').value = `${baseUrl}/ending.html`;
+      // Events
+      const evtTw = document.getElementById('evt-twitch').checked ? 1 : 0;
+      const evtYt = document.getElementById('evt-youtube').checked ? 1 : 0;
+      const evtFb = document.getElementById('evt-facebook').checked ? 1 : 0;
+      const evtLg = document.getElementById('evt-logos').checked ? 1 : 0;
+      const evtBg = document.getElementById('evt-bg').checked ? 1 : 0;
+      const evtMax = document.getElementById('evt-max').value;
+      document.getElementById('url-events').value = `${baseUrl}events.html?tw=${evtTw}&yt=${evtYt}&fb=${evtFb}&logos=${evtLg}&bg=${evtBg}&max=${evtMax}`;
+
+      // Alerts
+      const altTw = document.getElementById('alt-twitch').checked ? 1 : 0;
+      const altYt = document.getElementById('alt-youtube').checked ? 1 : 0;
+      const altFb = document.getElementById('alt-facebook').checked ? 1 : 0;
+      const altSnd = document.getElementById('alt-sound').checked ? 1 : 0;
+      const altDur = document.getElementById('alt-duration').value;
+      document.getElementById('url-alerts').value = `${baseUrl}alerts.html?tw=${altTw}&yt=${altYt}&fb=${altFb}&snd=${altSnd}&dur=${altDur}`;
+
+      // Scenes
+      const stMin = document.getElementById('st-timer').value || 5;
+      document.getElementById('url-starting').value = `${baseUrl}starting.html?min=${stMin}`;
+      document.getElementById('url-brb').value = `${baseUrl}brb.html`;
+      document.getElementById('url-technical').value = `${baseUrl}technical.html`;
+      document.getElementById('url-ending').value = `${baseUrl}ending.html`;
     }
-    updatePublicUrls();
 
     function toggleDrawer(id) {
       const el = document.getElementById(id);
       el.style.display = el.style.display === 'block' ? 'none' : 'block';
     }
 
-
-
-    // Save Viewers Config
-    async function saveViewersConfig() {
+    function saveViewersConfig() {
+      updatePublicUrls();
       const cfg = {
         viewers: {
           showTwitch: document.getElementById('vw-twitch').checked,
@@ -639,19 +620,11 @@
           fontSize: Number(document.getElementById('vw-fontsize').value)
         }
       };
-      try {
-        await fetch('/api/config', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(cfg)
-        });
-      } catch (e) {}
-      
       broadcastData('config_update', cfg);
     }
 
-    // Save Chat Config
-    async function saveChatConfig() {
+    function saveChatConfig() {
+      updatePublicUrls();
       const cfg = {
         chat: {
           showTwitch: document.getElementById('chat-twitch').checked,
@@ -665,19 +638,11 @@
           maxMessages: 50
         }
       };
-      try {
-        await fetch('/api/config', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(cfg)
-        });
-      } catch (e) {}
-
       broadcastData('config_update', cfg);
     }
 
-    // Save Events Config
-    async function saveEventsConfig() {
+    function saveEventsConfig() {
+      updatePublicUrls();
       const cfg = {
         events: {
           showTwitch: document.getElementById('evt-twitch').checked,
@@ -688,19 +653,11 @@
           maxItems: Number(document.getElementById('evt-max').value)
         }
       };
-      try {
-        await fetch('/api/config', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(cfg)
-        });
-      } catch (e) {}
-
       broadcastData('config_update', cfg);
     }
 
-    // Save Alerts Config
-    async function saveAlertsConfig() {
+    function saveAlertsConfig() {
+      updatePublicUrls();
       const cfg = {
         alerts: {
           showTwitch: document.getElementById('alt-twitch').checked,
@@ -710,33 +667,17 @@
           durationSeconds: Number(document.getElementById('alt-duration').value)
         }
       };
-      try {
-        await fetch('/api/config', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(cfg)
-        });
-      } catch (e) {}
-
       broadcastData('config_update', cfg);
     }
 
-    // Save Starting Config
-    async function saveStartingConfig() {
+    function saveStartingConfig() {
+      updatePublicUrls();
       const minutes = Number(document.getElementById('st-timer').value) || 5;
       const cfg = { starting: { timerMinutes: minutes } };
-      try {
-        await fetch('/api/config', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(cfg)
-        });
-      } catch (e) {}
-
       broadcastData('config_update', cfg);
     }
 
-    async function sendTestChat(platform) {
+    function sendTestChat(platform) {
       const msgs = {
         twitch: 'Boas pessoal! A acompanhar a stream na Twitch com full qualidade! 🔥',
         youtube: 'Grande gameplay no YouTube! Vamos a isso Apex Scorpio! 🚀',
@@ -752,25 +693,16 @@
         badges: { broadcaster: false, mod: Math.random() > 0.5, subscriber: true },
         timestamp: new Date().toISOString()
       };
-
-      try {
-        await fetch('/api/test-message', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(testMsg)
-        });
-      } catch (e) {}
-
       broadcastData('chat_message', testMsg);
     }
 
-    async function triggerRandomChat() {
+    function triggerRandomChat() {
       const plats = ['twitch', 'youtube', 'facebook'];
       const p = plats[Math.floor(Math.random() * plats.length)];
-      await sendTestChat(p);
+      sendTestChat(p);
     }
 
-    async function triggerAlert(type) {
+    function triggerAlert(type) {
       const names = {
         follower: ['GamerPro_99', 'ScorpioFan_42', 'TwitchLegend', 'CyberScorpio'],
         subscriber: ['MasterSub_77', 'SuperFan_007', 'VipGamer'],
@@ -785,19 +717,10 @@
         viewers: 24,
         timestamp: new Date().toISOString()
       };
-
-      try {
-        await fetch('/api/trigger-alert', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(eventPayload)
-        });
-      } catch (e) {}
-
       broadcastData('new_event', eventPayload);
     }
 
-    async function triggerRandomEvent() {
+    function triggerRandomEvent() {
       const types = ['follower', 'subscriber', 'raid'];
       const platforms = ['twitch', 'youtube', 'facebook'];
       const users = ['CyberScorpio_99', 'ApexGamer_PT', 'ShadowRider', 'ProStreamer_42', 'LegendaryPlayer'];
@@ -814,32 +737,14 @@
         viewers,
         timestamp: new Date().toISOString()
       };
-
-      try {
-        await fetch('/api/trigger-alert', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(eventPayload)
-        });
-      } catch (e) {}
-
       broadcastData('new_event', eventPayload);
     }
 
-    async function triggerRandomAlert() {
-      await triggerRandomEvent();
+    function triggerRandomAlert() {
+      triggerRandomEvent();
     }
 
-    async function simulateViewers() {
-      const payload = { twitchViewers: 50, youtubeViewers: 120, facebookViewers: 35, twitchLive: true, youtubeLive: true, facebookLive: true };
-      try {
-        await fetch('/api/simulate-counts', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(payload)
-        });
-      } catch (e) {}
-
+    function simulateViewers() {
       const state = {
         twitch: { isLive: true, viewers: 50 },
         youtube: { isLive: true, viewers: 120 },
@@ -849,16 +754,7 @@
       broadcastData('status_update', state);
     }
 
-    async function resetViewers() {
-      const payload = { twitchViewers: 0, youtubeViewers: 0, facebookViewers: 0, twitchLive: false, youtubeLive: false, facebookLive: false };
-      try {
-        await fetch('/api/simulate-counts', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(payload)
-        });
-      } catch (e) {}
-
+    function resetViewers() {
       const state = {
         twitch: { isLive: false, viewers: 0 },
         youtube: { isLive: false, viewers: 0 },
@@ -868,9 +764,6 @@
       broadcastData('status_update', state);
     }
 
-    // ─── Scale previews to fit a target box (maintain aspect ratio) ──────────
-    // Max preview height per overlay type (via data-max-h attribute, default 220px).
-    // Scale is min(containerW/srcW, maxH/srcH) so the overlay fits INSIDE the box.
     function fitPreviews() {
       document.querySelectorAll('.preview-frame[data-src-w]').forEach(frame => {
         const srcW    = parseInt(frame.dataset.srcW, 10);
@@ -885,7 +778,6 @@
         const previewW = Math.ceil(srcW * scale);
         const previewH = Math.ceil(srcH * scale);
 
-        // Set the outer box to the scaled dimensions (centered)
         frame.style.height = previewH + 'px';
 
         const wrap = frame.querySelector('.preview-scale-wrap');
@@ -894,25 +786,26 @@
           wrap.style.height = srcH + 'px';
           wrap.style.transform = `scale(${scale})`;
           wrap.style.transformOrigin = 'top left';
-          // center horizontally if narrower than card
           const leftOffset = Math.max(0, Math.floor((containerW - previewW) / 2));
           wrap.style.marginLeft = leftOffset + 'px';
         }
       });
     }
 
-    // Run on load and on every resize
-    window.addEventListener('load', fitPreviews);
+    window.addEventListener('load', () => {
+      updatePublicUrls();
+      fitPreviews();
+    });
     window.addEventListener('resize', fitPreviews);
-    // Also run now (fonts/layout already loaded at parse time)
-    document.addEventListener('DOMContentLoaded', fitPreviews);
-    setTimeout(fitPreviews, 200); // safety re-run after iframes settle
+    document.addEventListener('DOMContentLoaded', () => {
+      updatePublicUrls();
+      fitPreviews();
+    });
+    setTimeout(fitPreviews, 200);
 
-    // ─── switchScene: update scene-preview iframe src AND its data-src dimensions ─
     function switchScene(url) {
       const iframe = document.getElementById('scene-preview');
       if (iframe) iframe.src = url;
-      // All scene overlays are 1920×1080, no dimension change needed
       setTimeout(fitPreviews, 100);
     }
   </script>

@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>ApexScorpio - Stream Starting Soon</title>
   <link rel="stylesheet" href="css/style.css">
-  <script src="socket.io/socket.io.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/mqtt@5.3.4/dist/mqtt.min.js"></script>
   <style>
     body {
       background: #08080C;
@@ -129,9 +129,17 @@
   </div>
 
   <script>
-    const socket = typeof io !== 'undefined' ? io() : null;
     let secondsLeft = 300;
     const timerEl = document.getElementById('timer');
+
+    function loadConfigFromUrl() {
+      const p = new URLSearchParams(window.location.search);
+      if (p.has('min')) {
+        const mins = Number(p.get('min')) || 5;
+        secondsLeft = mins * 60;
+        updateTimerDisplay();
+      }
+    }
 
     const bc = typeof BroadcastChannel !== 'undefined' ? new BroadcastChannel('apex_scorpio_stream_tools') : null;
 
@@ -145,8 +153,22 @@
       }
     }
 
-    if (socket) {
-      socket.on('config_update', (config) => handleIncomingData('config_update', config));
+    // Public WSS Cloud Relay
+    if (typeof mqtt !== 'undefined') {
+      try {
+        const mqttClient = mqtt.connect('wss://broker.emqx.io:8084/mqtt', { clientId: 'scorpio_starting_' + Math.random().toString(16).substring(2, 8) });
+        mqttClient.on('connect', () => {
+          mqttClient.subscribe('apexscorpio/streamtools/v1');
+        });
+        mqttClient.on('message', (topic, message) => {
+          try {
+            const data = JSON.parse(message.toString());
+            if (data && data.type) {
+              handleIncomingData(data.type, data.payload);
+            }
+          } catch(err) {}
+        });
+      } catch(e) {}
     }
 
     if (bc) {
@@ -183,6 +205,8 @@
       const s = (secondsLeft % 60).toString().padStart(2, '0');
       timerEl.innerText = `${m}:${s}`;
     }
+
+    loadConfigFromUrl();
   </script>
 </body>
 </html>

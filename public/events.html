@@ -4,19 +4,28 @@
   <meta charset="UTF-8">
   <title>ApexScorpio - Event List Overlay</title>
   <link rel="stylesheet" href="css/style.css">
-  <script src="socket.io/socket.io.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/mqtt@5.3.4/dist/mqtt.min.js"></script>
 </head>
 <body class="events-page">
   <div class="event-list-container has-bg" id="event-feed"></div>
 
   <script>
-    const socket = typeof io !== 'undefined' ? io() : null;
     const feed = document.getElementById('event-feed');
 
     let cfg = {
       showTwitch: true, showYoutube: true, showFacebook: true,
       showBg: true, showLogos: true, maxItems: 8
     };
+
+    function loadConfigFromUrl() {
+      const p = new URLSearchParams(window.location.search);
+      if (p.has('tw')) cfg.showTwitch = p.get('tw') === '1' || p.get('tw') === 'true';
+      if (p.has('yt')) cfg.showYoutube = p.get('yt') === '1' || p.get('yt') === 'true';
+      if (p.has('fb')) cfg.showFacebook = p.get('fb') === '1' || p.get('fb') === 'true';
+      if (p.has('logos')) cfg.showLogos = p.get('logos') === '1' || p.get('logos') === 'true';
+      if (p.has('bg')) cfg.showBg = p.get('bg') === '1' || p.get('bg') === 'true';
+      if (p.has('max')) cfg.maxItems = Number(p.get('max')) || 8;
+    }
 
     const svgIcons = {
       twitch:   `<svg width="15" height="15" viewBox="0 0 24 24" fill="#9146FF"><path d="M11.571 4.714h1.715v5.143H11.571V4.714zm4.715 0H18v5.143h-1.714V4.714zM6 0L1.714 4.286v15.428h5.143V24l4.286-4.286h3.428L22.286 12V0H6zm14.571 11.143l-3.428 3.428h-3.429l-3 3v-3H6.857V1.714h13.714v9.429z"/></svg>`,
@@ -25,6 +34,15 @@
     };
 
     const bc = typeof BroadcastChannel !== 'undefined' ? new BroadcastChannel('apex_scorpio_stream_tools') : null;
+
+    const _seenIds = new Set();
+    function _isDuplicate(type, payload) {
+      const key = type + '|' + (payload?.id || '') + '|' + (payload?.username || '') + '|' + (payload?.type || '');
+      if (_seenIds.has(key)) return true;
+      _seenIds.add(key);
+      setTimeout(() => _seenIds.delete(key), 3000);
+      return false;
+    }
 
     function handleIncomingData(type, payload) {
       if (!type || !payload) return;
@@ -36,6 +54,7 @@
         }
       }
       if (type === 'new_event') {
+        if (_isDuplicate(type, payload?.event || payload)) return;
         const event = payload.event || payload;
         const platform = (event.platform || 'twitch').toLowerCase();
         if (platform === 'twitch'   && !cfg.showTwitch)   return;
@@ -45,9 +64,22 @@
       }
     }
 
-    if (socket) {
-      socket.on('config_update', (config) => handleIncomingData('config_update', config));
-      socket.on('new_event', (event) => handleIncomingData('new_event', event));
+    // Public WSS Cloud Relay
+    if (typeof mqtt !== 'undefined') {
+      try {
+        const mqttClient = mqtt.connect('wss://broker.emqx.io:8084/mqtt', { clientId: 'scorpio_events_' + Math.random().toString(16).substring(2, 8) });
+        mqttClient.on('connect', () => {
+          mqttClient.subscribe('apexscorpio/streamtools/v1');
+        });
+        mqttClient.on('message', (topic, message) => {
+          try {
+            const data = JSON.parse(message.toString());
+            if (data && data.type) {
+              handleIncomingData(data.type, data.payload);
+            }
+          } catch(err) {}
+        });
+      } catch(e) {}
     }
 
     if (bc) {
@@ -83,7 +115,6 @@
       });
     }
 
-
     function addCard(event, platform) {
       const platName = { twitch:'Twitch', youtube:'YouTube', facebook:'Facebook' }[platform] || 'Twitch';
 
@@ -105,16 +136,18 @@
 
       feed.insertBefore(card, feed.firstChild);
 
-      // Animate out and remove oldest card when over limit
       while (feed.children.length > (cfg.maxItems || 8)) {
         const oldest = feed.lastChild;
         if (oldest) {
           oldest.classList.add('removing');
           setTimeout(() => oldest.remove(), 380);
-          break; // only remove one at a time to allow animation
+          break;
         }
       }
     }
+
+    loadConfigFromUrl();
+    applyConfig();
   </script>
 </body>
 </html>

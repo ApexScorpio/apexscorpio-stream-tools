@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>ApexScorpio - Alert Box Overlay (Brandkit Clipart)</title>
   <link rel="stylesheet" href="css/style.css">
-  <script src="socket.io/socket.io.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/mqtt@5.3.4/dist/mqtt.min.js"></script>
   <style>
     body {
       background: transparent;
@@ -87,7 +87,6 @@
   </div>
 
   <script>
-    const socket = typeof io !== 'undefined' ? io() : null;
     const alertBox = document.getElementById('alert-box');
     const alertImg = document.getElementById('alert-img');
     const logoBox = document.getElementById('logo-box');
@@ -103,7 +102,25 @@
       durationSeconds: 5
     };
 
+    function loadConfigFromUrl() {
+      const p = new URLSearchParams(window.location.search);
+      if (p.has('tw')) currentConfig.showTwitch = p.get('tw') === '1' || p.get('tw') === 'true';
+      if (p.has('yt')) currentConfig.showYoutube = p.get('yt') === '1' || p.get('yt') === 'true';
+      if (p.has('fb')) currentConfig.showFacebook = p.get('fb') === '1' || p.get('fb') === 'true';
+      if (p.has('snd')) currentConfig.playSound = p.get('snd') === '1' || p.get('snd') === 'true';
+      if (p.has('dur')) currentConfig.durationSeconds = Number(p.get('dur')) || 5;
+    }
+
     const bc = typeof BroadcastChannel !== 'undefined' ? new BroadcastChannel('apex_scorpio_stream_tools') : null;
+
+    const _seenIds = new Set();
+    function _isDuplicate(type, payload) {
+      const key = type + '|' + (payload?.id || '') + '|' + (payload?.username || '') + '|' + (payload?.type || '');
+      if (_seenIds.has(key)) return true;
+      _seenIds.add(key);
+      setTimeout(() => _seenIds.delete(key), 3000);
+      return false;
+    }
 
     function handleIncomingData(type, payload) {
       if (!type || !payload) return;
@@ -113,7 +130,8 @@
           currentConfig = { ...currentConfig, ...config };
         }
       }
-      if (type === 'new_event') {
+      if (type === 'new_event' || type === 'trigger_alert') {
+        if (_isDuplicate(type, payload?.event || payload)) return;
         const event = payload.event || payload;
         const platform = (event.platform || 'twitch').toLowerCase();
         if (platform === 'twitch' && !currentConfig.showTwitch) return;
@@ -125,9 +143,22 @@
       }
     }
 
-    if (socket) {
-      socket.on('config_update', (config) => handleIncomingData('config_update', config));
-      socket.on('new_event', (event) => handleIncomingData('new_event', event));
+    // Public WSS Cloud Relay
+    if (typeof mqtt !== 'undefined') {
+      try {
+        const mqttClient = mqtt.connect('wss://broker.emqx.io:8084/mqtt', { clientId: 'scorpio_alerts_' + Math.random().toString(16).substring(2, 8) });
+        mqttClient.on('connect', () => {
+          mqttClient.subscribe('apexscorpio/streamtools/v1');
+        });
+        mqttClient.on('message', (topic, message) => {
+          try {
+            const data = JSON.parse(message.toString());
+            if (data && data.type) {
+              handleIncomingData(data.type, data.payload);
+            }
+          } catch(err) {}
+        });
+      } catch(e) {}
     }
 
     if (bc) {
@@ -185,7 +216,6 @@
       } catch (e) {}
     }
 
-
     function processAlertQueue() {
       if (isShowingAlert || alertQueue.length === 0) return;
 
@@ -229,6 +259,8 @@
         setTimeout(processAlertQueue, 500);
       }, durationMs);
     }
+
+    loadConfigFromUrl();
   </script>
 </body>
 </html>
