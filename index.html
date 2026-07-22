@@ -628,16 +628,17 @@
 
     function updatePublicUrls() {
       const baseUrl = 'https://apexscorpio.github.io/apexscorpio-stream-tools/';
+      const rand = '?v=' + Date.now();
 
-      document.getElementById('url-viewers').value = `${baseUrl}viewers.html`;
-      document.getElementById('url-chat').value = `${baseUrl}chat.html`;
-      document.getElementById('url-events').value = `${baseUrl}events.html`;
-      document.getElementById('url-alerts').value = `${baseUrl}alerts.html`;
+      document.getElementById('url-viewers').value = `${baseUrl}viewers.html${rand}`;
+      document.getElementById('url-chat').value = `${baseUrl}chat.html${rand}`;
+      document.getElementById('url-events').value = `${baseUrl}events.html${rand}`;
+      document.getElementById('url-alerts').value = `${baseUrl}alerts.html${rand}`;
 
-      document.getElementById('url-starting').value = `${baseUrl}starting.html`;
-      document.getElementById('url-brb').value = `${baseUrl}brb.html`;
-      document.getElementById('url-technical').value = `${baseUrl}technical.html`;
-      document.getElementById('url-ending').value = `${baseUrl}ending.html`;
+      document.getElementById('url-starting').value = `${baseUrl}starting.html${rand}`;
+      document.getElementById('url-brb').value = `${baseUrl}brb.html${rand}`;
+      document.getElementById('url-technical').value = `${baseUrl}technical.html${rand}`;
+      document.getElementById('url-ending').value = `${baseUrl}ending.html${rand}`;
     }
 
     function toggleDrawer(id) {

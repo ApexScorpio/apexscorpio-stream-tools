@@ -85,7 +85,7 @@
       if (!type) return;
       const typeStr = String(type).toLowerCase();
       if (typeStr.includes('clear')) {
-        doClearChat(false);
+        doClearChat(true);
         return;
       }
       if (type === 'config_update') {
@@ -132,7 +132,7 @@
 
               if (topicStr.includes('clear') || dataStr.includes('clear')) {
                 if (topicStr.includes('clear_chat') || dataStr.includes('clear_chat') || topicStr.includes('clear_all') || dataStr.includes('clear_all') || data.type === 'clear_chat') {
-                  doClearChat(false);
+                  doClearChat(true);
                   return;
                 }
               }

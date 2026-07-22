@@ -107,6 +107,7 @@
     let alertQueue = [];
     let isShowingAlert = false;
     let activeAlertTimer = null;
+    let currentAlert = null;
 
     function loadSavedConfig() {
       const p = new URLSearchParams(window.location.search);
@@ -135,22 +136,35 @@
       return false;
     }
 
-    function doClearAlerts() {
-      alertQueue = [];
-      if (activeAlertTimer) clearTimeout(activeAlertTimer);
-      if (alertBox) {
-        alertBox.style.animation = 'none';
-        alertBox.style.display = 'none';
+    function doClearAlerts(onlyTests = true) {
+      if (onlyTests) {
+        alertQueue = alertQueue.filter(event => !event.isTest);
+        if (currentAlert && currentAlert.isTest) {
+          if (activeAlertTimer) clearTimeout(activeAlertTimer);
+          if (alertBox) {
+            alertBox.style.animation = 'none';
+            alertBox.style.display = 'none';
+          }
+          isShowingAlert = false;
+          setTimeout(processAlertQueue, 500);
+        }
+      } else {
+        alertQueue = [];
+        if (activeAlertTimer) clearTimeout(activeAlertTimer);
+        if (alertBox) {
+          alertBox.style.animation = 'none';
+          alertBox.style.display = 'none';
+        }
+        isShowingAlert = false;
+        _seenIds.clear();
       }
-      isShowingAlert = false;
-      _seenIds.clear();
     }
 
     function handleIncomingData(type, payload) {
       if (!type) return;
       const typeStr = String(type).toLowerCase();
       if (typeStr.includes('clear')) {
-        doClearAlerts();
+        doClearAlerts(true);
         return;
       }
       if (type === 'config_update') {
@@ -198,7 +212,7 @@
 
               if (topicStr.includes('clear') || dataStr.includes('clear')) {
                 if (topicStr.includes('clear_alerts') || dataStr.includes('clear_alerts') || topicStr.includes('clear_all') || dataStr.includes('clear_all') || data.type === 'clear_alerts') {
-                  doClearAlerts();
+                  doClearAlerts(true);
                   return;
                 }
               }
@@ -271,6 +285,7 @@
 
       isShowingAlert = true;
       const event = alertQueue.shift();
+      currentAlert = event;
 
       const platformSvg = event.platform === 'youtube' ? youtubeSvg : (event.platform === 'facebook' ? facebookSvg : twitchSvg);
       const platformName = event.platform === 'youtube' ? 'YouTube' : (event.platform === 'facebook' ? 'Facebook' : 'Twitch');
