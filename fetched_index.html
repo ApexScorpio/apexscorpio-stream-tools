@@ -1,0 +1,888 @@
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+  <meta http-equiv="Pragma" content="no-cache">
+  <meta http-equiv="Expires" content="0">
+  <title>ApexScorpio - Central de Overlays & Opções Avançadas</title>
+  <link rel="stylesheet" href="css/style.css?v=6.0">
+  <script src="https://cdn.jsdelivr.net/npm/mqtt@5.3.4/dist/mqtt.min.js"></script>
+  <style>
+    body {
+      background: #08080C;
+      color: #FFF;
+      font-family: 'Inter', sans-serif;
+      overflow-y: auto;
+      padding: 24px;
+    }
+    .dashboard-container {
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+    .header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      border-bottom: 2px solid rgba(232, 24, 31, 0.3);
+      padding-bottom: 16px;
+      margin-bottom: 24px;
+    }
+    .brand-title {
+      font-family: 'Orbitron', sans-serif;
+      font-size: 26px;
+      font-weight: 900;
+      color: #FFF;
+      display: flex;
+      align-items: center;
+      gap: 14px;
+    }
+    .brand-title img {
+      height: 48px;
+    }
+    .card {
+      background: rgba(20, 23, 34, 0.85);
+      border: 1px solid rgba(232, 24, 31, 0.3);
+      border-radius: 16px;
+      padding: 24px;
+      margin-bottom: 30px;
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.6);
+    }
+    .card h2 {
+      font-family: 'Outfit', sans-serif;
+      font-size: 22px;
+      font-weight: 800;
+      margin-bottom: 8px;
+      color: #E8181F;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .card-desc {
+      color: #94A3B8;
+      font-size: 14px;
+      margin-bottom: 18px;
+    }
+    .btn {
+      background: #E8181F;
+      color: #FFF;
+      border: none;
+      padding: 10px 18px;
+      border-radius: 8px;
+      font-weight: 700;
+      font-family: 'Outfit', sans-serif;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .btn:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 4px 15px rgba(232, 24, 31, 0.4);
+    }
+    .btn-options {
+      background: rgba(255, 255, 255, 0.1);
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      font-size: 13px;
+      padding: 6px 14px;
+    }
+    .btn-options:hover {
+      background: #E8181F;
+      border-color: #E8181F;
+    }
+    .btn-twitch { background: #9146FF; }
+    .btn-youtube { background: #E8181F; }
+    .btn-facebook { background: #1877F2; }
+
+    .url-box {
+      background: #08080C;
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      padding: 10px 14px;
+      border-radius: 8px;
+      font-family: monospace;
+      font-size: 13px;
+      color: #38BDF8;
+      width: 100%;
+      margin-top: 6px;
+      margin-bottom: 16px;
+    }
+    .preview-frame {
+      width: 100%;
+      background: repeating-conic-gradient(#0a0c14 0% 25%, #111525 0% 50%) 0 0 / 16px 16px;
+      border-radius: 12px;
+      border: 1px solid rgba(232, 24, 31, 0.3);
+      overflow: hidden;
+      margin-top: 14px;
+      position: relative;
+      display: flex;
+      align-items: flex-start;
+      justify-content: center;
+    }
+    .preview-frame .preview-scale-wrap {
+      position: relative;
+      transform-origin: top left;
+      flex-shrink: 0;
+    }
+    .preview-frame .preview-scale-wrap iframe {
+      display: block;
+      border: none;
+      background: transparent;
+    }
+    .controls-group {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      margin-bottom: 16px;
+    }
+
+    .options-drawer {
+      display: none;
+      background: #0D1017;
+      border: 1px solid rgba(232, 24, 31, 0.4);
+      border-radius: 12px;
+      padding: 20px;
+      margin-bottom: 20px;
+      animation: fadeIn 0.3s ease;
+    }
+    .options-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 16px;
+    }
+    .opt-group {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+    .opt-group label {
+      font-size: 13px;
+      font-weight: 700;
+      color: #94A3B8;
+      text-transform: uppercase;
+    }
+    .opt-input, .opt-select {
+      background: #141722;
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      color: #FFF;
+      padding: 8px 12px;
+      border-radius: 6px;
+      font-family: 'Inter', sans-serif;
+      font-size: 14px;
+    }
+    .checkbox-label {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+    }
+
+    #toast-notification {
+      position: fixed;
+      bottom: 24px;
+      right: 24px;
+      background: rgba(16, 185, 129, 0.95);
+      color: #FFF;
+      font-weight: 800;
+      font-size: 14px;
+      padding: 12px 24px;
+      border-radius: 10px;
+      box-shadow: 0 8px 25px rgba(0,0,0,0.5);
+      display: none;
+      z-index: 9999;
+      animation: fadeIn 0.3s ease;
+    }
+  </style>
+</head>
+<body>
+  <div id="toast-notification">✅ Ação Executada!</div>
+
+  <div class="dashboard-container">
+    <div class="header">
+      <div class="brand-title">
+        <img src="brandkit/Apex_Scorpio_Brand_Assets/01_Primary/Apex_Scorpio_Primary_Full_Colour.png" alt="Apex Scorpio">
+        <span>CENTRAL DE OVERLAYS & STREAMTOOLS</span>
+      </div>
+      <div id="cloud-status-badge" style="font-size: 13px; color: #10B981; font-weight: 700;">● CLOUD RELAY ATIVO (Porta 443 WSS)</div>
+    </div>
+
+    <!-- CARD 1: CONTADOR DE ESPECTADORES -->
+    <div class="card">
+      <h2>
+        <span>📊 1. Contador de Espectadores (Viewers Counter)</span>
+        <button class="btn btn-options" onclick="toggleDrawer('drawer-viewers')">⚙️ Opções do Overlay</button>
+      </h2>
+      <p class="card-desc">Combina espectadores da Twitch, YouTube e Facebook Live num pill elegante com o estilo oficial do Brandkit v9.</p>
+      
+      <div class="options-drawer" id="drawer-viewers">
+        <div style="font-weight: 800; font-size: 15px; margin-bottom: 14px; color: #E8181F;">⚙️ Personalização do Contador de Viewers:</div>
+        <div class="options-grid">
+          <div class="opt-group">
+            <label>Plataformas Ativas:</label>
+            <label class="checkbox-label"><input type="checkbox" id="vw-twitch" checked onchange="saveViewersConfig()"> 🟣 Twitch</label>
+            <label class="checkbox-label"><input type="checkbox" id="vw-youtube" checked onchange="saveViewersConfig()"> 🔴 YouTube</label>
+            <label class="checkbox-label"><input type="checkbox" id="vw-facebook" checked onchange="saveViewersConfig()"> 🔵 Facebook</label>
+            <label class="checkbox-label"><input type="checkbox" id="vw-total" checked onchange="saveViewersConfig()"> ⚡ Total Geral</label>
+          </div>
+          <div class="opt-group">
+            <label>Estilo de Fundo & Layout:</label>
+            <label class="checkbox-label"><input type="checkbox" id="vw-bg" checked onchange="saveViewersConfig()"> Fundo Vidro Fosco (Glass)</label>
+            <label style="margin-top: 6px;">Layout das Pills:</label>
+            <select class="opt-select" id="vw-layout" onchange="saveViewersConfig()">
+              <option value="horizontal">Horizontal (Lado a lado)</option>
+              <option value="vertical">Vertical (Empilhado)</option>
+            </select>
+          </div>
+          <div class="opt-group">
+            <label>Tamanho da Fonte:</label>
+            <select class="opt-select" id="vw-fontsize" onchange="saveViewersConfig()">
+              <option value="13">Pequeno (13px)</option>
+              <option value="15" selected>Médio (15px)</option>
+              <option value="18">Grande (18px)</option>
+              <option value="22">Extra Grande (22px)</option>
+            </select>
+          </div>
+        </div>
+      </div>
+
+      <label style="font-weight: 700; font-size: 13px; color: #94A3B8; text-transform: uppercase;">URL para o Streamlabs OBS (Browser Source):</label>
+      <div style="display: flex; gap: 8px; align-items: center; margin-top: 6px; margin-bottom: 16px;">
+        <input type="text" readonly class="url-box" id="url-viewers" value="https://apexscorpio.github.io/apexscorpio-stream-tools/viewers.html" style="margin-top: 0; margin-bottom: 0;">
+        <button class="btn" style="padding: 8px 14px; font-size: 12px; white-space: nowrap; height: 38px;" onclick="copyUrl('url-viewers', this)">📋 Copiar URL</button>
+      </div>
+
+      <div class="controls-group">
+        <button class="btn" id="btn-sim-viewers" style="background: #10B981;" onclick="simulateViewers()">🎲 Simular Live (50 Twitch / 120 YouTube / 35 FB por 8s)</button>
+        <button class="btn" style="background: #DC2626;" onclick="resetViewers()">🛑 Terminar Teste & Restaurar Valores Reais</button>
+      </div>
+
+      <label style="font-weight: 700; font-size: 13px; color: #94A3B8; text-transform: uppercase;">Visualização da Source em Tempo Real:</label>
+      <div class="preview-frame" id="pf-viewers" data-src-w="600" data-src-h="90" data-max-h="100">
+        <div class="preview-scale-wrap" id="wrap-viewers">
+          <iframe id="iframe-viewers" src="viewers.html" width="600" height="90"></iframe>
+        </div>
+      </div>
+    </div>
+
+    <!-- CARD 2: CHAT UNIFICADO -->
+    <div class="card">
+      <h2>
+        <span>💬 2. Chat Unificado (Twitch + YouTube + Facebook)</span>
+        <button class="btn btn-options" onclick="toggleDrawer('drawer-chat')">⚙️ Opções do Overlay</button>
+      </h2>
+      <p class="card-desc">Chat em direto com retenção permanente, logótipos SVG oficiais sem texto e animações Cyberpunk.</p>
+      
+      <div class="options-drawer" id="drawer-chat">
+        <div style="font-weight: 800; font-size: 15px; margin-bottom: 14px; color: #E8181F;">⚙️ Personalização do Chat Unificado:</div>
+        <div class="options-grid">
+          <div class="opt-group">
+            <label>Plataformas Ativas:</label>
+            <label class="checkbox-label"><input type="checkbox" id="chat-twitch" checked onchange="saveChatConfig()"> 🟣 Twitch</label>
+            <label class="checkbox-label"><input type="checkbox" id="chat-youtube" checked onchange="saveChatConfig()"> 🔴 YouTube</label>
+            <label class="checkbox-label"><input type="checkbox" id="chat-facebook" checked onchange="saveChatConfig()"> 🔵 Facebook</label>
+          </div>
+          <div class="opt-group">
+            <label>Estilo Visual (Pill vs Compacto):</label>
+            <select class="opt-select" id="chat-mode" onchange="saveChatConfig()">
+              <option value="pill" selected>Pill (Caixa arredondada com sombra)</option>
+              <option value="compact">Compacto (Linha minimalista)</option>
+            </select>
+            <label class="checkbox-label" style="margin-top: 6px;"><input type="checkbox" id="chat-bg" checked onchange="saveChatConfig()"> Fundo Geral da Caixa de Chat</label>
+            <label class="checkbox-label"><input type="checkbox" id="chat-badges" checked onchange="saveChatConfig()"> Mostrar Badges SVG da Plataforma</label>
+          </div>
+          <div class="opt-group">
+            <label>Retenção & Limites:</label>
+            <select class="opt-select" id="chat-fade" onchange="saveChatConfig()">
+              <option value="0" selected>Permanente (Nunca desaparece)</option>
+              <option value="5">Desaparece em 5 segundos (com animação inversa)</option>
+              <option value="10">Desaparece em 10 segundos</option>
+              <option value="15">Desaparece em 15 segundos</option>
+              <option value="30">Desaparece em 30 segundos</option>
+            </select>
+            <label style="margin-top: 6px;">Tamanho da Fonte:</label>
+            <select class="opt-select" id="chat-fontsize" onchange="saveChatConfig()">
+              <option value="12">Pequeno (12px)</option>
+              <option value="14" selected>Médio (14px)</option>
+              <option value="16">Grande (16px)</option>
+              <option value="18">Extra Grande (18px)</option>
+            </select>
+          </div>
+        </div>
+      </div>
+
+      <label style="font-weight: 700; font-size: 13px; color: #94A3B8; text-transform: uppercase;">URL para o Streamlabs OBS (Browser Source):</label>
+      <div style="display: flex; gap: 8px; align-items: center; margin-top: 6px; margin-bottom: 16px;">
+        <input type="text" readonly class="url-box" id="url-chat" value="https://apexscorpio.github.io/apexscorpio-stream-tools/chat.html" style="margin-top: 0; margin-bottom: 0;">
+        <button class="btn" style="padding: 8px 14px; font-size: 12px; white-space: nowrap; height: 38px;" onclick="copyUrl('url-chat', this)">📋 Copiar URL</button>
+      </div>
+
+      <div class="controls-group">
+        <button class="btn btn-twitch" onclick="sendTestChat('twitch')">💬 Chat Twitch (8s)</button>
+        <button class="btn btn-youtube" onclick="sendTestChat('youtube')">💬 Chat YouTube (8s)</button>
+        <button class="btn btn-facebook" onclick="sendTestChat('facebook')">💬 Chat Facebook (8s)</button>
+        <button class="btn" style="background: linear-gradient(135deg, #9146FF, #E8181F);" onclick="triggerRandomChat()">🎲 Testar Chat Aleatório (8s)</button>
+        <button class="btn" style="background: #DC2626;" onclick="clearChat()">🛑 Limpar Chat de Teste</button>
+      </div>
+
+      <label style="font-weight: 700; font-size: 13px; color: #94A3B8; text-transform: uppercase;">Visualização da Source em Tempo Real:</label>
+      <div class="preview-frame" id="pf-chat" data-src-w="440" data-src-h="580" data-max-h="260">
+        <div class="preview-scale-wrap" id="wrap-chat">
+          <iframe id="iframe-chat" src="chat.html" width="440" height="580"></iframe>
+        </div>
+      </div>
+    </div>
+
+    <!-- CARD 3: EVENT LIST -->
+    <div class="card">
+      <h2>
+        <span>📋 3. Event List (Histórico Vertical de Eventos)</span>
+        <button class="btn btn-options" onclick="toggleDrawer('drawer-events')">⚙️ Opções do Overlay</button>
+      </h2>
+      <p class="card-desc">Lista vertical de eventos com logótipo SVG da plataforma antes de cada entrada em inglês.</p>
+      
+      <div class="options-drawer" id="drawer-events">
+        <div style="font-weight: 800; font-size: 15px; margin-bottom: 14px; color: #E8181F;">⚙️ Personalização do Event List:</div>
+        <div class="options-grid">
+          <div class="opt-group">
+            <label>Plataformas Ativas:</label>
+            <label class="checkbox-label"><input type="checkbox" id="evt-twitch" checked onchange="saveEventsConfig()"> 🟣 Twitch</label>
+            <label class="checkbox-label"><input type="checkbox" id="evt-youtube" checked onchange="saveEventsConfig()"> 🔴 YouTube</label>
+            <label class="checkbox-label"><input type="checkbox" id="evt-facebook" checked onchange="saveEventsConfig()"> 🔵 Facebook</label>
+          </div>
+          <div class="opt-group">
+            <label>Exibição & Fundo:</label>
+            <label class="checkbox-label"><input type="checkbox" id="evt-logos" checked onchange="saveEventsConfig()"> Mostrar Logótipos SVG</label>
+            <label class="checkbox-label"><input type="checkbox" id="evt-bg" checked onchange="saveEventsConfig()"> Fundo Vidro Fosco</label>
+          </div>
+          <div class="opt-group">
+            <label>Limite de Eventos Guardados:</label>
+            <select class="opt-select" id="evt-max" onchange="saveEventsConfig()">
+              <option value="5">5 últimos eventos</option>
+              <option value="8" selected>8 últimos eventos</option>
+              <option value="12">12 últimos eventos</option>
+            </select>
+          </div>
+        </div>
+      </div>
+
+      <label style="font-weight: 700; font-size: 13px; color: #94A3B8; text-transform: uppercase;">URL para o Streamlabs OBS (Browser Source):</label>
+      <div style="display: flex; gap: 8px; align-items: center; margin-top: 6px; margin-bottom: 16px;">
+        <input type="text" readonly class="url-box" id="url-events" value="https://apexscorpio.github.io/apexscorpio-stream-tools/events.html" style="margin-top: 0; margin-bottom: 0;">
+        <button class="btn" style="padding: 8px 14px; font-size: 12px; white-space: nowrap; height: 38px;" onclick="copyUrl('url-events', this)">📋 Copiar URL</button>
+      </div>
+
+      <div class="controls-group">
+        <button class="btn" style="background: #38BDF8;" onclick="triggerAlert('follower')">🔔 Testar Follower Event</button>
+        <button class="btn" style="background: #F59E0B;" onclick="triggerAlert('subscriber')">⭐ Testar Subscriber Event</button>
+        <button class="btn" style="background: #9146FF;" onclick="triggerAlert('raid')">🚀 Testar Raid Event</button>
+        <button class="btn" style="background: linear-gradient(135deg, #38BDF8, #9146FF);" onclick="triggerRandomEvent()">🎲 Disparar Evento Aleatório</button>
+        <button class="btn" style="background: #DC2626;" onclick="clearEvents()">🛑 Limpar Eventos de Teste</button>
+      </div>
+
+      <label style="font-weight: 700; font-size: 13px; color: #94A3B8; text-transform: uppercase;">Visualização da Source em Tempo Real:</label>
+      <div class="preview-frame" id="pf-events" data-src-w="380" data-src-h="460" data-max-h="260">
+        <div class="preview-scale-wrap" id="wrap-events">
+          <iframe id="iframe-events" src="events.html" width="380" height="460"></iframe>
+        </div>
+      </div>
+    </div>
+
+    <!-- CARD 4: ALERT BOX OVERLAY -->
+    <div class="card">
+      <h2>
+        <span>🔔 4. Alert Box Overlay (Follower, Sub, Raid Alerts)</span>
+        <button class="btn btn-options" onclick="toggleDrawer('drawer-alerts')">⚙️ Opções do Overlay</button>
+      </h2>
+      <p class="card-desc">Alertas pop-up em direto com clipart exclusivo por tipo de alerta e som sintetizado.</p>
+      
+      <div class="options-drawer" id="drawer-alerts">
+        <div style="font-weight: 800; font-size: 15px; margin-bottom: 14px; color: #E8181F;">⚙️ Personalização do Alert Box:</div>
+        <div class="options-grid">
+          <div class="opt-group">
+            <label>Plataformas Ativas:</label>
+            <label class="checkbox-label"><input type="checkbox" id="alt-twitch" checked onchange="saveAlertsConfig()"> 🟣 Twitch</label>
+            <label class="checkbox-label"><input type="checkbox" id="alt-youtube" checked onchange="saveAlertsConfig()"> 🔴 YouTube</label>
+            <label class="checkbox-label"><input type="checkbox" id="alt-facebook" checked onchange="saveAlertsConfig()"> 🔵 Facebook</label>
+          </div>
+          <div class="opt-group">
+            <label>Som & Duração:</label>
+            <label class="checkbox-label"><input type="checkbox" id="alt-sound" checked onchange="saveAlertsConfig()"> Ativar Efeito Sonoro</label>
+            <label style="margin-top: 6px;">Duração do Alerta no Ecrã:</label>
+            <select class="opt-select" id="alt-duration" onchange="saveAlertsConfig()">
+              <option value="3">3 Segundos</option>
+              <option value="5" selected>5 Segundos</option>
+              <option value="7">7 Segundos</option>
+              <option value="10">10 Segundos</option>
+            </select>
+          </div>
+        </div>
+      </div>
+
+      <label style="font-weight: 700; font-size: 13px; color: #94A3B8; text-transform: uppercase;">URL para o Streamlabs OBS (Browser Source):</label>
+      <div style="display: flex; gap: 8px; align-items: center; margin-top: 6px; margin-bottom: 16px;">
+        <input type="text" readonly class="url-box" id="url-alerts" value="https://apexscorpio.github.io/apexscorpio-stream-tools/alerts.html" style="margin-top: 0; margin-bottom: 0;">
+        <button class="btn" style="padding: 8px 14px; font-size: 12px; white-space: nowrap; height: 38px;" onclick="copyUrl('url-alerts', this)">📋 Copiar URL</button>
+      </div>
+
+      <div class="controls-group">
+        <button class="btn" style="background: #38BDF8;" onclick="triggerAlert('follower')">🔔 Alerta Follower</button>
+        <button class="btn" style="background: #F59E0B;" onclick="triggerAlert('subscriber')">⭐ Alerta Subscriber</button>
+        <button class="btn" style="background: #9146FF;" onclick="triggerAlert('raid')">🚀 Alerta Raid</button>
+        <button class="btn" style="background: linear-gradient(135deg, #E8181F, #F59E0B);" onclick="triggerRandomAlert()">🎲 Disparar Alerta Aleatório com Som</button>
+        <button class="btn" style="background: #DC2626;" onclick="clearAlerts()">🛑 Parar Alerta & Limpar Queue</button>
+      </div>
+
+      <label style="font-weight: 700; font-size: 13px; color: #94A3B8; text-transform: uppercase;">Visualização da Source em Tempo Real:</label>
+      <div class="preview-frame" id="pf-alerts" data-src-w="600" data-src-h="300" data-max-h="180">
+        <div class="preview-scale-wrap" id="wrap-alerts">
+          <iframe id="iframe-alerts" src="alerts.html" width="600" height="300"></iframe>
+        </div>
+      </div>
+    </div>
+
+    <!-- CARD 5: CENAS DE ECRÃ ANIMADAS -->
+    <div class="card">
+      <h2>
+        <span>🎬 5. Cenas de Ecrã Animadas (Full Stream Scenes)</span>
+        <button class="btn btn-options" onclick="toggleDrawer('drawer-starting')">⚙️ Opções do Overlay</button>
+      </h2>
+      <p class="card-desc">Ecrãs de cena completa para o Streamlabs OBS com temporizadores, brilho do Escorpião e redes sociais.</p>
+
+      <div class="options-drawer" id="drawer-starting">
+        <div style="font-weight: 800; font-size: 15px; margin-bottom: 14px; color: #E8181F;">⚙️ Personalização das Cenas Animadas:</div>
+        <div class="options-grid">
+          <div class="opt-group">
+            <label>Valor Personalizado do Temporizador (Minutos):</label>
+            <input type="number" min="1" max="60" value="5" class="opt-input" id="st-timer" onchange="saveStartingConfig()">
+          </div>
+        </div>
+      </div>
+
+      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 16px; margin-bottom: 16px;">
+        <div>
+          <label style="font-weight: 700; font-size: 13px; color: #E8181F;">🎬 Stream Starting Soon:</label>
+          <div style="display: flex; gap: 6px; align-items: center; margin-top: 6px; margin-bottom: 16px;">
+            <input type="text" readonly class="url-box" id="url-starting" value="https://apexscorpio.github.io/apexscorpio-stream-tools/starting.html" style="margin-top: 0; margin-bottom: 0;">
+            <button class="btn" style="padding: 8px 10px; font-size: 11px; white-space: nowrap; height: 38px;" onclick="copyUrl('url-starting', this)">📋 Copiar</button>
+          </div>
+        </div>
+        <div>
+          <label style="font-weight: 700; font-size: 13px; color: #E8181F;">☕ Be Right Back (BRB):</label>
+          <div style="display: flex; gap: 6px; align-items: center; margin-top: 6px; margin-bottom: 16px;">
+            <input type="text" readonly class="url-box" id="url-brb" value="https://apexscorpio.github.io/apexscorpio-stream-tools/brb.html" style="margin-top: 0; margin-bottom: 0;">
+            <button class="btn" style="padding: 8px 10px; font-size: 11px; white-space: nowrap; height: 38px;" onclick="copyUrl('url-brb', this)">📋 Copiar</button>
+          </div>
+        </div>
+        <div>
+          <label style="font-weight: 700; font-size: 13px; color: #F59E0B;">⚠️ Technical Issues:</label>
+          <div style="display: flex; gap: 6px; align-items: center; margin-top: 6px; margin-bottom: 16px;">
+            <input type="text" readonly class="url-box" id="url-technical" value="https://apexscorpio.github.io/apexscorpio-stream-tools/technical.html" style="margin-top: 0; margin-bottom: 0;">
+            <button class="btn" style="padding: 8px 10px; font-size: 11px; white-space: nowrap; height: 38px;" onclick="copyUrl('url-technical', this)">📋 Copiar</button>
+          </div>
+        </div>
+        <div>
+          <label style="font-weight: 700; font-size: 13px; color: #9146FF;">🏁 Stream Ending:</label>
+          <div style="display: flex; gap: 6px; align-items: center; margin-top: 6px; margin-bottom: 16px;">
+            <input type="text" readonly class="url-box" id="url-ending" value="https://apexscorpio.github.io/apexscorpio-stream-tools/ending.html" style="margin-top: 0; margin-bottom: 0;">
+            <button class="btn" style="padding: 8px 10px; font-size: 11px; white-space: nowrap; height: 38px;" onclick="copyUrl('url-ending', this)">📋 Copiar</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="controls-group">
+        <button class="btn" style="background: #E8181F;" onclick="switchScene('starting.html')">🎬 Ver Starting Soon</button>
+        <button class="btn" style="background: #9146FF;" onclick="switchScene('brb.html')">☕ Ver BRB</button>
+        <button class="btn" style="background: #F59E0B;" onclick="switchScene('technical.html')">⚠️ Ver Technical Issues</button>
+        <button class="btn" style="background: #38BDF8;" onclick="switchScene('ending.html')">🏁 Ver Stream Ending</button>
+      </div>
+
+      <label style="font-weight: 700; font-size: 13px; color: #94A3B8; text-transform: uppercase;">Visualização da Cena em Tempo Real:</label>
+      <div class="preview-frame" id="pf-scene" data-src-w="1920" data-src-h="1080" data-max-h="260">
+        <div class="preview-scale-wrap" id="wrap-scene">
+          <iframe id="scene-preview" src="starting.html" width="1920" height="1080"></iframe>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // Multi-Broker Redundancy over Port 443 / 8000
+    const MQTT_BROKERS = [
+      'wss://broker.emqx.io:443/mqtt',
+      'wss://broker.hivemq.com:8000/mqtt',
+      'wss://broker.emqx.io:8084/mqtt'
+    ];
+    let activeClients = [];
+
+    if (typeof mqtt !== 'undefined') {
+      MQTT_BROKERS.forEach(url => {
+        try {
+          const client = mqtt.connect(url, {
+            clientId: 'scorpio_dash_' + Math.random().toString(16).substring(2, 8),
+            connectTimeout: 4000,
+            keepalive: 30
+          });
+          client.on('connect', () => {
+            const badge = document.getElementById('cloud-status-badge');
+            if (badge) {
+              badge.style.color = '#10B981';
+              badge.innerText = '● CLOUD RELAY ATIVO (Porta 443 WSS)';
+            }
+          });
+          activeClients.push(client);
+        } catch(e) {}
+      });
+    }
+
+    const bc = typeof BroadcastChannel !== 'undefined' ? new BroadcastChannel('apex_scorpio_stream_tools') : null;
+
+    function showToast(msg) {
+      const el = document.getElementById('toast-notification');
+      if (!el) return;
+      el.innerText = msg;
+      el.style.display = 'block';
+      setTimeout(() => el.style.display = 'none', 2500);
+    }
+
+    function publishCloudMessage(topic, payload, opts = {}) {
+      const str = typeof payload === 'string' ? payload : JSON.stringify(payload);
+      activeClients.forEach(client => {
+        try { client.publish(topic, str, opts); } catch(e) {}
+      });
+    }
+
+    function publishConfig(overlayName, configData) {
+      const payload = { type: 'config_update', overlay: overlayName, config: configData, timestamp: Date.now() };
+
+      publishCloudMessage(`apexscorpio/streamtools/v1/cfg/${overlayName}`, configData, { retain: true, qos: 1 });
+      publishCloudMessage('apexscorpio/streamtools/v1/events', { type: 'config_update', payload: { [overlayName]: configData } });
+
+      if (bc) {
+        try { bc.postMessage({ type: 'config_update', data: { [overlayName]: configData } }); } catch(e) {}
+      }
+
+      try {
+        localStorage.setItem(`apex_cfg_${overlayName}`, JSON.stringify(configData));
+        localStorage.setItem('apex_event_config_update', JSON.stringify({ payload: { [overlayName]: configData }, timestamp: Date.now() }));
+      } catch(e) {}
+
+      const iframeMap = {
+        viewers: 'iframe-viewers',
+        chat: 'iframe-chat',
+        events: 'iframe-events',
+        alerts: 'iframe-alerts',
+        starting: 'scene-preview'
+      };
+      const iframeId = iframeMap[overlayName];
+      if (iframeId) {
+        const iframe = document.getElementById(iframeId);
+        if (iframe && iframe.contentWindow) {
+          iframe.contentWindow.postMessage({ type: 'config_update', data: { [overlayName]: configData } }, '*');
+        }
+      }
+    }
+
+    // THE EXACT SAME EVENT BROADCASTER USED BY TEST TRIGGERS THAT ALREADY WORK IN SLOBS!
+    function broadcastEvent(type, payload) {
+      const data = { type, payload, timestamp: Date.now() };
+
+      publishCloudMessage('apexscorpio/streamtools/v1/events', data);
+      publishCloudMessage(`apexscorpio/streamtools/v1/cfg/${type}`, data, { retain: true, qos: 1 });
+
+      if (bc) {
+        try { bc.postMessage({ type, data: payload }); } catch(e) {}
+      }
+
+      try {
+        localStorage.removeItem(`apex_event_${type}`);
+        localStorage.setItem(`apex_event_${type}`, JSON.stringify({ payload, timestamp: Date.now() }));
+      } catch(e) {}
+
+      const iframes = ['iframe-viewers', 'iframe-chat', 'iframe-events', 'iframe-alerts', 'scene-preview'];
+      iframes.forEach(id => {
+        const iframe = document.getElementById(id);
+        if (iframe && iframe.contentWindow) {
+          iframe.contentWindow.postMessage({ type, data: payload }, '*');
+        }
+      });
+    }
+
+    function copyUrl(inputId, btnEl) {
+      const input = document.getElementById(inputId);
+      if (!input || !input.value) return;
+      navigator.clipboard.writeText(input.value).then(() => {
+        const orig = btnEl.innerText;
+        btnEl.innerText = '✅ Copiado!';
+        setTimeout(() => btnEl.innerText = orig, 2000);
+      }).catch(err => {
+        input.select();
+        document.execCommand('copy');
+        const orig = btnEl.innerText;
+        btnEl.innerText = '✅ Copiado!';
+        setTimeout(() => btnEl.innerText = orig, 2000);
+      });
+    }
+
+    function updatePublicUrls() {
+      const baseUrl = 'https://apexscorpio.github.io/apexscorpio-stream-tools/';
+
+      document.getElementById('url-viewers').value = `${baseUrl}viewers.html`;
+      document.getElementById('url-chat').value = `${baseUrl}chat.html`;
+      document.getElementById('url-events').value = `${baseUrl}events.html`;
+      document.getElementById('url-alerts').value = `${baseUrl}alerts.html`;
+
+      document.getElementById('url-starting').value = `${baseUrl}starting.html`;
+      document.getElementById('url-brb').value = `${baseUrl}brb.html`;
+      document.getElementById('url-technical').value = `${baseUrl}technical.html`;
+      document.getElementById('url-ending').value = `${baseUrl}ending.html`;
+    }
+
+    function toggleDrawer(id) {
+      const el = document.getElementById(id);
+      el.style.display = el.style.display === 'block' ? 'none' : 'block';
+    }
+
+    function saveViewersConfig() {
+      const cfg = {
+        showTwitch: document.getElementById('vw-twitch').checked,
+        showYoutube: document.getElementById('vw-youtube').checked,
+        showFacebook: document.getElementById('vw-facebook').checked,
+        showTotal: document.getElementById('vw-total').checked,
+        showBg: document.getElementById('vw-bg').checked,
+        layout: document.getElementById('vw-layout').value,
+        fontSize: Number(document.getElementById('vw-fontsize').value)
+      };
+      publishConfig('viewers', cfg);
+    }
+
+    function saveChatConfig() {
+      const cfg = {
+        showTwitch: document.getElementById('chat-twitch').checked,
+        showYoutube: document.getElementById('chat-youtube').checked,
+        showFacebook: document.getElementById('chat-facebook').checked,
+        displayMode: document.getElementById('chat-mode').value,
+        fadeSeconds: Number(document.getElementById('chat-fade').value),
+        showBg: document.getElementById('chat-bg').checked,
+        showBadges: document.getElementById('chat-badges').checked,
+        fontSize: Number(document.getElementById('chat-fontsize').value),
+        maxMessages: 50
+      };
+      publishConfig('chat', cfg);
+    }
+
+    function saveEventsConfig() {
+      const cfg = {
+        showTwitch: document.getElementById('evt-twitch').checked,
+        showYoutube: document.getElementById('evt-youtube').checked,
+        showFacebook: document.getElementById('evt-facebook').checked,
+        showLogos: document.getElementById('evt-logos').checked,
+        showBg: document.getElementById('evt-bg').checked,
+        maxItems: Number(document.getElementById('evt-max').value)
+      };
+      publishConfig('events', cfg);
+    }
+
+    function saveAlertsConfig() {
+      const cfg = {
+        showTwitch: document.getElementById('alt-twitch').checked,
+        showYoutube: document.getElementById('alt-youtube').checked,
+        showFacebook: document.getElementById('alt-facebook').checked,
+        playSound: document.getElementById('alt-sound').checked,
+        durationSeconds: Number(document.getElementById('alt-duration').value)
+      };
+      publishConfig('alerts', cfg);
+    }
+
+    function saveStartingConfig() {
+      const minutes = Number(document.getElementById('st-timer').value) || 5;
+      const cfg = { timerMinutes: minutes };
+      publishConfig('starting', cfg);
+    }
+
+    function sendTestChat(platform) {
+      const msgs = {
+        twitch: 'Boas pessoal! A acompanhar a stream na Twitch com full qualidade! 🔥',
+        youtube: 'Grande gameplay no YouTube! Vamos a isso Apex Scorpio! 🚀',
+        facebook: 'Stream brutal no Facebook Live! Força nisso Scorpio! 💣'
+      };
+      const colors = { twitch: '#9146FF', youtube: '#E8181F', facebook: '#1877F2' };
+      const testMsg = {
+        id: `test-${Date.now()}`,
+        platform: platform,
+        username: platform === 'youtube' ? 'GamerYT_88' : (platform === 'facebook' ? 'ScorpioFB_10' : 'TwitchGamer_99'),
+        userColor: colors[platform] || '#E8181F',
+        message: msgs[platform] || 'Test chat message',
+        badges: { broadcaster: false, mod: Math.random() > 0.5, subscriber: true },
+        isTest: true,
+        timestamp: new Date().toISOString()
+      };
+      broadcastEvent('chat_message', testMsg);
+      showToast('💬 Mensagem de teste enviada (Auto-reverte após 8s)!');
+    }
+
+    function triggerRandomChat() {
+      const plats = ['twitch', 'youtube', 'facebook'];
+      const p = plats[Math.floor(Math.random() * plats.length)];
+      sendTestChat(p);
+    }
+
+    // SIMPLIFIED Symmetrical Clear Functions using broadcastEvent!
+    function clearChat() {
+      broadcastEvent('clear_chat', { timestamp: Date.now() });
+      showToast('🛑 Chat de teste limpo!');
+    }
+
+    function triggerAlert(type) {
+      const names = {
+        follower: ['GamerPro_99', 'ScorpioFan_42', 'TwitchLegend', 'CyberScorpio'],
+        subscriber: ['MasterSub_77', 'SuperFan_007', 'VipGamer'],
+        raid: ['StreamHost_X', 'RaidLeader_01']
+      };
+      const randomName = names[type][Math.floor(Math.random() * names[type].length)];
+      const eventPayload = {
+        id: `event-${Date.now()}`,
+        type: type || 'follower',
+        username: randomName,
+        platform: 'twitch',
+        viewers: 24,
+        isTest: true,
+        timestamp: new Date().toISOString()
+      };
+      broadcastEvent('new_event', eventPayload);
+      showToast('🔔 Evento de teste disparado!');
+    }
+
+    function triggerRandomEvent() {
+      const types = ['follower', 'subscriber', 'raid'];
+      const platforms = ['twitch', 'youtube', 'facebook'];
+      const users = ['CyberScorpio_99', 'ApexGamer_PT', 'ShadowRider', 'ProStreamer_42', 'LegendaryPlayer'];
+      
+      const type = types[Math.floor(Math.random() * types.length)];
+      const platform = platforms[Math.floor(Math.random() * platforms.length)];
+      const username = users[Math.floor(Math.random() * users.length)];
+      const viewers = Math.floor(Math.random() * 45) + 10;
+      const eventPayload = {
+        id: `event-${Date.now()}`,
+        type,
+        username,
+        platform,
+        viewers,
+        isTest: true,
+        timestamp: new Date().toISOString()
+      };
+      broadcastEvent('new_event', eventPayload);
+      showToast('🎲 Evento de teste aleatório disparado!');
+    }
+
+    function clearEvents() {
+      broadcastEvent('clear_events', { timestamp: Date.now() });
+      showToast('🛑 Eventos de teste limpos!');
+    }
+
+    function triggerRandomAlert() {
+      triggerRandomEvent();
+    }
+
+    function clearAlerts() {
+      broadcastEvent('clear_alerts', { timestamp: Date.now() });
+      showToast('🛑 Alertas & Queue limpos!');
+    }
+
+    let simTimer = null;
+    function simulateViewers(durationSec = 8) {
+      if (simTimer) clearTimeout(simTimer);
+
+      const state = {
+        twitch: { isLive: true, viewers: 50 },
+        youtube: { isLive: true, viewers: 120 },
+        facebook: { isLive: true, viewers: 35 },
+        totalViewers: 205,
+        isTest: true,
+        testDuration: durationSec
+      };
+      broadcastEvent('status_update', state);
+      showToast(`🎲 Simulação ativa por ${durationSec} segundos!`);
+
+      const btn = document.getElementById('btn-sim-viewers');
+      if (btn) btn.innerText = `⏳ Simulação Ativa (${durationSec}s restante)...`;
+
+      let count = durationSec;
+      const interval = setInterval(() => {
+        count--;
+        if (btn && count > 0) btn.innerText = `⏳ Simulação Ativa (${count}s restante)...`;
+        if (count <= 0) clearInterval(interval);
+      }, 1000);
+
+      // Revert back to real values after 8 seconds!
+      simTimer = setTimeout(() => {
+        resetViewers();
+        if (btn) btn.innerText = '🎲 Simular Live (50 Twitch / 120 YouTube / 35 FB por 8s)';
+      }, durationSec * 1000);
+    }
+
+    function resetViewers() {
+      if (simTimer) clearTimeout(simTimer);
+      const state = {
+        twitch: { isLive: false, viewers: 0 },
+        youtube: { isLive: false, viewers: 0 },
+        facebook: { isLive: false, viewers: 0 },
+        totalViewers: 0,
+        isTest: false
+      };
+      broadcastEvent('clear_viewers', { timestamp: Date.now() });
+      broadcastEvent('status_update', state);
+      showToast('🛑 Teste do contador terminado. Valores reais restaurados!');
+      const btn = document.getElementById('btn-sim-viewers');
+      if (btn) btn.innerText = '🎲 Simular Live (50 Twitch / 120 YouTube / 35 FB por 8s)';
+    }
+
+    function fitPreviews() {
+      document.querySelectorAll('.preview-frame[data-src-w]').forEach(frame => {
+        const srcW    = parseInt(frame.dataset.srcW, 10);
+        const srcH    = parseInt(frame.dataset.srcH, 10);
+        const maxH    = parseInt(frame.dataset.maxH || '220', 10);
+        const containerW = frame.parentElement ? frame.parentElement.offsetWidth - 32 : frame.offsetWidth;
+
+        const scaleByW = containerW / srcW;
+        const scaleByH = maxH / srcH;
+        const scale    = Math.min(scaleByW, scaleByH);
+
+        const previewW = Math.ceil(srcW * scale);
+        const previewH = Math.ceil(srcH * scale);
+
+        frame.style.height = previewH + 'px';
+
+        const wrap = frame.querySelector('.preview-scale-wrap');
+        if (wrap) {
+          wrap.style.width  = srcW + 'px';
+          wrap.style.height = srcH + 'px';
+          wrap.style.transform = `scale(${scale})`;
+          wrap.style.transformOrigin = 'top left';
+          const leftOffset = Math.max(0, Math.floor((containerW - previewW) / 2));
+          wrap.style.marginLeft = leftOffset + 'px';
+        }
+      });
+    }
+
+    window.addEventListener('load', () => {
+      updatePublicUrls();
+      fitPreviews();
+    });
+    window.addEventListener('resize', fitPreviews);
+    document.addEventListener('DOMContentLoaded', () => {
+      updatePublicUrls();
+      fitPreviews();
+    });
+    setTimeout(fitPreviews, 200);
+
+    function switchScene(url) {
+      const iframe = document.getElementById('scene-preview');
+      if (iframe) iframe.src = url;
+      setTimeout(fitPreviews, 100);
+    }
+  </script>
+</body>
+</html>

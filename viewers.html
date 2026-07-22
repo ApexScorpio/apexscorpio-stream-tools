@@ -299,39 +299,76 @@
     async function checkYoutubeLive() {
       if (isTestActive) return;
       try {
-        const channelId = await resolveYtChannelId();
-        if (!channelId) return;
+        let isLiveFound = false;
+        let videoIdFound = null;
+        let countFound = 0;
 
-        // Search for active live stream on this channel (costs 100 quota units)
-        const searchResp = await fetch(
-          `https://www.googleapis.com/youtube/v3/search?part=id&channelId=${channelId}&eventType=live&type=video&key=${YT_API_KEY}`
-        );
-        const searchData = await searchResp.json();
+        // Tentar obter o HTML da Live usando proxy CORS (necessário para requisições client-side no browser)
+        const targetLiveUrl = 'https://www.youtube.com/@apexscorpio/live';
+        const proxyUrls = [
+          `https://api.allorigins.win/raw?url=${encodeURIComponent(targetLiveUrl)}`,
+          `https://corsproxy.io/?${encodeURIComponent(targetLiveUrl)}`
+        ];
 
-        if (!searchData?.items?.length) {
-          realState.youtube = { isLive: false, viewers: 0 };
-          ytLiveVideoId = null;
-          ytLiveChatId = null;
-          realState.totalViewers = (realState.twitch.viewers || 0) + 0 + (realState.facebook.viewers || 0);
-          if (!isTestActive) renderStatus(realState);
-          return;
+        let html = '';
+        for (const pUrl of proxyUrls) {
+          try {
+            const resp = await fetch(pUrl, { cache: 'no-store' });
+            if (resp.ok) {
+              html = await resp.text();
+              if (html && html.length > 500) break;
+            }
+          } catch(e) {}
         }
 
-        ytLiveVideoId = searchData.items[0].id.videoId;
+        if (html) {
+          // Extrair Video ID da Live
+          const matchVid = html.match(/<link rel="canonical" href="https:\/\/www\.youtube\.com\/watch\?v=([a-zA-Z0-9_-]{11})">/) ||
+                           html.match(/"videoId":"([a-zA-Z0-9_-]{11})"/);
+          if (matchVid && matchVid[1]) {
+            videoIdFound = matchVid[1];
+          }
 
-        // Get concurrent viewers and liveChatId (costs 1 quota unit)
-        const videoResp = await fetch(
-          `https://www.googleapis.com/youtube/v3/videos?part=liveStreamingDetails&id=${ytLiveVideoId}&key=${YT_API_KEY}`
-        );
-        const videoData = await videoResp.json();
-        const lsd = videoData?.items?.[0]?.liveStreamingDetails;
+          // Confirmar estado LIVE
+          const hasLiveFlag = html.includes('"isLiveNow":true') || 
+                              html.includes('"isLiveBroadcast":true') || 
+                              html.includes('"isLive":true') || 
+                              html.includes('"is_viewed_live":"True"') ||
+                              html.includes('"status":"LIVE"');
 
-        if (lsd) {
-          const viewers = parseInt(lsd.concurrentViewers || '0', 10);
-          ytLiveChatId = lsd.activeLiveChatId || null;
-          realState.youtube = { isLive: true, viewers };
+          const isUpcoming = html.includes('"isUpcoming":true');
+
+          if (videoIdFound && hasLiveFlag && !isUpcoming) {
+            isLiveFound = true;
+          }
+
+          // Extrair Espectadores
+          const viewerPatterns = [
+            /"viewCount":\s*\{\s*"runs":\s*\[\s*\{\s*"text":\s*"([\d,\.\s]+)"/,
+            /"shortViewCount":\s*\{\s*"runs":\s*\[\s*\{\s*"text":\s*"([\d,\.\s]+)"/,
+            /"viewCount":"(\d+)"/,
+            /([\d,\.]+)\s*(?:a assistir|watching now|espectadores|espectadores ao vivo)/i
+          ];
+
+          for (const pattern of viewerPatterns) {
+            const match = html.match(pattern);
+            if (match && match[1]) {
+              const rawStr = match[1].replace(/[^\d]/g, '');
+              if (rawStr) {
+                countFound = parseInt(rawStr, 10);
+                break;
+              }
+            }
+          }
+        }
+
+        // Atualizar estado
+        if (isLiveFound) {
+          realState.youtube = { isLive: true, viewers: countFound || 1 };
+          ytLiveVideoId = videoIdFound;
         } else {
           realState.youtube = { isLive: false, viewers: 0 };
+          ytLiveVideoId = null;
         }
 
         realState.totalViewers = (realState.twitch.viewers || 0) + (realState.youtube.viewers || 0) + (realState.facebook.viewers || 0);
