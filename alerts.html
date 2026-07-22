@@ -102,6 +102,10 @@
       durationSeconds: 5
     };
 
+    let alertQueue = [];
+    let isShowingAlert = false;
+    let activeAlertTimer = null;
+
     function loadSavedConfig() {
       const p = new URLSearchParams(window.location.search);
       if (p.has('tw')) currentConfig.showTwitch = p.get('tw') === '1' || p.get('tw') === 'true';
@@ -131,6 +135,7 @@
 
     function doClearAlerts() {
       alertQueue = [];
+      if (activeAlertTimer) clearTimeout(activeAlertTimer);
       if (alertBox) {
         alertBox.style.animation = 'none';
         alertBox.style.display = 'none';
@@ -164,27 +169,39 @@
       }
     }
 
-    // Public WSS Cloud Relay + Retained Message Subscribing
+    // Multi-Broker Cloud Relay (Port 443 HTTPS + 8000 + 8084)
+    const MQTT_BROKERS = [
+      'wss://broker.emqx.io:443/mqtt',
+      'wss://broker.hivemq.com:8000/mqtt',
+      'wss://broker.emqx.io:8084/mqtt'
+    ];
+
     if (typeof mqtt !== 'undefined') {
-      try {
-        const mqttClient = mqtt.connect('wss://broker.emqx.io:8084/mqtt', { clientId: 'scorpio_alerts_' + Math.random().toString(16).substring(2, 8) });
-        mqttClient.on('connect', () => {
-          mqttClient.subscribe('apexscorpio/streamtools/v1/cfg/#');
-          mqttClient.subscribe('apexscorpio/streamtools/v1/events/#');
-        });
-        mqttClient.on('message', (topic, message) => {
-          try {
-            const data = JSON.parse(message.toString());
-            if (topic.includes('clear')) {
-              doClearAlerts();
-            } else if (topic.includes('/cfg/alerts')) {
-              currentConfig = { ...currentConfig, ...data };
-            } else if (data && (data.type || data.payload)) {
-              handleIncomingData(data.type || data.payload?.type, data.payload || data);
-            }
-          } catch(err) {}
-        });
-      } catch(e) {}
+      MQTT_BROKERS.forEach(url => {
+        try {
+          const mqttClient = mqtt.connect(url, {
+            clientId: 'scorpio_alerts_' + Math.random().toString(16).substring(2, 8),
+            connectTimeout: 4000,
+            keepalive: 30
+          });
+          mqttClient.on('connect', () => {
+            mqttClient.subscribe('apexscorpio/streamtools/v1/cfg/#');
+            mqttClient.subscribe('apexscorpio/streamtools/v1/events/#');
+          });
+          mqttClient.on('message', (topic, message) => {
+            try {
+              const data = JSON.parse(message.toString());
+              if (topic.includes('clear')) {
+                doClearAlerts();
+              } else if (topic.includes('/cfg/alerts')) {
+                currentConfig = { ...currentConfig, ...data };
+              } else if (data && (data.type || data.payload)) {
+                handleIncomingData(data.type || data.payload?.type, data.payload || data);
+              }
+            } catch(err) {}
+          });
+        } catch(e) {}
+      });
     }
 
     if (bc) {
@@ -216,9 +233,6 @@
       subscriber: 'brandkit/Apex_Scorpio_Brand_Assets/02_Jewel/AS_Jewel_Full_Metallic.png',
       raid: 'brandkit/Apex_Scorpio_Brand_Assets/03_Scorpion/Apex_Stinger_A_Symbol.png'
     };
-
-    let alertQueue = [];
-    let isShowingAlert = false;
 
     function playAlertSound() {
       if (!currentConfig.playSound) return;
@@ -279,7 +293,8 @@
 
       const durationMs = (currentConfig.durationSeconds || 5) * 1000;
 
-      setTimeout(() => {
+      if (activeAlertTimer) clearTimeout(activeAlertTimer);
+      activeAlertTimer = setTimeout(() => {
         alertBox.style.display = 'none';
         isShowingAlert = false;
         setTimeout(processAlertQueue, 500);
