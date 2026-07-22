@@ -1,28 +1,28 @@
 @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;700;800;900&family=Inter:wght@400;500;600;700&family=Orbitron:wght@600;800;900&display=swap');
 
 :root {
-  /* Apex Scorpio Brand Palette */
-  --apex-cyan: #38BDF8;
-  --apex-cyan-glow: rgba(56, 189, 248, 0.4);
-  --apex-purple: #8B5CF6;
-  --apex-gold: #F59E0B;
-  --apex-neon: #06B6D4;
+  /* ApexScorpio Authentic Brand Palette */
+  --apex-cyan: #00F0FF;
+  --apex-cyan-glow: rgba(0, 240, 255, 0.4);
+  --apex-purple: #9146FF;
+  --apex-red: #FF0000;
+  --apex-dark: #0A0D14;
   
-  --twitch-color: #A855F7;
-  --twitch-bg: rgba(168, 85, 247, 0.18);
-  --twitch-border: rgba(168, 85, 247, 0.45);
+  --twitch-color: #9146FF;
+  --twitch-bg: rgba(145, 70, 255, 0.20);
+  --twitch-border: rgba(145, 70, 255, 0.5);
 
-  --youtube-color: #EF4444;
-  --youtube-bg: rgba(239, 68, 68, 0.18);
-  --youtube-border: rgba(239, 68, 68, 0.45);
+  --youtube-color: #FF0000;
+  --youtube-bg: rgba(255, 0, 0, 0.20);
+  --youtube-border: rgba(255, 0, 0, 0.5);
 
-  --total-color: #38BDF8;
-  --total-bg: rgba(56, 189, 248, 0.18);
-  --total-border: rgba(56, 189, 248, 0.45);
+  --total-color: #00F0FF;
+  --total-bg: rgba(0, 240, 255, 0.20);
+  --total-border: rgba(0, 240, 255, 0.5);
 
-  --dark-bg: rgba(11, 15, 25, 0.90);
-  --glass-border: rgba(255, 255, 255, 0.12);
-  --text-main: #F8FAFC;
+  --dark-bg: rgba(10, 13, 20, 0.92);
+  --glass-border: rgba(0, 240, 255, 0.25);
+  --text-main: #FFFFFF;
   --text-muted: #94A3B8;
 }
 
@@ -56,33 +56,45 @@ body.viewers-page {
 }
 
 /* =======================================
-   APEX SCORPIO - VIEWER COUNTER WIDGET
-======================================= */
+   APEXSCORPIO - VIEWER COUNTER WIDGET
+====================================== */
 .viewer-counter-container {
   display: inline-flex;
   align-items: center;
   gap: 12px;
-  padding: 10px 20px;
+  padding: 10px 22px;
   background: var(--dark-bg);
   backdrop-filter: blur(16px);
   -webkit-backdrop-filter: blur(16px);
   border: 1px solid var(--glass-border);
   border-radius: 50px;
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.6), 0 0 15px rgba(56, 189, 248, 0.15);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.8), 0 0 20px rgba(0, 240, 255, 0.2);
   animation: fadeIn 0.5s ease-out;
   position: relative;
   overflow: hidden;
 }
 
-/* Scorpio Accent Line */
+/* Tribal Scorpio Watermark Overlay */
+.viewer-counter-container::after {
+  content: '';
+  position: absolute;
+  right: -10px;
+  top: -10px;
+  width: 60px;
+  height: 60px;
+  background: url('/assets/latest-black-ink-tribal-scorpio-tattoo-design.jpg') no-repeat center center;
+  background-size: cover;
+  opacity: 0.15;
+  mix-blend-mode: screen;
+  pointer-events: none;
+}
+
 .viewer-counter-container::before {
   content: '';
   position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  height: 2px;
-  background: linear-gradient(90deg, #38BDF8, #8B5CF6, #EF4444);
+  top: 0; left: 0; right: 0;
+  height: 3px;
+  background: linear-gradient(90deg, #00F0FF, #9146FF, #FF0000);
 }
 
 .platform-pill {
@@ -102,21 +114,21 @@ body.viewers-page {
   background: var(--twitch-bg);
   border: 1px solid var(--twitch-border);
   color: #E9D5FF;
-  box-shadow: 0 0 12px rgba(168, 85, 247, 0.25);
+  box-shadow: 0 0 12px rgba(145, 70, 255, 0.3);
 }
 
 .platform-pill.youtube {
   background: var(--youtube-bg);
   border: 1px solid var(--youtube-border);
   color: #FECACA;
-  box-shadow: 0 0 12px rgba(239, 68, 68, 0.25);
+  box-shadow: 0 0 12px rgba(255, 0, 0, 0.3);
 }
 
 .platform-pill.total {
-  background: linear-gradient(135deg, rgba(56, 189, 248, 0.2), rgba(139, 92, 246, 0.2));
-  border: 1px solid rgba(56, 189, 248, 0.5);
+  background: linear-gradient(135deg, rgba(0, 240, 255, 0.2), rgba(145, 70, 255, 0.2));
+  border: 1px solid rgba(0, 240, 255, 0.6);
   color: #FFFFFF;
-  box-shadow: 0 0 15px rgba(56, 189, 248, 0.3);
+  box-shadow: 0 0 18px rgba(0, 240, 255, 0.4);
 }
 
 .platform-icon {
@@ -136,8 +148,8 @@ body.viewers-page {
 }
 
 .status-dot.online {
-  background: #10B981;
-  box-shadow: 0 0 10px #10B981, 0 0 20px #10B981;
+  background: #00F0FF;
+  box-shadow: 0 0 10px #00F0FF, 0 0 20px #00F0FF;
 }
 
 .count-number {
@@ -147,7 +159,7 @@ body.viewers-page {
 }
 
 /* =======================================
-   APEX SCORPIO - UNIFIED LIVE CHAT WIDGET
+   APEXSCORPIO - UNIFIED LIVE CHAT WIDGET
 ======================================= */
 .chat-container {
   display: flex;
@@ -166,7 +178,7 @@ body.viewers-page {
 }
 
 .chat-container::-webkit-scrollbar-thumb {
-  background: rgba(56, 189, 248, 0.4);
+  background: rgba(0, 240, 255, 0.4);
   border-radius: 4px;
 }
 
@@ -178,7 +190,7 @@ body.viewers-page {
   border-left: 4px solid var(--apex-cyan);
   border-radius: 12px;
   padding: 10px 14px;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.6);
   animation: slideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1);
   word-wrap: break-word;
   opacity: 1;
@@ -186,12 +198,12 @@ body.viewers-page {
 
 .chat-message.twitch {
   border-left-color: var(--twitch-color);
-  box-shadow: -2px 0 12px rgba(168, 85, 247, 0.2);
+  box-shadow: -3px 0 14px rgba(145, 70, 255, 0.3);
 }
 
 .chat-message.youtube {
   border-left-color: var(--youtube-color);
-  box-shadow: -2px 0 12px rgba(239, 68, 68, 0.2);
+  box-shadow: -3px 0 14px rgba(255, 0, 0, 0.3);
 }
 
 .chat-header {
