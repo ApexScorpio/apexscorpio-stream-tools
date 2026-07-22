@@ -40,15 +40,19 @@
       align-items: center;
       gap: 10px;
     }
-    .event-card.follower {
-      border-left-color: #E8181F;
+    .event-card.no-bg {
+      background: transparent !important;
+      backdrop-filter: none !important;
+      -webkit-backdrop-filter: none !important;
+      border-top: none !important;
+      border-right: none !important;
+      border-bottom: none !important;
+      box-shadow: none !important;
     }
-    .event-card.subscriber {
-      border-left-color: #F59E0B;
-    }
-    .event-card.raid {
-      border-left-color: #9146FF;
-    }
+    .event-card.follower { border-left-color: #E8181F; }
+    .event-card.subscriber { border-left-color: #F59E0B; }
+    .event-card.raid { border-left-color: #9146FF; }
+
     .platform-logo-badge {
       width: 28px;
       height: 28px;
@@ -89,44 +93,57 @@
   </style>
 </head>
 <body>
-  <div class="event-list-container" id="event-feed">
-    <!-- Default initial list entries -->
-    <div class="event-card subscriber">
-      <div class="platform-logo-badge youtube">
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="#E8181F"><path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/></svg>
-      </div>
-      <div class="event-info">
-        <div class="event-user">@ApexFanatic ⭐</div>
-        <div class="event-action">subscribed on YouTube</div>
-      </div>
-    </div>
-
-    <div class="event-card follower">
-      <div class="platform-logo-badge twitch">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="#9146FF"><path d="M11.571 4.714h1.715v5.143H11.571V4.714zm4.715 0H18v5.143h-1.714V4.714zM6 0L1.714 4.286v15.428h5.143V24l4.286-4.286h3.428L22.286 12V0H6zm14.571 11.143l-3.428 3.428h-3.429l-3 3v-3H6.857V1.714h13.714v9.429z"/></svg>
-      </div>
-      <div class="event-info">
-        <div class="event-user">@GamerGurl_99 🔔</div>
-        <div class="event-action">followed on Twitch</div>
-      </div>
-    </div>
-  </div>
+  <div class="event-list-container" id="event-feed"></div>
 
   <script>
     const socket = io();
     const feed = document.getElementById('event-feed');
 
+    let currentConfig = {
+      showTwitch: true,
+      showYoutube: true,
+      showFacebook: true,
+      showBg: true,
+      showLogos: true,
+      maxItems: 8
+    };
+
     const twitchSvg = `<svg width="16" height="16" viewBox="0 0 24 24" fill="#9146FF"><path d="M11.571 4.714h1.715v5.143H11.571V4.714zm4.715 0H18v5.143h-1.714V4.714zM6 0L1.714 4.286v15.428h5.143V24l4.286-4.286h3.428L22.286 12V0H6zm14.571 11.143l-3.428 3.428h-3.429l-3 3v-3H6.857V1.714h13.714v9.429z"/></svg>`;
     const youtubeSvg = `<svg width="18" height="18" viewBox="0 0 24 24" fill="#E8181F"><path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/></svg>`;
     const facebookSvg = `<svg width="17" height="17" viewBox="0 0 24 24" fill="#1877F2"><path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/></svg>`;
 
-    socket.on('new_event', (event) => {
-      addEventCard(event);
+    socket.on('config_update', (config) => {
+      if (config && config.events) {
+        currentConfig = { ...currentConfig, ...config.events };
+        applyConfigToDOM();
+      }
     });
 
-    function addEventCard(event) {
-      const card = document.createElement('div');
+    function applyConfigToDOM() {
+      const cards = document.querySelectorAll('.event-card');
+      cards.forEach(card => {
+        if (!currentConfig.showBg) card.classList.add('no-bg');
+        else card.classList.remove('no-bg');
+
+        const badge = card.querySelector('.platform-logo-badge');
+        if (badge) {
+          badge.style.display = currentConfig.showLogos ? 'flex' : 'none';
+        }
+      });
+    }
+
+    socket.on('new_event', (event) => {
       const platform = (event.platform || 'twitch').toLowerCase();
+      
+      if (platform === 'twitch' && !currentConfig.showTwitch) return;
+      if (platform === 'youtube' && !currentConfig.showYoutube) return;
+      if (platform === 'facebook' && !currentConfig.showFacebook) return;
+
+      addEventCard(event, platform);
+    });
+
+    function addEventCard(event, platform) {
+      const card = document.createElement('div');
       const platName = platform === 'youtube' ? 'YouTube' : (platform === 'facebook' ? 'Facebook' : 'Twitch');
 
       let svgIcon = twitchSvg;
@@ -147,9 +164,12 @@
         eventClass = 'raid';
       }
 
-      card.className = `event-card ${eventClass}`;
+      const noBgClass = currentConfig.showBg ? '' : 'no-bg';
+      const logoDisplay = currentConfig.showLogos ? 'flex' : 'none';
+
+      card.className = `event-card ${eventClass} ${noBgClass}`;
       card.innerHTML = `
-        <div class="platform-logo-badge ${platform}">
+        <div class="platform-logo-badge ${platform}" style="display: ${logoDisplay}">
           ${svgIcon}
         </div>
         <div class="event-info">
@@ -160,7 +180,7 @@
 
       feed.insertBefore(card, feed.firstChild);
 
-      if (feed.children.length > 8) {
+      while (feed.children.length > (currentConfig.maxItems || 8)) {
         feed.removeChild(feed.lastChild);
       }
     }

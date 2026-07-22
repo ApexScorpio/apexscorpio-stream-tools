@@ -30,7 +30,7 @@ const streamState = {
   totalViewers: 0
 };
 
-// Global state for expanded overlay customization options
+// Global state for expanded overlay customization options across all sources
 let overlayConfig = {
   viewers: {
     showTwitch: true,
@@ -39,35 +39,36 @@ let overlayConfig = {
     showTotal: true,
     showBg: true,
     layout: 'horizontal',
-    fontSize: 15,
-    animationStyle: 'pulse'
+    fontSize: 15
   },
   chat: {
+    showTwitch: true,
+    showYoutube: true,
+    showFacebook: true,
     fadeSeconds: 0,        // 0 = permanent
-    showBg: true,
+    showBg: true,          // full chat viewport background
+    displayMode: 'pill',   // 'pill' or 'compact'
     fontSize: 14,
     showBadges: true,
-    maxMessages: 50,
-    animationStyle: 'cyberline'
+    maxMessages: 50
   },
   events: {
+    showTwitch: true,
+    showYoutube: true,
+    showFacebook: true,
     showBg: true,
     maxItems: 8,
-    showLogos: true,
-    fontSize: 14,
-    language: 'en'
+    showLogos: true
   },
   alerts: {
+    showTwitch: true,
+    showYoutube: true,
+    showFacebook: true,
     playSound: true,
-    volume: 80,
-    durationSeconds: 5,
-    showClipart: true,
-    animationStyle: 'popin'
+    durationSeconds: 5
   },
   starting: {
-    timerMinutes: 5,
-    showSocials: true,
-    pulseGlow: true
+    timerMinutes: 5
   }
 };
 

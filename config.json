@@ -9,18 +9,16 @@
     "fontSize": 15
   },
   "chat": {
-    "fadeSeconds": 5,
+    "fadeSeconds": 0,
     "showBg": true,
     "showBadges": true,
     "fontSize": 14,
     "maxMessages": 50
   },
   "events": {
-    "showBg": true,
-    "maxItems": 8,
     "showLogos": true,
-    "fontSize": 14,
-    "language": "en"
+    "showBg": true,
+    "maxItems": 8
   },
   "alerts": {
     "playSound": true,
@@ -30,8 +28,6 @@
     "animationStyle": "popin"
   },
   "starting": {
-    "timerMinutes": 5,
-    "showSocials": true,
-    "pulseGlow": true
+    "timerMinutes": 15
   }
 }

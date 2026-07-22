@@ -16,9 +16,9 @@
   --youtube-bg: rgba(232, 24, 31, 0.18);
   --youtube-border: rgba(232, 24, 31, 0.45);
 
-  --total-color: #E8181F;
-  --total-bg: rgba(232, 24, 31, 0.18);
-  --total-border: rgba(232, 24, 31, 0.45);
+  --facebook-color: #1877F2;
+  --facebook-bg: rgba(24, 119, 242, 0.18);
+  --facebook-border: rgba(24, 119, 242, 0.45);
 
   --dark-bg: rgba(8, 8, 12, 0.94);
   --glass-border: rgba(232, 24, 31, 0.35);
@@ -74,7 +74,6 @@ body.viewers-page {
   overflow: hidden;
 }
 
-/* Official AS Jewel Metallic Emblem Watermark */
 .viewer-counter-container::after {
   content: '';
   position: absolute;
@@ -96,7 +95,7 @@ body.viewers-page {
   background: linear-gradient(90deg, #E8181F, #9146FF, #E8181F);
 }
 
-/* No-Background Clean Mode: Completely removes outer container decorations */
+/* No-Background Mode */
 .viewer-counter-container.no-bg {
   background: transparent !important;
   backdrop-filter: none !important;
@@ -175,6 +174,7 @@ body.viewers-page {
 /* =======================================
    APEX SCORPIO - UNIFIED LIVE CHAT WIDGET
 ======================================= */
+/* Outer Container with optional full viewport background */
 .chat-container {
   display: flex;
   flex-direction: column;
@@ -184,7 +184,26 @@ body.viewers-page {
   max-height: 85vh;
   overflow-y: auto;
   scroll-behavior: smooth;
-  padding-right: 6px;
+  padding: 14px;
+  border-radius: 16px;
+  transition: all 0.3s ease;
+}
+
+.chat-container.has-bg {
+  background: var(--dark-bg);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid var(--glass-border);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.8), 0 0 20px rgba(232, 24, 31, 0.2);
+}
+
+.chat-container.no-bg {
+  background: transparent !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+  border: none !important;
+  box-shadow: none !important;
+  padding: 0 !important;
 }
 
 .chat-container::-webkit-scrollbar {
@@ -196,35 +215,50 @@ body.viewers-page {
   border-radius: 4px;
 }
 
+/* Chat Message Modes: Pill vs Compact */
 .chat-message {
-  background: var(--dark-bg);
-  backdrop-filter: blur(14px);
-  -webkit-backdrop-filter: blur(14px);
-  border: 1px solid var(--glass-border);
+  background: rgba(20, 23, 34, 0.7);
+  border: 1px solid rgba(255, 255, 255, 0.1);
   border-left: 4px solid var(--apex-red);
-  border-radius: 0 12px 12px 0;
   padding: 10px 14px;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.6);
   word-wrap: break-word;
   opacity: 1;
   transform-origin: left center;
-  animation: lineGrowAndSlideOut 0.45s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  animation: lineGrowAndSlideOut 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
   position: relative;
+}
+
+/* Pill Mode (Default) */
+.chat-message.mode-pill {
+  border-radius: 0 14px 14px 0;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.5);
+}
+
+/* Compact Mode (Minimal Line) */
+.chat-message.mode-compact {
+  border-radius: 0;
+  background: transparent !important;
+  border-top: none !important;
+  border-right: none !important;
+  border-bottom: none !important;
+  padding: 4px 8px;
+  box-shadow: none !important;
 }
 
 .chat-message.twitch {
   border-left-color: var(--twitch-color);
-  box-shadow: -3px 0 14px rgba(145, 70, 255, 0.3);
 }
 
 .chat-message.youtube {
   border-left-color: var(--youtube-color);
-  box-shadow: -3px 0 14px rgba(232, 24, 31, 0.3);
 }
 
 .chat-message.facebook {
-  border-left-color: #1877F2;
-  box-shadow: -3px 0 14px rgba(24, 119, 242, 0.3);
+  border-left-color: var(--facebook-color);
+}
+
+.chat-message.exiting {
+  animation: lineGrowAndSlideOutReverse 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards !important;
 }
 
 .chat-header {
@@ -238,26 +272,15 @@ body.viewers-page {
   font-family: 'Outfit', sans-serif;
   font-size: 10px;
   font-weight: 800;
-  padding: 2px 8px;
+  padding: 3px 6px;
   border-radius: 6px;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
+  display: inline-flex;
+  align-items: center;
 }
 
-.platform-badge.twitch {
-  background: var(--twitch-color);
-  color: #FFF;
-}
-
-.platform-badge.youtube {
-  background: var(--youtube-color);
-  color: #FFF;
-}
-
-.platform-badge.facebook {
-  background: #1877F2;
-  color: #FFF;
-}
+.platform-badge.twitch { background: var(--twitch-color); color: #FFF; }
+.platform-badge.youtube { background: var(--youtube-color); color: #FFF; }
+.platform-badge.facebook { background: var(--facebook-color); color: #FFF; }
 
 .role-badge {
   font-size: 9px;
@@ -266,7 +289,6 @@ body.viewers-page {
   border-radius: 4px;
   color: #FFF;
   text-transform: uppercase;
-  letter-spacing: 0.5px;
 }
 
 .user-name {
@@ -282,7 +304,7 @@ body.viewers-page {
   color: #F1F5F9;
 }
 
-/* Cyberpunk Animation: Vertical line grows, text emerges outwards from line */
+/* Cyberpunk Animation: Entry */
 @keyframes lineGrowAndSlideOut {
   0% {
     opacity: 0;
@@ -298,6 +320,25 @@ body.viewers-page {
     opacity: 1;
     transform: scaleX(1) scaleY(1);
     clip-path: inset(0 0 0 0);
+  }
+}
+
+/* Cyberpunk Animation: Exit (REVERSE) */
+@keyframes lineGrowAndSlideOutReverse {
+  0% {
+    opacity: 1;
+    transform: scaleX(1) scaleY(1);
+    clip-path: inset(0 0 0 0);
+  }
+  60% {
+    opacity: 1;
+    transform: scaleX(0.05) scaleY(1);
+    clip-path: inset(0 95% 0 0);
+  }
+  100% {
+    opacity: 0;
+    transform: scaleX(0.02) scaleY(0);
+    clip-path: inset(0 100% 0 0);
   }
 }
 

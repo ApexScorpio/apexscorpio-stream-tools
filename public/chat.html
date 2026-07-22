@@ -8,15 +8,19 @@
   <script src="/socket.io/socket.io.js"></script>
 </head>
 <body class="chat-page">
-  <div class="chat-container" id="chat-container"></div>
+  <div class="chat-container has-bg" id="chat-container"></div>
 
   <script>
     const socket = io();
     const chatContainer = document.getElementById('chat-container');
 
     let currentConfig = {
+      showTwitch: true,
+      showYoutube: true,
+      showFacebook: true,
       fadeSeconds: 0,
       showBg: true,
+      displayMode: 'pill',
       fontSize: 14,
       showBadges: true,
       maxMessages: 50
@@ -34,25 +38,45 @@
     });
 
     function applyConfigToDOM() {
+      // Toggle Full Container Background
+      if (currentConfig.showBg) {
+        chatContainer.classList.add('has-bg');
+        chatContainer.classList.remove('no-bg');
+      } else {
+        chatContainer.classList.add('no-bg');
+        chatContainer.classList.remove('has-bg');
+      }
+
       const messages = document.querySelectorAll('.chat-message');
       messages.forEach(msg => {
         msg.style.fontSize = `${currentConfig.fontSize || 14}px`;
-        if (!currentConfig.showBg) {
-          msg.style.background = 'transparent';
-          msg.style.backdropFilter = 'none';
-          msg.style.border = 'none';
+        
+        // Mode toggle (pill vs compact)
+        if (currentConfig.displayMode === 'compact') {
+          msg.classList.add('mode-compact');
+          msg.classList.remove('mode-pill');
+        } else {
+          msg.classList.add('mode-pill');
+          msg.classList.remove('mode-compact');
         }
       });
     }
 
     socket.on('chat_message', (msg) => {
-      addMessageToDOM(msg);
+      const platform = (msg.platform || 'twitch').toLowerCase();
+      
+      // Platform filtering check
+      if (platform === 'twitch' && !currentConfig.showTwitch) return;
+      if (platform === 'youtube' && !currentConfig.showYoutube) return;
+      if (platform === 'facebook' && !currentConfig.showFacebook) return;
+
+      addMessageToDOM(msg, platform);
     });
 
-    function addMessageToDOM(msg) {
+    function addMessageToDOM(msg, platform) {
       const msgElement = document.createElement('div');
-      const platform = (msg.platform || 'twitch').toLowerCase();
-      msgElement.className = `chat-message ${platform}`;
+      const modeClass = currentConfig.displayMode === 'compact' ? 'mode-compact' : 'mode-pill';
+      msgElement.className = `chat-message ${platform} ${modeClass}`;
       msgElement.style.fontSize = `${currentConfig.fontSize || 14}px`;
 
       let iconSvg = twitchIconSvg;
@@ -61,7 +85,7 @@
 
       let badgesHtml = '';
       if (currentConfig.showBadges) {
-        badgesHtml += `<span class="platform-badge ${platform}" style="padding: 3px 6px; display: inline-flex; align-items: center;">${iconSvg}</span>`;
+        badgesHtml += `<span class="platform-badge ${platform}">${iconSvg}</span>`;
         if (msg.badges) {
           if (msg.badges.broadcaster) badgesHtml += `<span class="role-badge" style="background:#E8181F">STREAMER</span>`;
           else if (msg.badges.mod) badgesHtml += `<span class="role-badge" style="background:#00F0FF; color:#000">MOD</span>`;
@@ -80,12 +104,11 @@
       chatContainer.appendChild(msgElement);
       chatContainer.scrollTop = chatContainer.scrollHeight;
 
-      // Auto-fade timer if fadeSeconds > 0
+      // Auto-fade timer with REVERSE animation
       if (currentConfig.fadeSeconds > 0) {
         setTimeout(() => {
-          msgElement.style.transition = 'opacity 1s ease';
-          msgElement.style.opacity = '0';
-          setTimeout(() => msgElement.remove(), 1000);
+          msgElement.classList.add('exiting');
+          setTimeout(() => msgElement.remove(), 400); // 400ms duration of reverse exit animation
         }, currentConfig.fadeSeconds * 1000);
       }
 
