@@ -190,19 +190,9 @@
 
     <!-- SLOBS Public Sync Banner -->
     <div style="background: linear-gradient(135deg, rgba(14,10,30,0.98), rgba(8,8,12,0.98)); border: 1px solid rgba(16,185,129,0.5); border-radius: 14px; padding: 16px 20px; margin-bottom: 18px;">
-      <div style="font-size: 13px; font-weight: 800; color: #10B981; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 8px;">⚡ Sincronização 100% Pública para o Streamlabs OBS (Zero Localhost)</div>
-      <div style="font-size: 13px; color: #CBD5E1; line-height: 1.5; margin-bottom: 12px;">
-        As tuas fontes comunicam via <strong>URL Parameters</strong> (garantia absoluta ao colar o URL) e em tempo real via <strong>Cloud WSS Relay</strong> público (latência &lt; 50ms):
-      </div>
-      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 12px;">
-        <div style="background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.1); border-radius: 10px; padding: 12px;">
-          <div style="font-size: 12px; font-weight: 800; color: #38BDF8; margin-bottom: 4px;">📌 Opção A — URLs Personalizados</div>
-          <div style="font-size: 12px; color: #94A3B8;">Ao alterar as definições abaixo, o botão <strong>"Copiar URL"</strong> gera automaticamente o URL com os teus parâmetros para colar no SLOBS.</div>
-        </div>
-        <div style="background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.1); border-radius: 10px; padding: 12px;">
-          <div style="font-size: 12px; font-weight: 800; color: #9146FF; margin-bottom: 4px;">⚡ Opção B — Cloud WSS Realtime</div>
-          <div style="font-size: 12px; color: #94A3B8;">O Dashboard e o SLOBS sincronizam alterações e testes instantaneamente através do servidor Cloud WSS seguro (HTTPS/WSS).</div>
-        </div>
+      <div style="font-size: 13px; font-weight: 800; color: #10B981; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 6px;">⚡ Sincronização 100% Pública e URLs Limpos para o Streamlabs OBS</div>
+      <div style="font-size: 13px; color: #CBD5E1; line-height: 1.5;">
+        Usa sempre os <strong>URLs fixos e limpos</strong> abaixo no SLOBS. Ao alterares qualquer opção neste Dashboard, as tuas definições guardam-se no servidor Cloud WSS público e atualizam o SLOBS em tempo real!
       </div>
     </div>
 
@@ -512,15 +502,54 @@
 
     const bc = typeof BroadcastChannel !== 'undefined' ? new BroadcastChannel('apex_scorpio_stream_tools') : null;
 
-    async function broadcastData(type, payload) {
+    function publishConfig(overlayName, configData) {
+      const payload = { type: 'config_update', overlay: overlayName, config: configData, timestamp: Date.now() };
+
+      // 1. MQTT WSS with Retained Message (stores config on broker so overlays get it on load!)
+      if (mqttClient && mqttClient.connected) {
+        try {
+          mqttClient.publish(`apexscorpio/streamtools/v1/cfg/${overlayName}`, JSON.stringify(configData), { retain: true, qos: 1 });
+          mqttClient.publish('apexscorpio/streamtools/v1/events', JSON.stringify({ type: 'config_update', payload: { [overlayName]: configData } }));
+        } catch(e) {}
+      }
+
+      // 2. BroadcastChannel fallback
+      if (bc) {
+        try { bc.postMessage({ type: 'config_update', data: { [overlayName]: configData } }); } catch(e) {}
+      }
+
+      // 3. localStorage fallback
+      try {
+        localStorage.setItem(`apex_cfg_${overlayName}`, JSON.stringify(configData));
+        localStorage.setItem('apex_event_config_update', JSON.stringify({ payload: { [overlayName]: configData }, timestamp: Date.now() }));
+      } catch(e) {}
+
+      // 4. Update preview iframe inside dashboard
+      const iframeMap = {
+        viewers: 'iframe-viewers',
+        chat: 'iframe-chat',
+        events: 'iframe-events',
+        alerts: 'iframe-alerts',
+        starting: 'scene-preview'
+      };
+      const iframeId = iframeMap[overlayName];
+      if (iframeId) {
+        const iframe = document.getElementById(iframeId);
+        if (iframe && iframe.contentWindow) {
+          iframe.contentWindow.postMessage({ type: 'config_update', data: { [overlayName]: configData } }, '*');
+        }
+      }
+    }
+
+    function broadcastEvent(type, payload) {
       const data = { type, payload, timestamp: Date.now() };
 
       if (mqttClient && mqttClient.connected) {
-        try { mqttClient.publish('apexscorpio/streamtools/v1', JSON.stringify(data)); } catch(e) {}
+        try { mqttClient.publish('apexscorpio/streamtools/v1/events', JSON.stringify(data)); } catch(e) {}
       }
 
       if (bc) {
-        try { bc.postMessage({ type, data: payload, timestamp: Date.now() }); } catch(e) {}
+        try { bc.postMessage({ type, data: payload }); } catch(e) {}
       }
 
       try {
@@ -531,7 +560,7 @@
       iframes.forEach(id => {
         const iframe = document.getElementById(id);
         if (iframe && iframe.contentWindow) {
-          iframe.contentWindow.postMessage({ type, data: payload, config: payload, state: payload, msg: payload, event: payload }, '*');
+          iframe.contentWindow.postMessage({ type, data: payload }, '*');
         }
       });
     }
@@ -556,47 +585,12 @@
       let loc = window.location.href;
       let baseUrl = loc.substring(0, loc.lastIndexOf('/') + 1);
 
-      // Viewers
-      const vwTw = document.getElementById('vw-twitch').checked ? 1 : 0;
-      const vwYt = document.getElementById('vw-youtube').checked ? 1 : 0;
-      const vwFb = document.getElementById('vw-facebook').checked ? 1 : 0;
-      const vwTot = document.getElementById('vw-total').checked ? 1 : 0;
-      const vwBg = document.getElementById('vw-bg').checked ? 1 : 0;
-      const vwLy = document.getElementById('vw-layout').value;
-      const vwFs = document.getElementById('vw-fontsize').value;
-      document.getElementById('url-viewers').value = `${baseUrl}viewers.html?tw=${vwTw}&yt=${vwYt}&fb=${vwFb}&tot=${vwTot}&bg=${vwBg}&ly=${vwLy}&fs=${vwFs}`;
+      document.getElementById('url-viewers').value = `${baseUrl}viewers.html`;
+      document.getElementById('url-chat').value = `${baseUrl}chat.html`;
+      document.getElementById('url-events').value = `${baseUrl}events.html`;
+      document.getElementById('url-alerts').value = `${baseUrl}alerts.html`;
 
-      // Chat
-      const chatTw = document.getElementById('chat-twitch').checked ? 1 : 0;
-      const chatYt = document.getElementById('chat-youtube').checked ? 1 : 0;
-      const chatFb = document.getElementById('chat-facebook').checked ? 1 : 0;
-      const chatMode = document.getElementById('chat-mode').value;
-      const chatFade = document.getElementById('chat-fade').value;
-      const chatBg = document.getElementById('chat-bg').checked ? 1 : 0;
-      const chatBdg = document.getElementById('chat-badges').checked ? 1 : 0;
-      const chatFs = document.getElementById('chat-fontsize').value;
-      document.getElementById('url-chat').value = `${baseUrl}chat.html?tw=${chatTw}&yt=${chatYt}&fb=${chatFb}&mode=${chatMode}&fade=${chatFade}&bg=${chatBg}&bdg=${chatBdg}&fs=${chatFs}`;
-
-      // Events
-      const evtTw = document.getElementById('evt-twitch').checked ? 1 : 0;
-      const evtYt = document.getElementById('evt-youtube').checked ? 1 : 0;
-      const evtFb = document.getElementById('evt-facebook').checked ? 1 : 0;
-      const evtLg = document.getElementById('evt-logos').checked ? 1 : 0;
-      const evtBg = document.getElementById('evt-bg').checked ? 1 : 0;
-      const evtMax = document.getElementById('evt-max').value;
-      document.getElementById('url-events').value = `${baseUrl}events.html?tw=${evtTw}&yt=${evtYt}&fb=${evtFb}&logos=${evtLg}&bg=${evtBg}&max=${evtMax}`;
-
-      // Alerts
-      const altTw = document.getElementById('alt-twitch').checked ? 1 : 0;
-      const altYt = document.getElementById('alt-youtube').checked ? 1 : 0;
-      const altFb = document.getElementById('alt-facebook').checked ? 1 : 0;
-      const altSnd = document.getElementById('alt-sound').checked ? 1 : 0;
-      const altDur = document.getElementById('alt-duration').value;
-      document.getElementById('url-alerts').value = `${baseUrl}alerts.html?tw=${altTw}&yt=${altYt}&fb=${altFb}&snd=${altSnd}&dur=${altDur}`;
-
-      // Scenes
-      const stMin = document.getElementById('st-timer').value || 5;
-      document.getElementById('url-starting').value = `${baseUrl}starting.html?min=${stMin}`;
+      document.getElementById('url-starting').value = `${baseUrl}starting.html`;
       document.getElementById('url-brb').value = `${baseUrl}brb.html`;
       document.getElementById('url-technical').value = `${baseUrl}technical.html`;
       document.getElementById('url-ending').value = `${baseUrl}ending.html`;
@@ -608,73 +602,60 @@
     }
 
     function saveViewersConfig() {
-      updatePublicUrls();
       const cfg = {
-        viewers: {
-          showTwitch: document.getElementById('vw-twitch').checked,
-          showYoutube: document.getElementById('vw-youtube').checked,
-          showFacebook: document.getElementById('vw-facebook').checked,
-          showTotal: document.getElementById('vw-total').checked,
-          showBg: document.getElementById('vw-bg').checked,
-          layout: document.getElementById('vw-layout').value,
-          fontSize: Number(document.getElementById('vw-fontsize').value)
-        }
+        showTwitch: document.getElementById('vw-twitch').checked,
+        showYoutube: document.getElementById('vw-youtube').checked,
+        showFacebook: document.getElementById('vw-facebook').checked,
+        showTotal: document.getElementById('vw-total').checked,
+        showBg: document.getElementById('vw-bg').checked,
+        layout: document.getElementById('vw-layout').value,
+        fontSize: Number(document.getElementById('vw-fontsize').value)
       };
-      broadcastData('config_update', cfg);
+      publishConfig('viewers', cfg);
     }
 
     function saveChatConfig() {
-      updatePublicUrls();
       const cfg = {
-        chat: {
-          showTwitch: document.getElementById('chat-twitch').checked,
-          showYoutube: document.getElementById('chat-youtube').checked,
-          showFacebook: document.getElementById('chat-facebook').checked,
-          displayMode: document.getElementById('chat-mode').value,
-          fadeSeconds: Number(document.getElementById('chat-fade').value),
-          showBg: document.getElementById('chat-bg').checked,
-          showBadges: document.getElementById('chat-badges').checked,
-          fontSize: Number(document.getElementById('chat-fontsize').value),
-          maxMessages: 50
-        }
+        showTwitch: document.getElementById('chat-twitch').checked,
+        showYoutube: document.getElementById('chat-youtube').checked,
+        showFacebook: document.getElementById('chat-facebook').checked,
+        displayMode: document.getElementById('chat-mode').value,
+        fadeSeconds: Number(document.getElementById('chat-fade').value),
+        showBg: document.getElementById('chat-bg').checked,
+        showBadges: document.getElementById('chat-badges').checked,
+        fontSize: Number(document.getElementById('chat-fontsize').value),
+        maxMessages: 50
       };
-      broadcastData('config_update', cfg);
+      publishConfig('chat', cfg);
     }
 
     function saveEventsConfig() {
-      updatePublicUrls();
       const cfg = {
-        events: {
-          showTwitch: document.getElementById('evt-twitch').checked,
-          showYoutube: document.getElementById('evt-youtube').checked,
-          showFacebook: document.getElementById('evt-facebook').checked,
-          showLogos: document.getElementById('evt-logos').checked,
-          showBg: document.getElementById('evt-bg').checked,
-          maxItems: Number(document.getElementById('evt-max').value)
-        }
+        showTwitch: document.getElementById('evt-twitch').checked,
+        showYoutube: document.getElementById('evt-youtube').checked,
+        showFacebook: document.getElementById('evt-facebook').checked,
+        showLogos: document.getElementById('evt-logos').checked,
+        showBg: document.getElementById('evt-bg').checked,
+        maxItems: Number(document.getElementById('evt-max').value)
       };
-      broadcastData('config_update', cfg);
+      publishConfig('events', cfg);
     }
 
     function saveAlertsConfig() {
-      updatePublicUrls();
       const cfg = {
-        alerts: {
-          showTwitch: document.getElementById('alt-twitch').checked,
-          showYoutube: document.getElementById('alt-youtube').checked,
-          showFacebook: document.getElementById('alt-facebook').checked,
-          playSound: document.getElementById('alt-sound').checked,
-          durationSeconds: Number(document.getElementById('alt-duration').value)
-        }
+        showTwitch: document.getElementById('alt-twitch').checked,
+        showYoutube: document.getElementById('alt-youtube').checked,
+        showFacebook: document.getElementById('alt-facebook').checked,
+        playSound: document.getElementById('alt-sound').checked,
+        durationSeconds: Number(document.getElementById('alt-duration').value)
       };
-      broadcastData('config_update', cfg);
+      publishConfig('alerts', cfg);
     }
 
     function saveStartingConfig() {
-      updatePublicUrls();
       const minutes = Number(document.getElementById('st-timer').value) || 5;
-      const cfg = { starting: { timerMinutes: minutes } };
-      broadcastData('config_update', cfg);
+      const cfg = { timerMinutes: minutes };
+      publishConfig('starting', cfg);
     }
 
     function sendTestChat(platform) {
@@ -693,7 +674,7 @@
         badges: { broadcaster: false, mod: Math.random() > 0.5, subscriber: true },
         timestamp: new Date().toISOString()
       };
-      broadcastData('chat_message', testMsg);
+      broadcastEvent('chat_message', testMsg);
     }
 
     function triggerRandomChat() {
@@ -717,7 +698,7 @@
         viewers: 24,
         timestamp: new Date().toISOString()
       };
-      broadcastData('new_event', eventPayload);
+      broadcastEvent('new_event', eventPayload);
     }
 
     function triggerRandomEvent() {
@@ -737,7 +718,7 @@
         viewers,
         timestamp: new Date().toISOString()
       };
-      broadcastData('new_event', eventPayload);
+      broadcastEvent('new_event', eventPayload);
     }
 
     function triggerRandomAlert() {
@@ -751,7 +732,7 @@
         facebook: { isLive: true, viewers: 35 },
         totalViewers: 205
       };
-      broadcastData('status_update', state);
+      broadcastEvent('status_update', state);
     }
 
     function resetViewers() {
@@ -761,7 +742,7 @@
         facebook: { isLive: false, viewers: 0 },
         totalViewers: 0
       };
-      broadcastData('status_update', state);
+      broadcastEvent('status_update', state);
     }
 
     function fitPreviews() {

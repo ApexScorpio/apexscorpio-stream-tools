@@ -7,11 +7,11 @@
 
 ---
 
-## 🌐 ARQUITETURA 100% PÚBLICA (SEM LOCALHOST)
+## 🌐 ARQUITETURA 100% PÚBLICA & URLS LIMPOS (SEM LOCALHOST)
 
 O projeto é **100% estático e hospedado no GitHub Pages**. Não necessita nem utiliza qualquer servidor local (`localhost` ou `node server.js`).
 
-### 📋 Lista Definitiva de URLs Públicos:
+### 📋 Lista Definitiva de URLs Públicos e Limpos (Sem Parâmetros Exigidos):
 
 1. **Painel de Controlo Principal (Dashboard):**  
    `https://apexscorpio.github.io/apexscorpio-stream-tools/index.html`
@@ -44,12 +44,12 @@ O projeto é **100% estático e hospedado no GitHub Pages**. Não necessita nem 
 
 ## ⚡ COMO FUNCIONA A SINCRONIZAÇÃO DADOS DEDICADOS ↔ OBS
 
-1. **Geração Automática de Parâmetros de URL (Garantido em qualquer situação)**:
-   - Ao alterar qualquer opção no Dashboard, o URL gerado na caixa "URL para o Streamlabs OBS" inclui automaticamente todas as opções como parâmetros (ex.: `viewers.html?tw=1&yt=1&bg=1&ly=horizontal&fs=15`).
-   - Ao colar o URL no SLOBS, o overlay carrega as definições exatas diretamente do URL.
+1. **URLs Limpos e Fixos**:
+   - Os URLs usados no SLOBS são sempre limpos (ex: `viewers.html`, `chat.html`), sem necessidade de parâmetros gigantes.
 
-2. **Sincronização em Tempo Real via Cloud WSS (MQTT Public Relay)**:
-   - Todos os overlays e o Dashboard ligam-se automaticamente a um broker público de WebSockets HTTPS/WSS (`wss://broker.emqx.io:8084/mqtt`).
+2. **Sincronização Cloud WSS com Mensagens Retidas (MQTT Retain)**:
+   - Ao alterar qualquer opção no Dashboard (no Chrome), a configuração é publicada com **retenção** no servidor público Cloud WSS (`wss://broker.emqx.io:8084/mqtt`).
+   - Quando o SLOBS abre ou reinicia qualquer fonte, liga-se ao servidor WSS e recebe imediatamente a última configuração guardada.
    - Quando mudas definições ou disparas um evento/chat de teste no Dashboard, a alteração é transmitida em tempo real via WSS para o SLOBS (latência < 50ms) **sem precisar de servidor local**.
 
 ---
@@ -65,7 +65,7 @@ O projeto é **100% estático e hospedado no GitHub Pages**. Não necessita nem 
 - **Enviar novas alterações para o GitHub:**
   ```cmd
   git add .
-  git commit -m "Arquitetura 100% publica com WSS Cloud Relay e URL Params"
+  git commit -m "Clean URLs with WSS MQTT Retained Config Cloud Sync"
   git push origin master
   git push origin master:gh-pages --force
   ```

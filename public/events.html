@@ -17,7 +17,7 @@
       showBg: true, showLogos: true, maxItems: 8
     };
 
-    function loadConfigFromUrl() {
+    function loadSavedConfig() {
       const p = new URLSearchParams(window.location.search);
       if (p.has('tw')) cfg.showTwitch = p.get('tw') === '1' || p.get('tw') === 'true';
       if (p.has('yt')) cfg.showYoutube = p.get('yt') === '1' || p.get('yt') === 'true';
@@ -25,6 +25,13 @@
       if (p.has('logos')) cfg.showLogos = p.get('logos') === '1' || p.get('logos') === 'true';
       if (p.has('bg')) cfg.showBg = p.get('bg') === '1' || p.get('bg') === 'true';
       if (p.has('max')) cfg.maxItems = Number(p.get('max')) || 8;
+
+      try {
+        const saved = localStorage.getItem('apex_cfg_events');
+        if (saved && [...p.keys()].length === 0) {
+          cfg = { ...cfg, ...JSON.parse(saved) };
+        }
+      } catch(e) {}
     }
 
     const svgIcons = {
@@ -47,7 +54,7 @@
     function handleIncomingData(type, payload) {
       if (!type || !payload) return;
       if (type === 'config_update') {
-        const config = payload.events || payload;
+        const config = payload.events || payload.config || payload;
         if (config) {
           cfg = { ...cfg, ...config };
           applyConfig();
@@ -64,17 +71,21 @@
       }
     }
 
-    // Public WSS Cloud Relay
+    // Public WSS Cloud Relay + Retained Message Subscribing
     if (typeof mqtt !== 'undefined') {
       try {
         const mqttClient = mqtt.connect('wss://broker.emqx.io:8084/mqtt', { clientId: 'scorpio_events_' + Math.random().toString(16).substring(2, 8) });
         mqttClient.on('connect', () => {
-          mqttClient.subscribe('apexscorpio/streamtools/v1');
+          mqttClient.subscribe('apexscorpio/streamtools/v1/cfg/events');
+          mqttClient.subscribe('apexscorpio/streamtools/v1/events');
         });
         mqttClient.on('message', (topic, message) => {
           try {
             const data = JSON.parse(message.toString());
-            if (data && data.type) {
+            if (topic.includes('/cfg/events')) {
+              cfg = { ...cfg, ...data };
+              applyConfig();
+            } else if (data && data.type) {
               handleIncomingData(data.type, data.payload);
             }
           } catch(err) {}
@@ -146,7 +157,7 @@
       }
     }
 
-    loadConfigFromUrl();
+    loadSavedConfig();
     applyConfig();
   </script>
 </body>

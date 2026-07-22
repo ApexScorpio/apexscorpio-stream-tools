@@ -66,7 +66,8 @@
       showBg: true, layout: 'horizontal', fontSize: 15
     };
 
-    function loadConfigFromUrl() {
+    function loadSavedConfig() {
+      // 1. Try URL parameters
       const p = new URLSearchParams(window.location.search);
       if (p.has('tw')) cfg.showTwitch = p.get('tw') === '1' || p.get('tw') === 'true';
       if (p.has('yt')) cfg.showYoutube = p.get('yt') === '1' || p.get('yt') === 'true';
@@ -75,6 +76,14 @@
       if (p.has('bg')) cfg.showBg = p.get('bg') === '1' || p.get('bg') === 'true';
       if (p.has('ly')) cfg.layout = p.get('ly');
       if (p.has('fs')) cfg.fontSize = Number(p.get('fs')) || 15;
+
+      // 2. Try LocalStorage fallback
+      try {
+        const saved = localStorage.getItem('apex_cfg_viewers');
+        if (saved && [...p.keys()].length === 0) {
+          cfg = { ...cfg, ...JSON.parse(saved) };
+        }
+      } catch(e) {}
     }
 
     const bc = typeof BroadcastChannel !== 'undefined' ? new BroadcastChannel('apex_scorpio_stream_tools') : null;
@@ -82,7 +91,7 @@
     function handleIncomingData(type, payload) {
       if (!type || !payload) return;
       if (type === 'config_update') {
-        const config = payload.viewers || payload;
+        const config = payload.viewers || payload.config || payload;
         if (config) {
           cfg = { ...cfg, ...config };
           applyConfig();
@@ -93,17 +102,21 @@
       }
     }
 
-    // Public WSS Cloud Relay
+    // Public WSS Cloud Relay + Retained Message Subscribing
     if (typeof mqtt !== 'undefined') {
       try {
         const mqttClient = mqtt.connect('wss://broker.emqx.io:8084/mqtt', { clientId: 'scorpio_viewers_' + Math.random().toString(16).substring(2, 8) });
         mqttClient.on('connect', () => {
-          mqttClient.subscribe('apexscorpio/streamtools/v1');
+          mqttClient.subscribe('apexscorpio/streamtools/v1/cfg/viewers');
+          mqttClient.subscribe('apexscorpio/streamtools/v1/events');
         });
         mqttClient.on('message', (topic, message) => {
           try {
             const data = JSON.parse(message.toString());
-            if (data && data.type) {
+            if (topic.includes('/cfg/viewers')) {
+              cfg = { ...cfg, ...data };
+              applyConfig();
+            } else if (data && data.type) {
               handleIncomingData(data.type, data.payload);
             }
           } catch(err) {}
@@ -209,7 +222,7 @@
       return String(n);
     }
 
-    loadConfigFromUrl();
+    loadSavedConfig();
     applyConfig();
   </script>
 </body>
