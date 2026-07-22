@@ -2,9 +2,11 @@
 <html lang="pt">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+  <meta http-equiv="Pragma" content="no-cache">
+  <meta http-equiv="Expires" content="0">
   <title>ApexScorpio - Alert Box Overlay (Brandkit Clipart)</title>
-  <link rel="stylesheet" href="css/style.css">
+  <link rel="stylesheet" href="css/style.css?v=5.0">
   <script src="https://cdn.jsdelivr.net/npm/mqtt@5.3.4/dist/mqtt.min.js"></script>
   <style>
     body {
@@ -146,15 +148,16 @@
 
     function handleIncomingData(type, payload) {
       if (!type) return;
+      const typeStr = String(type).toLowerCase();
+      if (typeStr.includes('clear')) {
+        doClearAlerts();
+        return;
+      }
       if (type === 'config_update') {
         const config = payload.alerts || payload.config || payload;
         if (config) {
           currentConfig = { ...currentConfig, ...config };
         }
-      }
-      if (type === 'clear_alerts' || type === 'clear' || (payload && payload.type === 'clear_alerts')) {
-        doClearAlerts();
-        return;
       }
       if ((type === 'new_event' || type === 'trigger_alert') && payload) {
         if (_isDuplicate(type, payload?.event || payload)) return;
@@ -185,15 +188,22 @@
             keepalive: 30
           });
           mqttClient.on('connect', () => {
-            mqttClient.subscribe('apexscorpio/streamtools/v1/cfg/#');
-            mqttClient.subscribe('apexscorpio/streamtools/v1/events/#');
+            mqttClient.subscribe('apexscorpio/streamtools/v1/#');
           });
           mqttClient.on('message', (topic, message) => {
             try {
               const data = JSON.parse(message.toString());
-              if (topic.includes('clear')) {
-                doClearAlerts();
-              } else if (topic.includes('/cfg/alerts')) {
+              const topicStr = String(topic).toLowerCase();
+              const dataStr = JSON.stringify(data).toLowerCase();
+
+              if (topicStr.includes('clear') || dataStr.includes('clear')) {
+                if (topicStr.includes('clear_alerts') || dataStr.includes('clear_alerts') || topicStr.includes('clear_all') || dataStr.includes('clear_all') || data.type === 'clear_alerts') {
+                  doClearAlerts();
+                  return;
+                }
+              }
+
+              if (topicStr.includes('/cfg/alerts')) {
                 currentConfig = { ...currentConfig, ...data };
               } else if (data && (data.type || data.payload)) {
                 handleIncomingData(data.type || data.payload?.type, data.payload || data);
@@ -229,7 +239,7 @@
     const facebookSvg = `<svg width="30" height="30" viewBox="0 0 24 24" fill="#1877F2"><path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/></svg>`;
 
     const clipartMap = {
-      follower: 'brandkit/Apex_Scorpio_Brand_Assets/03_Scorpion/Apex_Scorpio_Full_Metallic.png',
+      follower: 'brandkit/Apex_Scorpio_Brand_Assets/03_Scorpion/Apex_Scorpion_Full_Metallic.png',
       subscriber: 'brandkit/Apex_Scorpio_Brand_Assets/02_Jewel/AS_Jewel_Full_Metallic.png',
       raid: 'brandkit/Apex_Scorpio_Brand_Assets/03_Scorpion/Apex_Stinger_A_Symbol.png'
     };

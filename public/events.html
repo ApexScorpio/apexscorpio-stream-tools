@@ -2,8 +2,11 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
+  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+  <meta http-equiv="Pragma" content="no-cache">
+  <meta http-equiv="Expires" content="0">
   <title>ApexScorpio - Event List Overlay</title>
-  <link rel="stylesheet" href="css/style.css">
+  <link rel="stylesheet" href="css/style.css?v=5.0">
   <script src="https://cdn.jsdelivr.net/npm/mqtt@5.3.4/dist/mqtt.min.js"></script>
 </head>
 <body class="events-page">
@@ -60,22 +63,26 @@
           child.remove();
         });
         container.innerHTML = '';
+        while (container.firstChild) {
+          container.removeChild(container.firstChild);
+        }
       }
       _seenIds.clear();
     }
 
     function handleIncomingData(type, payload) {
       if (!type) return;
+      const typeStr = String(type).toLowerCase();
+      if (typeStr.includes('clear')) {
+        doClearEvents();
+        return;
+      }
       if (type === 'config_update') {
         const config = payload.events || payload.config || payload;
         if (config) {
           cfg = { ...cfg, ...config };
           applyConfig();
         }
-      }
-      if (type === 'clear_events' || type === 'clear' || (payload && payload.type === 'clear_events')) {
-        doClearEvents();
-        return;
       }
       if (type === 'new_event' && payload) {
         if (_isDuplicate(type, payload?.event || payload)) return;
@@ -104,15 +111,22 @@
             keepalive: 30
           });
           mqttClient.on('connect', () => {
-            mqttClient.subscribe('apexscorpio/streamtools/v1/cfg/#');
-            mqttClient.subscribe('apexscorpio/streamtools/v1/events/#');
+            mqttClient.subscribe('apexscorpio/streamtools/v1/#');
           });
           mqttClient.on('message', (topic, message) => {
             try {
               const data = JSON.parse(message.toString());
-              if (topic.includes('clear')) {
-                doClearEvents();
-              } else if (topic.includes('/cfg/events')) {
+              const topicStr = String(topic).toLowerCase();
+              const dataStr = JSON.stringify(data).toLowerCase();
+
+              if (topicStr.includes('clear') || dataStr.includes('clear')) {
+                if (topicStr.includes('clear_events') || dataStr.includes('clear_events') || topicStr.includes('clear_all') || dataStr.includes('clear_all') || data.type === 'clear_events') {
+                  doClearEvents();
+                  return;
+                }
+              }
+
+              if (topicStr.includes('/cfg/events')) {
                 cfg = { ...cfg, ...data };
                 applyConfig();
               } else if (data && (data.type || data.payload)) {

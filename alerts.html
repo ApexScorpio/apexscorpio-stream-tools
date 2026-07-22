@@ -2,9 +2,11 @@
 <html lang="pt">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+  <meta http-equiv="Pragma" content="no-cache">
+  <meta http-equiv="Expires" content="0">
   <title>ApexScorpio - Alert Box Overlay (Brandkit Clipart)</title>
-  <link rel="stylesheet" href="css/style.css">
+  <link rel="stylesheet" href="css/style.css?v=5.0">
   <script src="https://cdn.jsdelivr.net/npm/mqtt@5.3.4/dist/mqtt.min.js"></script>
   <style>
     body {
@@ -146,15 +148,16 @@
 
     function handleIncomingData(type, payload) {
       if (!type) return;
+      const typeStr = String(type).toLowerCase();
+      if (typeStr.includes('clear')) {
+        doClearAlerts();
+        return;
+      }
       if (type === 'config_update') {
         const config = payload.alerts || payload.config || payload;
         if (config) {
           currentConfig = { ...currentConfig, ...config };
         }
-      }
-      if (type === 'clear_alerts' || type === 'clear' || (payload && payload.type === 'clear_alerts')) {
-        doClearAlerts();
-        return;
       }
       if ((type === 'new_event' || type === 'trigger_alert') && payload) {
         if (_isDuplicate(type, payload?.event || payload)) return;
@@ -185,15 +188,22 @@
             keepalive: 30
           });
           mqttClient.on('connect', () => {
-            mqttClient.subscribe('apexscorpio/streamtools/v1/cfg/#');
-            mqttClient.subscribe('apexscorpio/streamtools/v1/events/#');
+            mqttClient.subscribe('apexscorpio/streamtools/v1/#');
           });
           mqttClient.on('message', (topic, message) => {
             try {
               const data = JSON.parse(message.toString());
-              if (topic.includes('clear')) {
-                doClearAlerts();
-              } else if (topic.includes('/cfg/alerts')) {
+              const topicStr = String(topic).toLowerCase();
+              const dataStr = JSON.stringify(data).toLowerCase();
+
+              if (topicStr.includes('clear') || dataStr.includes('clear')) {
+                if (topicStr.includes('clear_alerts') || dataStr.includes('clear_alerts') || topicStr.includes('clear_all') || dataStr.includes('clear_all') || data.type === 'clear_alerts') {
+                  doClearAlerts();
+                  return;
+                }
+              }
+
+              if (topicStr.includes('/cfg/alerts')) {
                 currentConfig = { ...currentConfig, ...data };
               } else if (data && (data.type || data.payload)) {
                 handleIncomingData(data.type || data.payload?.type, data.payload || data);

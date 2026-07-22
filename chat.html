@@ -2,8 +2,11 @@
 <html lang="pt">
 <head>
   <meta charset="UTF-8">
+  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+  <meta http-equiv="Pragma" content="no-cache">
+  <meta http-equiv="Expires" content="0">
   <title>ApexScorpio - Unified Chat Overlay</title>
-  <link rel="stylesheet" href="css/style.css">
+  <link rel="stylesheet" href="css/style.css?v=5.0">
   <script src="https://cdn.jsdelivr.net/npm/mqtt@5.3.4/dist/mqtt.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/tmi.js@1.8.5/dist/tmi.min.js"></script>
 </head>
@@ -68,23 +71,29 @@
             child.remove();
           }
         });
-        if (!onlyTests) container.innerHTML = '';
+        if (!onlyTests) {
+          container.innerHTML = '';
+          while (container.firstChild) {
+            container.removeChild(container.firstChild);
+          }
+        }
       }
       _seenIds.clear();
     }
 
     function handleIncomingData(type, payload) {
       if (!type) return;
+      const typeStr = String(type).toLowerCase();
+      if (typeStr.includes('clear')) {
+        doClearChat(false);
+        return;
+      }
       if (type === 'config_update') {
         const config = payload.chat || payload.config || payload;
         if (config) {
           cfg = { ...cfg, ...config };
           applyConfig();
         }
-      }
-      if (type === 'clear_chat' || type === 'clear' || (payload && payload.type === 'clear_chat')) {
-        doClearChat(false);
-        return;
       }
       if (type === 'chat_message' && payload) {
         if (_isDuplicate(type, payload?.msg || payload)) return;
@@ -113,15 +122,22 @@
             keepalive: 30
           });
           mqttClient.on('connect', () => {
-            mqttClient.subscribe('apexscorpio/streamtools/v1/cfg/#');
-            mqttClient.subscribe('apexscorpio/streamtools/v1/events/#');
+            mqttClient.subscribe('apexscorpio/streamtools/v1/#');
           });
           mqttClient.on('message', (topic, message) => {
             try {
               const data = JSON.parse(message.toString());
-              if (topic.includes('clear')) {
-                doClearChat(false);
-              } else if (topic.includes('/cfg/chat')) {
+              const topicStr = String(topic).toLowerCase();
+              const dataStr = JSON.stringify(data).toLowerCase();
+
+              if (topicStr.includes('clear') || dataStr.includes('clear')) {
+                if (topicStr.includes('clear_chat') || dataStr.includes('clear_chat') || topicStr.includes('clear_all') || dataStr.includes('clear_all') || data.type === 'clear_chat') {
+                  doClearChat(false);
+                  return;
+                }
+              }
+
+              if (topicStr.includes('/cfg/chat')) {
                 cfg = { ...cfg, ...data };
                 applyConfig();
               } else if (data && (data.type || data.payload)) {
