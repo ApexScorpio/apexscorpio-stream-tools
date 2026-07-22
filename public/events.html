@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<html lang="pt">
+<html lang="en">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>ApexScorpio - Activity Feed Ticker (Event List)</title>
+  <title>ApexScorpio - Event List Overlay</title>
   <link rel="stylesheet" href="/css/style.css">
   <script src="/socket.io/socket.io.js"></script>
   <style>
@@ -11,101 +11,150 @@
       background: transparent;
       overflow: hidden;
       display: flex;
-      align-items: center;
+      flex-direction: column;
       justify-content: flex-start;
       width: 100vw;
       height: 100vh;
       padding: 12px;
     }
-    .ticker-container {
-      display: inline-flex;
-      align-items: center;
-      gap: 16px;
-      padding: 10px 24px;
+    .event-list-container {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      width: 100%;
+      max-width: 360px;
+      max-height: 90vh;
+      overflow: hidden;
+    }
+    .event-card {
       background: rgba(8, 8, 12, 0.94);
       backdrop-filter: blur(16px);
       -webkit-backdrop-filter: blur(16px);
       border: 1px solid rgba(232, 24, 31, 0.35);
-      border-radius: 50px;
-      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.8), 0 0 20px rgba(232, 24, 31, 0.25);
-      animation: fadeIn 0.5s ease-out;
-      position: relative;
-    }
-    .ticker-container::before {
-      content: '';
-      position: absolute;
-      top: 0; left: 0; right: 0;
-      height: 3px;
-      background: linear-gradient(90deg, #E8181F, #9146FF, #E8181F);
-    }
-    .ticker-item {
+      border-left: 4px solid #E8181F;
+      border-radius: 0 12px 12px 0;
+      padding: 10px 14px;
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.6);
+      animation: slideInFromLeft 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
       display: flex;
       align-items: center;
-      gap: 8px;
+      gap: 12px;
+    }
+    .event-card.follower {
+      border-left-color: #E8181F;
+    }
+    .event-card.subscriber {
+      border-left-color: #F59E0B;
+    }
+    .event-card.raid {
+      border-left-color: #9146FF;
+    }
+    .event-icon {
+      font-size: 18px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .event-info {
+      display: flex;
+      flex-direction: column;
+    }
+    .event-user {
       font-family: 'Outfit', sans-serif;
-      font-size: 14px;
-      font-weight: 700;
-      color: #F1F5F9;
-    }
-    .ticker-label {
-      font-family: 'Orbitron', sans-serif;
-      font-size: 11px;
       font-weight: 800;
-      color: #E8181F;
-      text-transform: uppercase;
-      letter-spacing: 1px;
-    }
-    .ticker-value {
+      font-size: 15px;
       color: #FFFFFF;
-      font-weight: 800;
     }
-    .divider {
-      width: 1px;
-      height: 18px;
-      background: rgba(255, 255, 255, 0.2);
+    .event-action {
+      font-family: 'Inter', sans-serif;
+      font-size: 13px;
+      color: #94A3B8;
+      font-weight: 600;
+    }
+
+    @keyframes slideInFromLeft {
+      0% {
+        opacity: 0;
+        transform: translateX(-30px);
+      }
+      100% {
+        opacity: 1;
+        transform: translateX(0);
+      }
     }
   </style>
 </head>
 <body>
-  <div class="ticker-container">
-    <div class="ticker-item">
-      <span class="ticker-label">🔔 ÚLTIMO FOLLOWER:</span>
-      <span class="ticker-value" id="last-follower">@GamerGurl_99</span>
+  <div class="event-list-container" id="event-feed">
+    <!-- Initial Default Feed Items -->
+    <div class="event-card subscriber">
+      <div class="event-icon">⭐</div>
+      <div class="event-info">
+        <div class="event-user">@ApexFanatic</div>
+        <div class="event-action">subscribed on YouTube</div>
+      </div>
     </div>
-    <div class="divider"></div>
-    <div class="ticker-item">
-      <span class="ticker-label">⭐ ÚLTIMO SUB:</span>
-      <span class="ticker-value" id="last-subscriber">@ApexFanatic</span>
+
+    <div class="event-card follower">
+      <div class="event-icon">🔔</div>
+      <div class="event-info">
+        <div class="event-user">@GamerGurl_99</div>
+        <div class="event-action">followed on Twitch</div>
+      </div>
     </div>
-    <div class="divider"></div>
-    <div class="ticker-item">
-      <span class="ticker-label">🚀 ÚLTIMA RAID:</span>
-      <span class="ticker-value" id="last-raid">@StreamMaster (25)</span>
+
+    <div class="event-card raid">
+      <div class="event-icon">🚀</div>
+      <div class="event-info">
+        <div class="event-user">@StreamMaster</div>
+        <div class="event-action">raided with 25 viewers</div>
+      </div>
     </div>
   </div>
 
   <script>
     const socket = io();
-    const elFollower = document.getElementById('last-follower');
-    const elSub = document.getElementById('last-subscriber');
-    const elRaid = document.getElementById('last-raid');
-
-    socket.on('events_update', (events) => {
-      if (events.lastFollower) elFollower.innerText = events.lastFollower;
-      if (events.lastSubscriber) elSub.innerText = events.lastSubscriber;
-      if (events.lastRaid) elRaid.innerText = events.lastRaid;
-    });
+    const feed = document.getElementById('event-feed');
 
     socket.on('new_event', (event) => {
-      const platName = event.platform.toUpperCase();
-      if (event.type === 'follower') {
-        elFollower.innerText = `@${event.username} (${platName})`;
-      } else if (event.type === 'subscriber') {
-        elSub.innerText = `@${event.username} (${platName})`;
-      } else if (event.type === 'raid') {
-        elRaid.innerText = `@${event.username} (${event.viewers || 15} espectadores)`;
-      }
+      addEventCard(event);
     });
+
+    function addEventCard(event) {
+      const card = document.createElement('div');
+      const platName = event.platform ? event.platform.charAt(0).toUpperCase() + event.platform.slice(1) : 'Twitch';
+      
+      let icon = '🔔';
+      let actionText = `followed on ${platName}`;
+      let eventClass = 'follower';
+
+      if (event.type === 'subscriber') {
+        icon = '⭐';
+        actionText = `subscribed on ${platName}`;
+        eventClass = 'subscriber';
+      } else if (event.type === 'raid') {
+        icon = '🚀';
+        actionText = `raided with ${event.viewers || 15} viewers`;
+        eventClass = 'raid';
+      }
+
+      card.className = `event-card ${eventClass}`;
+      card.innerHTML = `
+        <div class="event-icon">${icon}</div>
+        <div class="event-info">
+          <div class="event-user">@${event.username}</div>
+          <div class="event-action">${actionText}</div>
+        </div>
+      `;
+
+      // Insert at top of vertical list
+      feed.insertBefore(card, feed.firstChild);
+
+      // Keep maximum 8 events in history feed
+      if (feed.children.length > 8) {
+        feed.removeChild(feed.lastChild);
+      }
+    }
   </script>
 </body>
 </html>
