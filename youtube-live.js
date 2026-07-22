@@ -1,9 +1,10 @@
 /**
- * ApexScorpio YouTube Live Module v2.2
+ * ApexScorpio YouTube Live Module v2.3
  *
  * Uses the official YouTube Data / Live Streaming API only.
  * - oEmbed / uploads playlist discover the active video without search.list
  * - videos.list reads the official live state, concurrent viewers and chat ID
+ * - a confirmed live stays online until actualEndTime is returned twice
  * - liveChatMessages.list reads chat, memberships and paid messages
  *
  * Multiple overlays coordinate through BroadcastChannel/localStorage so that,
@@ -17,18 +18,17 @@
   const CHANNEL_HANDLE = '@apexscorpio';
   const UPLOADS_PLAYLIST_ID = CHANNEL_ID.replace(/^UC/, 'UU');
 
-  const STATE_KEY = 'apex_yt_live_state_v4';
-  const VIDEO_KEY = 'apex_yt_live_video_id_v4';
-  const LEADER_KEY = 'apex_yt_live_leader_v4';
-  const BUS_KEY = 'apex_yt_live_bus_v4';
-  const LAST_SEARCH_KEY = 'apex_yt_last_search_v4';
+  const STATE_KEY = 'apex_yt_live_state_v5';
+  const VIDEO_KEY = 'apex_yt_live_video_id_v5';
+  const LEADER_KEY = 'apex_yt_live_leader_v5';
+  const BUS_KEY = 'apex_yt_live_bus_v5';
+  const LAST_SEARCH_KEY = 'apex_yt_last_search_v5';
 
   const LEADER_TTL_MS = 30000;
   const LEADER_HEARTBEAT_MS = 5000;
   const VIDEO_POLL_MS = 5000;
   const OFFLINE_RETRY_MS = 5000;
-  const OFFLINE_GRACE_MS = 30000;
-  const OFFLINE_CONFIRMATIONS_REQUIRED = 4;
+  const END_CONFIRMATIONS_REQUIRED = 2;
   // Offline discovery uses the channel uploads playlist instead of search.list.
   // This avoids the small daily search.list bucket and notices a new live quickly.
   const OFFLINE_DISCOVERY_MS = 30 * 1000;
@@ -38,7 +38,7 @@
 
   const instanceId = `yt-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
   const channel = typeof BroadcastChannel !== 'undefined'
-    ? new BroadcastChannel('apex_youtube_live_v4')
+    ? new BroadcastChannel('apex_youtube_live_v5')
     : null;
 
   const messageHandlers = new Set();
@@ -58,8 +58,7 @@
   let activeChatId = null;
   let activeVideoId = safeGet(VIDEO_KEY) || null;
   let state = loadState();
-  let consecutiveOfflineChecks = 0;
-  let lastConfirmedLiveAt = state.isLive ? state.updatedAt : 0;
+  let consecutiveEndChecks = 0;
 
   function safeGet(key) {
     try { return localStorage.getItem(key); } catch (_) { return null; }
@@ -170,7 +169,8 @@
     }
 
     if (envelope.kind === 'refresh' && isLeader) {
-      discoverLive(true);
+      if (activeVideoId || state.isLive) refreshVideoDetails();
+      else discoverLive(true);
     }
   }
 
@@ -224,19 +224,25 @@
   }
 
   function recordConfirmedLive() {
-    consecutiveOfflineChecks = 0;
-    lastConfirmedLiveAt = Date.now();
+    consecutiveEndChecks = 0;
   }
 
-  function shouldHoldLastLiveState() {
-    consecutiveOfflineChecks += 1;
+  function holdKnownLive(error = null) {
     if (!state.isLive) return false;
-    const liveAge = Date.now() - Number(lastConfirmedLiveAt || 0);
-    return consecutiveOfflineChecks < OFFLINE_CONFIRMATIONS_REQUIRED || liveAge < OFFLINE_GRACE_MS;
+    activeVideoId = activeVideoId || state.videoId || null;
+    publishState({
+      ...state,
+      isLive: true,
+      videoId: activeVideoId || state.videoId,
+      error
+    });
+    if (activeVideoId) scheduleVideoPoll(OFFLINE_RETRY_MS);
+    else scheduleDiscovery(OFFLINE_RETRY_MS);
+    return true;
   }
 
   function publishConfirmedOffline(discoveryDelay = OFFLINE_DISCOVERY_MS) {
-    consecutiveOfflineChecks = 0;
+    consecutiveEndChecks = 0;
     activeVideoId = null;
     stopChatPolling();
     publishState({ isLive: false, viewers: 0, videoId: null, liveChatId: null, title: '', error: null });
@@ -263,7 +269,11 @@
   }
 
   async function refreshVideoDetails() {
-    if (!activeVideoId || !hasActiveLeadership()) return;
+    if (!activeVideoId || !hasActiveLeadership()) {
+      if (state.isLive && !activeVideoId) scheduleDiscovery(OFFLINE_RETRY_MS);
+      return;
+    }
+
     try {
       const requestedVideoId = activeVideoId;
       const data = await apiGet('videos', {
@@ -273,27 +283,31 @@
       });
       if (!hasActiveLeadership() || activeVideoId !== requestedVideoId) return;
 
-      const video = data?.items?.[0];
+      const video = data?.items?.[0] || null;
       const details = video?.liveStreamingDetails || null;
       const liveContent = video?.snippet?.liveBroadcastContent || 'none';
+      const hasExplicitEnd = Boolean(details?.actualEndTime);
       const isActuallyLive = Boolean(
-        video && details &&
-        !details.actualEndTime &&
+        video && details && !hasExplicitEnd &&
         (liveContent === 'live' || details.actualStartTime)
       );
 
-      if (!isActuallyLive) {
-        if (shouldHoldLastLiveState()) {
-          publishState({
-            ...state,
-            isLive: true,
-            videoId: activeVideoId || state.videoId,
-            error: null
-          });
-          scheduleVideoPoll(OFFLINE_RETRY_MS);
-          return;
-        }
+      if (hasExplicitEnd) {
+        consecutiveEndChecks += 1;
+        if (consecutiveEndChecks < END_CONFIRMATIONS_REQUIRED && holdKnownLive(null)) return;
         publishConfirmedOffline(OFFLINE_RETRY_MS);
+        return;
+      }
+
+      // Missing/partial API data must never cancel a live session that was
+      // already positively confirmed. Only actualEndTime may do that.
+      if (!isActuallyLive) {
+        consecutiveEndChecks = 0;
+        if (holdKnownLive(null)) return;
+
+        activeVideoId = null;
+        safeRemove(VIDEO_KEY);
+        scheduleDiscovery(OFFLINE_DISCOVERY_MS);
         return;
       }
 
@@ -312,8 +326,10 @@
       scheduleVideoPoll(VIDEO_POLL_MS);
     } catch (error) {
       if (!hasActiveLeadership()) return;
-      publishState({ ...state, error: error.message });
-      scheduleVideoPoll(state.isLive ? OFFLINE_RETRY_MS : 15000);
+      if (!holdKnownLive(error.message)) {
+        publishState({ ...state, error: error.message });
+        scheduleDiscovery(OFFLINE_DISCOVERY_MS);
+      }
     }
   }
 
@@ -361,6 +377,16 @@
 
   async function discoverLive(force) {
     if (!hasActiveLeadership()) return;
+
+    // Once a broadcast has been confirmed, discovery is no longer allowed to
+    // overwrite it. The known video is authoritative until YouTube supplies
+    // actualEndTime for that exact video.
+    if (state.isLive && (activeVideoId || state.videoId)) {
+      activeVideoId = activeVideoId || state.videoId;
+      refreshVideoDetails();
+      return;
+    }
+
     const now = Date.now();
     const lastSearchAt = Number(safeGet(LAST_SEARCH_KEY) || 0);
     if (!force && lastSearchAt && now - lastSearchAt < MIN_SEARCH_GAP_MS) {
@@ -370,8 +396,6 @@
 
     safeSet(LAST_SEARCH_KEY, String(now));
     try {
-      // No-quota attempt first. If oEmbed does not resolve the channel live URL,
-      // use the official uploads playlist + videos.list path (no search.list).
       let videoId = await discoverFromOEmbed();
       if (!videoId) videoId = await discoverFromUploadsPlaylist();
       if (!hasActiveLeadership()) return;
@@ -380,16 +404,6 @@
         activeVideoId = videoId;
         liveChatPageToken = null;
         await refreshVideoDetails();
-      } else if (shouldHoldLastLiveState()) {
-        activeVideoId = activeVideoId || state.videoId || null;
-        publishState({
-          ...state,
-          isLive: true,
-          videoId: activeVideoId || state.videoId,
-          error: null
-        });
-        if (activeVideoId) scheduleVideoPoll(OFFLINE_RETRY_MS);
-        else scheduleDiscovery(OFFLINE_RETRY_MS);
       } else {
         publishConfirmedOffline(OFFLINE_DISCOVERY_MS);
       }
@@ -397,7 +411,7 @@
       if (!hasActiveLeadership()) return;
       console.warn('[YouTube Live] discovery failed:', error);
       publishState({ ...state, error: error.message });
-      scheduleDiscovery(state.isLive ? OFFLINE_RETRY_MS : OFFLINE_DISCOVERY_MS);
+      scheduleDiscovery(OFFLINE_DISCOVERY_MS);
     }
   }
 
@@ -634,14 +648,23 @@
     },
     resolveLiveDetails() {
       start();
-      if (isLeader) return discoverLive(true).then(() => publicState());
+      if (isLeader) {
+        const task = (activeVideoId || state.isLive)
+          ? refreshVideoDetails()
+          : discoverLive(true);
+        return Promise.resolve(task).then(() => publicState());
+      }
       broadcast('refresh', { requestedBy: instanceId });
       return Promise.resolve(publicState());
     },
     refresh() {
       start();
-      if (isLeader) discoverLive(true);
-      else broadcast('refresh', { requestedBy: instanceId });
+      if (isLeader) {
+        if (activeVideoId || state.isLive) refreshVideoDetails();
+        else discoverLive(true);
+      } else {
+        broadcast('refresh', { requestedBy: instanceId });
+      }
     },
     getState: publicState,
     stopChat() {
