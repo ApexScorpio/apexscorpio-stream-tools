@@ -444,17 +444,27 @@
 
   <script>
     const socket = io();
-    const baseUrl = window.location.origin;
+    async function updatePublicUrls() {
+      let baseUrl = window.location.origin;
+      try {
+        const res = await fetch('/api/public-url');
+        const data = await res.json();
+        if (data && data.publicBaseUrl) {
+          baseUrl = data.publicBaseUrl;
+        }
+      } catch (e) {}
 
-    document.getElementById('url-viewers').value = `${baseUrl}/viewers.html`;
-    document.getElementById('url-chat').value = `${baseUrl}/chat.html`;
-    document.getElementById('url-events').value = `${baseUrl}/events.html`;
-    document.getElementById('url-alerts').value = `${baseUrl}/alerts.html`;
+      document.getElementById('url-viewers').value = `${baseUrl}/viewers.html`;
+      document.getElementById('url-chat').value = `${baseUrl}/chat.html`;
+      document.getElementById('url-events').value = `${baseUrl}/events.html`;
+      document.getElementById('url-alerts').value = `${baseUrl}/alerts.html`;
 
-    document.getElementById('url-starting').value = `${baseUrl}/starting.html`;
-    document.getElementById('url-brb').value = `${baseUrl}/brb.html`;
-    document.getElementById('url-technical').value = `${baseUrl}/technical.html`;
-    document.getElementById('url-ending').value = `${baseUrl}/ending.html`;
+      document.getElementById('url-starting').value = `${baseUrl}/starting.html`;
+      document.getElementById('url-brb').value = `${baseUrl}/brb.html`;
+      document.getElementById('url-technical').value = `${baseUrl}/technical.html`;
+      document.getElementById('url-ending').value = `${baseUrl}/ending.html`;
+    }
+    updatePublicUrls();
 
     function toggleDrawer(id) {
       const el = document.getElementById(id);
