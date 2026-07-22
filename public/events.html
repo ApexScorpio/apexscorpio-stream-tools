@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ApexScorpio - Recent Events Ticker</title>
+  <link rel="stylesheet" href="/css/style.css">
+  <script src="/socket.io/socket.io.js"></script>
+  <style>
+    body {
+      background: transparent;
+      overflow: hidden;
+      display: flex;
+      align-items: center;
+      padding: 10px;
+    }
+    .ticker-bar {
+      display: inline-flex;
+      align-items: center;
+      gap: 16px;
+      padding: 8px 18px;
+      background: rgba(11, 15, 25, 0.90);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      border-radius: 50px;
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.6), 0 0 15px rgba(56, 189, 248, 0.15);
+      position: relative;
+      overflow: hidden;
+    }
+    .ticker-bar::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 0; right: 0;
+      height: 2px;
+      background: linear-gradient(90deg, #38BDF8, #8B5CF6, #EF4444);
+    }
+    .ticker-item {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-family: 'Outfit', sans-serif;
+      font-size: 13px;
+      font-weight: 700;
+      color: #F8FAFC;
+      white-space: nowrap;
+    }
+    .ticker-label {
+      color: #94A3B8;
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+    .ticker-value {
+      color: #38BDF8;
+      font-weight: 800;
+    }
+    .ticker-divider {
+      width: 4px;
+      height: 4px;
+      border-radius: 50%;
+      background: rgba(255, 255, 255, 0.2);
+    }
+  </style>
+</head>
+<body>
+  <div class="ticker-bar" id="ticker-bar">
+    <div class="ticker-item">
+      <span class="ticker-label">Último Follow:</span>
+      <span class="ticker-value" id="last-follower">--</span>
+    </div>
+    <div class="ticker-divider"></div>
+    <div class="ticker-item">
+      <span class="ticker-label">Último Sub:</span>
+      <span class="ticker-value" style="color: #F59E0B;" id="last-subscriber">--</span>
+    </div>
+    <div class="ticker-divider"></div>
+    <div class="ticker-item">
+      <span class="ticker-label">Último Raid:</span>
+      <span class="ticker-value" style="color: #A855F7;" id="last-raid">--</span>
+    </div>
+  </div>
+
+  <script>
+    const socket = io();
+
+    socket.on('events_update', (events) => {
+      if (events.lastFollower) {
+        document.getElementById('last-follower').innerText = events.lastFollower;
+      }
+      if (events.lastSubscriber) {
+        document.getElementById('last-subscriber').innerText = events.lastSubscriber;
+      }
+      if (events.lastRaid) {
+        document.getElementById('last-raid').innerText = events.lastRaid;
+      }
+    });
+
+    socket.on('new_event', (event) => {
+      if (event.type === 'follower') {
+        document.getElementById('last-follower').innerText = `@${event.username} (${event.platform})`;
+      } else if (event.type === 'subscriber') {
+        document.getElementById('last-subscriber').innerText = `@${event.username} (${event.platform})`;
+      } else if (event.type === 'raid') {
+        document.getElementById('last-raid').innerText = `@${event.username} (${event.viewers || 10} viewers)`;
+      }
+    });
+  </script>
+</body>
+</html>

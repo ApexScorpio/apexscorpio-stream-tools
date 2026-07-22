@@ -79,6 +79,13 @@ function broadcastConfig() {
   io.emit('config_update', overlayConfig);
 }
 
+// Global state for recent events ticker
+const recentEvents = {
+  lastFollower: 'GamerGurl_99 (Twitch)',
+  lastSubscriber: 'ApexFanatic (YouTube)',
+  lastRaid: 'StreamMaster (25 viewers)'
+};
+
 // Handle chat message ingestion
 function handleChatMessage(msg) {
   console.log(`[Unified Chat] [${msg.platform.toUpperCase()}] ${msg.username}: ${msg.message}`);
@@ -112,6 +119,7 @@ io.on('connection', (socket) => {
   // Send initial states upon connection
   socket.emit('status_update', streamState);
   socket.emit('config_update', overlayConfig);
+  socket.emit('events_update', recentEvents);
 
   // Listen for config changes from dashboard
   socket.on('update_config', (newConfig) => {
@@ -137,6 +145,30 @@ app.post('/api/config', (req, res) => {
   overlayConfig = { ...overlayConfig, ...req.body };
   broadcastConfig();
   res.json({ success: true, overlayConfig });
+});
+
+app.post('/api/trigger-alert', (req, res) => {
+  const { type, username, platform, viewers } = req.body;
+  const eventPayload = {
+    id: `event-${Date.now()}`,
+    type: type || 'follower',
+    username: username || 'NovoSeguidor_42',
+    platform: platform || 'twitch',
+    viewers: viewers || 12,
+    timestamp: new Date().toISOString()
+  };
+
+  if (eventPayload.type === 'follower') {
+    recentEvents.lastFollower = `@${eventPayload.username} (${eventPayload.platform})`;
+  } else if (eventPayload.type === 'subscriber') {
+    recentEvents.lastSubscriber = `@${eventPayload.username} (${eventPayload.platform})`;
+  } else if (eventPayload.type === 'raid') {
+    recentEvents.lastRaid = `@${eventPayload.username} (${eventPayload.viewers} viewers)`;
+  }
+
+  io.emit('new_event', eventPayload);
+  io.emit('events_update', recentEvents);
+  res.json({ success: true, eventPayload });
 });
 
 // Test endpoint to trigger fake chat messages for testing in Streamlabs

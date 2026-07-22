@@ -328,7 +328,7 @@
     <!-- Streamlabs Browser Sources Section -->
     <div class="card" style="margin-bottom: 30px;">
       <h2>📺 Links Gerados para o Streamlabs OBS</h2>
-      <p style="color: #94A3B8; font-size: 14px;">Estes links já contêm todas as tuas personalizações (fundo, permanência, tamanhos) embutidas:</p>
+      <p style="color: #94A3B8; font-size: 14px;">Estes links contêm todas as fontes e overlays configurados:</p>
 
       <div style="margin-top: 20px;">
         <label style="font-weight: 600; font-size: 14px;">1. Viewer Counter Overlay URL</label>
@@ -345,16 +345,35 @@
           <button class="btn" onclick="copyUrl('url-chat')">Copiar Link</button>
         </div>
       </div>
+
+      <div style="margin-top: 20px;">
+        <label style="font-weight: 600; font-size: 14px;">3. Activity Feed / Recent Events Ticker URL</label>
+        <div class="url-box">
+          <input type="text" readonly id="url-events" class="url-input">
+          <button class="btn" onclick="copyUrl('url-events')">Copiar Link</button>
+        </div>
+      </div>
+
+      <div style="margin-top: 20px;">
+        <label style="font-weight: 600; font-size: 14px;">4. Animated Alert Box Overlay URL (Pop-ups com Som)</label>
+        <div class="url-box">
+          <input type="text" readonly id="url-alerts" class="url-input">
+          <button class="btn" onclick="copyUrl('url-alerts')">Copiar Link</button>
+        </div>
+      </div>
     </div>
 
     <!-- Test Controls Card -->
     <div class="card">
-      <h2>🧪 Testar Overlays no Streamlabs</h2>
-      <p style="color: #94A3B8; font-size: 14px; margin-bottom: 15px;">Clica para simular mensagens e entrada de espectadores em tempo real:</p>
+      <h2>🧪 Testar Overlays & Alertas no Streamlabs</h2>
+      <p style="color: #94A3B8; font-size: 14px; margin-bottom: 15px;">Clica para simular mensagens e disparar alertas em direto no ecrã:</p>
       
       <div style="display: flex; gap: 10px; flex-wrap: wrap;">
         <button class="btn btn-twitch" onclick="sendTestChat('twitch')">Testar Chat Twitch</button>
         <button class="btn btn-youtube" onclick="sendTestChat('youtube')">Testar Chat YouTube</button>
+        <button class="btn" style="background: #38BDF8;" onclick="triggerAlert('follower')">🔔 Alerta Follower</button>
+        <button class="btn" style="background: #F59E0B;" onclick="triggerAlert('subscriber')">⭐ Alerta Sub</button>
+        <button class="btn" style="background: #A855F7;" onclick="triggerAlert('raid')">🚀 Alerta Raid</button>
         <button class="btn" style="background: #10B981;" onclick="simulateViewers()">Simular Live (50 Twitch / 120 YouTube)</button>
         <button class="btn" style="background: #64748B;" onclick="resetViewers()">Resetar Espectadores (0)</button>
       </div>
@@ -483,6 +502,22 @@
 
       document.getElementById('url-viewers').value = `${baseUrl}/viewers.html?${viewerParams.toString()}`;
       document.getElementById('url-chat').value = `${baseUrl}/chat.html?${chatParams.toString()}`;
+      document.getElementById('url-events').value = `${baseUrl}/events.html`;
+      document.getElementById('url-alerts').value = `${baseUrl}/alerts.html`;
+    }
+
+    async function triggerAlert(type) {
+      const names = {
+        follower: ['GamerPro_99', 'ScorpioFan_42', 'TwitchLegend', 'CyberScorpio'],
+        subscriber: ['MasterSub_77', 'SuperFan_007', 'VipGamer'],
+        raid: ['StreamHost_X', 'RaidLeader_01']
+      };
+      const randomName = names[type][Math.floor(Math.random() * names[type].length)];
+      await fetch('/api/trigger-alert', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ type, username: randomName, platform: 'twitch', viewers: 24 })
+      });
     }
 
     function copyUrl(inputId) {

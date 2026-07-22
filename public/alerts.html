@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ApexScorpio - Alert Box Overlay</title>
+  <link rel="stylesheet" href="/css/style.css">
+  <script src="/socket.io/socket.io.js"></script>
+  <style>
+    body {
+      background: transparent;
+      overflow: hidden;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 100vw;
+      height: 100vh;
+    }
+    .alert-box {
+      display: none;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      padding: 24px 36px;
+      background: rgba(11, 15, 25, 0.92);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      border: 2px solid #38BDF8;
+      border-radius: 24px;
+      box-shadow: 0 10px 40px rgba(0, 0, 0, 0.8), 0 0 30px rgba(56, 189, 248, 0.4);
+      animation: alertPopIn 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+      position: relative;
+    }
+    .alert-icon {
+      font-size: 48px;
+      margin-bottom: 8px;
+      animation: pulseGlow 1.5s infinite alternate;
+    }
+    .alert-title {
+      font-family: 'Orbitron', 'Outfit', sans-serif;
+      font-size: 14px;
+      font-weight: 800;
+      color: #38BDF8;
+      text-transform: uppercase;
+      letter-spacing: 2px;
+    }
+    .alert-message {
+      font-family: 'Outfit', sans-serif;
+      font-size: 26px;
+      font-weight: 800;
+      color: #FFFFFF;
+      margin-top: 6px;
+    }
+    .alert-subtext {
+      font-family: 'Inter', sans-serif;
+      font-size: 14px;
+      color: #94A3B8;
+      margin-top: 4px;
+    }
+
+    @keyframes alertPopIn {
+      0% { opacity: 0; transform: scale(0.5) translateY(50px); }
+      100% { opacity: 1; transform: scale(1) translateY(0); }
+    }
+
+    @keyframes pulseGlow {
+      from { transform: scale(1); filter: drop-shadow(0 0 10px #38BDF8); }
+      to { transform: scale(1.1); filter: drop-shadow(0 0 25px #8B5CF6); }
+    }
+  </style>
+</head>
+<body>
+  <div class="alert-box" id="alert-box">
+    <div class="alert-icon" id="alert-icon">⚡</div>
+    <div class="alert-title" id="alert-title">NOVO SEGUIDOR!</div>
+    <div class="alert-message" id="alert-message">GamerScorpio</div>
+    <div class="alert-subtext" id="alert-subtext">Acabou de seguir na Twitch!</div>
+  </div>
+
+  <script>
+    const socket = io();
+    const alertBox = document.getElementById('alert-box');
+    const alertIcon = document.getElementById('alert-icon');
+    const alertTitle = document.getElementById('alert-title');
+    const alertMessage = document.getElementById('alert-message');
+    const alertSubtext = document.getElementById('alert-subtext');
+
+    let alertQueue = [];
+    let isShowingAlert = false;
+
+    // Web Audio Synthesizer sound effect
+    function playAlertSound() {
+      try {
+        const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(523.25, audioCtx.currentTime); // C5
+        osc.frequency.exponentialRampToValueAtTime(880, audioCtx.currentTime + 0.3); // A5
+
+        gain.gain.setValueAtTime(0.3, audioCtx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.5);
+
+        osc.connect(gain);
+        gain.connect(audioCtx.destination);
+
+        osc.start();
+        osc.stop(audioCtx.currentTime + 0.5);
+      } catch (e) {}
+    }
+
+    socket.on('new_event', (event) => {
+      alertQueue.push(event);
+      processAlertQueue();
+    });
+
+    function processAlertQueue() {
+      if (isShowingAlert || alertQueue.length === 0) return;
+
+      isShowingAlert = true;
+      const event = alertQueue.shift();
+
+      if (event.type === 'follower') {
+        alertIcon.innerText = '👤';
+        alertTitle.innerText = 'NOVO SEGUIDOR!';
+        alertTitle.style.color = '#38BDF8';
+        alertBox.style.borderColor = '#38BDF8';
+        alertMessage.innerText = `@${event.username}`;
+        alertSubtext.innerText = `Acabou de seguir no ${event.platform === 'youtube' ? 'YouTube' : 'Twitch'}!`;
+      } else if (event.type === 'subscriber') {
+        alertIcon.innerText = '⭐';
+        alertTitle.innerText = 'NOVO SUBSCROTOR!';
+        alertTitle.style.color = '#F59E0B';
+        alertBox.style.borderColor = '#F59E0B';
+        alertMessage.innerText = `@${event.username}`;
+        alertSubtext.innerText = `Inscreveu-se com sucesso no ${event.platform === 'youtube' ? 'YouTube' : 'Twitch'}!`;
+      } else if (event.type === 'raid') {
+        alertIcon.innerText = '🚀';
+        alertTitle.innerText = 'RAID EM DIRETO!';
+        alertTitle.style.color = '#A855F7';
+        alertBox.style.borderColor = '#A855F7';
+        alertMessage.innerText = `@${event.username}`;
+        alertSubtext.innerText = `Entrou em raid com ${event.viewers || 15} espectadores!`;
+      }
+
+      playAlertSound();
+      alertBox.style.display = 'flex';
+
+      setTimeout(() => {
+        alertBox.style.display = 'none';
+        isShowingAlert = false;
+        setTimeout(processAlertQueue, 500);
+      }, 5000);
+    }
+  </script>
+</body>
+</html>
