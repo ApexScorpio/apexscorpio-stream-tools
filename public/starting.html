@@ -142,6 +142,13 @@
       });
     }
 
+    window.addEventListener('message', (e) => {
+      if (e.data && e.data.type === 'config_update' && e.data.config && e.data.config.starting && e.data.config.starting.timerMinutes) {
+        secondsLeft = Number(e.data.config.starting.timerMinutes) * 60;
+        updateTimerDisplay();
+      }
+    });
+
     setInterval(() => {
       if (secondsLeft > 0) {
         secondsLeft--;

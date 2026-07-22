@@ -533,15 +533,21 @@
           fontSize: Number(document.getElementById('vw-fontsize').value)
         }
       };
-      await fetch('/api/config', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(cfg)
-      });
-      // No iframe reload — socket config_update triggers live update in viewers.html
+      try {
+        await fetch('/api/config', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(cfg)
+        });
+      } catch (e) {}
+      
+      const iframe = document.getElementById('iframe-viewers');
+      if (iframe && iframe.contentWindow) {
+        iframe.contentWindow.postMessage({ type: 'config_update', config: cfg }, '*');
+      }
     }
 
-    // Save Chat Config — sends via API (socket broadcasts to all overlays, no iframe reload)
+    // Save Chat Config
     async function saveChatConfig() {
       const cfg = {
         chat: {
@@ -556,15 +562,21 @@
           maxMessages: 50
         }
       };
-      await fetch('/api/config', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(cfg)
-      });
-      // No iframe reload — socket config_update triggers live update in chat.html
+      try {
+        await fetch('/api/config', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(cfg)
+        });
+      } catch (e) {}
+
+      const iframe = document.getElementById('iframe-chat');
+      if (iframe && iframe.contentWindow) {
+        iframe.contentWindow.postMessage({ type: 'config_update', config: cfg }, '*');
+      }
     }
 
-    // Save Events Config — socket broadcasts live, no iframe reload
+    // Save Events Config
     async function saveEventsConfig() {
       const cfg = {
         events: {
@@ -576,12 +588,18 @@
           maxItems: Number(document.getElementById('evt-max').value)
         }
       };
-      await fetch('/api/config', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(cfg)
-      });
-      // No iframe reload — socket config_update triggers live update in events.html
+      try {
+        await fetch('/api/config', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(cfg)
+        });
+      } catch (e) {}
+
+      const iframe = document.getElementById('iframe-events');
+      if (iframe && iframe.contentWindow) {
+        iframe.contentWindow.postMessage({ type: 'config_update', config: cfg }, '*');
+      }
     }
 
     // Save Alerts Config
@@ -595,27 +613,36 @@
           durationSeconds: Number(document.getElementById('alt-duration').value)
         }
       };
-      await fetch('/api/config', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(cfg)
-      });
+      try {
+        await fetch('/api/config', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(cfg)
+        });
+      } catch (e) {}
+
+      const iframe = document.getElementById('iframe-alerts');
+      if (iframe && iframe.contentWindow) {
+        iframe.contentWindow.postMessage({ type: 'config_update', config: cfg }, '*');
+      }
     }
 
     // Save Starting Config
     async function saveStartingConfig() {
       const minutes = Number(document.getElementById('st-timer').value) || 5;
-      const cfg = {
-        starting: {
-          timerMinutes: minutes
-        }
-      };
-      await fetch('/api/config', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(cfg)
-      });
-      document.getElementById('scene-preview').src = 'starting.html';
+      const cfg = { starting: { timerMinutes: minutes } };
+      try {
+        await fetch('/api/config', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(cfg)
+        });
+      } catch (e) {}
+
+      const iframe = document.getElementById('scene-preview');
+      if (iframe && iframe.contentWindow) {
+        iframe.contentWindow.postMessage({ type: 'config_update', config: cfg }, '*');
+      }
     }
 
     async function sendTestChat(platform) {
@@ -624,16 +651,29 @@
         youtube: 'Grande gameplay no YouTube! Vamos a isso Apex Scorpio! 🚀',
         facebook: 'Stream brutal no Facebook Live! Força nisso Scorpio! 💣'
       };
-      
-      await fetch('/api/test-message', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          platform: platform,
-          username: platform === 'youtube' ? 'GamerYT_88' : (platform === 'facebook' ? 'ScorpioFB_10' : 'TwitchGamer_99'),
-          message: msgs[platform] || 'Test chat message'
-        })
-      });
+      const colors = { twitch: '#9146FF', youtube: '#E8181F', facebook: '#1877F2' };
+      const testMsg = {
+        id: `test-${Date.now()}`,
+        platform: platform,
+        username: platform === 'youtube' ? 'GamerYT_88' : (platform === 'facebook' ? 'ScorpioFB_10' : 'TwitchGamer_99'),
+        userColor: colors[platform] || '#E8181F',
+        message: msgs[platform] || 'Test chat message',
+        badges: { broadcaster: false, mod: Math.random() > 0.5, subscriber: true },
+        timestamp: new Date().toISOString()
+      };
+
+      try {
+        await fetch('/api/test-message', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(testMsg)
+        });
+      } catch (e) {}
+
+      const iframe = document.getElementById('iframe-chat');
+      if (iframe && iframe.contentWindow) {
+        iframe.contentWindow.postMessage({ type: 'chat_message', msg: testMsg }, '*');
+      }
     }
 
     async function triggerRandomChat() {
@@ -649,11 +689,31 @@
         raid: ['StreamHost_X', 'RaidLeader_01']
       };
       const randomName = names[type][Math.floor(Math.random() * names[type].length)];
-      await fetch('/api/trigger-alert', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ type, username: randomName, platform: 'twitch', viewers: 24 })
-      });
+      const eventPayload = {
+        id: `event-${Date.now()}`,
+        type: type || 'follower',
+        username: randomName,
+        platform: 'twitch',
+        viewers: 24,
+        timestamp: new Date().toISOString()
+      };
+
+      try {
+        await fetch('/api/trigger-alert', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(eventPayload)
+        });
+      } catch (e) {}
+
+      const iframeAlerts = document.getElementById('iframe-alerts');
+      if (iframeAlerts && iframeAlerts.contentWindow) {
+        iframeAlerts.contentWindow.postMessage({ type: 'new_event', event: eventPayload }, '*');
+      }
+      const iframeEvents = document.getElementById('iframe-events');
+      if (iframeEvents && iframeEvents.contentWindow) {
+        iframeEvents.contentWindow.postMessage({ type: 'new_event', event: eventPayload }, '*');
+      }
     }
 
     async function triggerRandomEvent() {
@@ -665,12 +725,31 @@
       const platform = platforms[Math.floor(Math.random() * platforms.length)];
       const username = users[Math.floor(Math.random() * users.length)];
       const viewers = Math.floor(Math.random() * 45) + 10;
+      const eventPayload = {
+        id: `event-${Date.now()}`,
+        type,
+        username,
+        platform,
+        viewers,
+        timestamp: new Date().toISOString()
+      };
 
-      await fetch('/api/trigger-alert', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ type, username, platform, viewers })
-      });
+      try {
+        await fetch('/api/trigger-alert', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(eventPayload)
+        });
+      } catch (e) {}
+
+      const iframeEvents = document.getElementById('iframe-events');
+      if (iframeEvents && iframeEvents.contentWindow) {
+        iframeEvents.contentWindow.postMessage({ type: 'new_event', event: eventPayload }, '*');
+      }
+      const iframeAlerts = document.getElementById('iframe-alerts');
+      if (iframeAlerts && iframeAlerts.contentWindow) {
+        iframeAlerts.contentWindow.postMessage({ type: 'new_event', event: eventPayload }, '*');
+      }
     }
 
     async function triggerRandomAlert() {
@@ -678,19 +757,47 @@
     }
 
     async function simulateViewers() {
-      await fetch('/api/simulate-counts', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ twitchViewers: 50, youtubeViewers: 120, facebookViewers: 35, twitchLive: true, youtubeLive: true, facebookLive: true })
-      });
+      const payload = { twitchViewers: 50, youtubeViewers: 120, facebookViewers: 35, twitchLive: true, youtubeLive: true, facebookLive: true };
+      try {
+        await fetch('/api/simulate-counts', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+      } catch (e) {}
+
+      const state = {
+        twitch: { isLive: true, viewers: 50 },
+        youtube: { isLive: true, viewers: 120 },
+        facebook: { isLive: true, viewers: 35 },
+        totalViewers: 205
+      };
+      const iframe = document.getElementById('iframe-viewers');
+      if (iframe && iframe.contentWindow) {
+        iframe.contentWindow.postMessage({ type: 'status_update', state: state }, '*');
+      }
     }
 
     async function resetViewers() {
-      await fetch('/api/simulate-counts', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ twitchViewers: 0, youtubeViewers: 0, facebookViewers: 0, twitchLive: false, youtubeLive: false, facebookLive: false })
-      });
+      const payload = { twitchViewers: 0, youtubeViewers: 0, facebookViewers: 0, twitchLive: false, youtubeLive: false, facebookLive: false };
+      try {
+        await fetch('/api/simulate-counts', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+      } catch (e) {}
+
+      const state = {
+        twitch: { isLive: false, viewers: 0 },
+        youtube: { isLive: false, viewers: 0 },
+        facebook: { isLive: false, viewers: 0 },
+        totalViewers: 0
+      };
+      const iframe = document.getElementById('iframe-viewers');
+      if (iframe && iframe.contentWindow) {
+        iframe.contentWindow.postMessage({ type: 'status_update', state: state }, '*');
+      }
     }
   </script>
 </body>

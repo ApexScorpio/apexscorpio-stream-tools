@@ -76,6 +76,18 @@
       });
     }
 
+    window.addEventListener('message', (e) => {
+      if (e.data) {
+        if (e.data.type === 'config_update' && e.data.config && e.data.config.viewers) {
+          cfg = { ...cfg, ...e.data.config.viewers };
+          applyConfig();
+        }
+        if (e.data.type === 'status_update' && e.data.state) {
+          handleStatusUpdate(e.data.state);
+        }
+      }
+    });
+
     function setPillVisible(pill, visible) {
       if (visible) {
         pill.classList.remove('hiding');
@@ -119,34 +131,36 @@
       Object.values(counts).forEach(el => el.style.fontSize = fs);
     }
 
-    if (socket) {
-      socket.on('status_update', (state) => {
-        const animateCount = (el, newVal) => {
-          const formatted = fmt(newVal);
-          if (el.innerText !== formatted) {
-            el.style.transform = 'scale(1.25)';
-            el.style.color = '#FFFFFF';
-            el.innerText = formatted;
-            setTimeout(() => {
-              el.style.transform = 'scale(1)';
-            }, 200);
-          }
-        };
+    function handleStatusUpdate(state) {
+      const animateCount = (el, newVal) => {
+        const formatted = fmt(newVal);
+        if (el.innerText !== formatted) {
+          el.style.transform = 'scale(1.25)';
+          el.style.color = '#FFFFFF';
+          el.innerText = formatted;
+          setTimeout(() => {
+            el.style.transform = 'scale(1)';
+          }, 200);
+        }
+      };
 
-        if (state.twitch) {
-          animateCount(counts.twitch, state.twitch.viewers);
-          dots.twitch.classList.toggle('online', !!state.twitch.isLive);
-        }
-        if (state.youtube) {
-          animateCount(counts.youtube, state.youtube.viewers);
-          dots.youtube.classList.toggle('online', !!state.youtube.isLive);
-        }
-        if (state.facebook) {
-          animateCount(counts.facebook, state.facebook.viewers);
-          dots.facebook.classList.toggle('online', !!state.facebook.isLive);
-        }
-        animateCount(counts.total, state.totalViewers || 0);
-      });
+      if (state.twitch) {
+        animateCount(counts.twitch, state.twitch.viewers);
+        dots.twitch.classList.toggle('online', !!state.twitch.isLive);
+      }
+      if (state.youtube) {
+        animateCount(counts.youtube, state.youtube.viewers);
+        dots.youtube.classList.toggle('online', !!state.youtube.isLive);
+      }
+      if (state.facebook) {
+        animateCount(counts.facebook, state.facebook.viewers);
+        dots.facebook.classList.toggle('online', !!state.facebook.isLive);
+      }
+      animateCount(counts.total, state.totalViewers || 0);
+    }
+
+    if (socket) {
+      socket.on('status_update', (state) => handleStatusUpdate(state));
     }
 
     function fmt(n) {

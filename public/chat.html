@@ -43,6 +43,22 @@
       });
     }
 
+    window.addEventListener('message', (e) => {
+      if (e.data) {
+        if (e.data.type === 'config_update' && e.data.config && e.data.config.chat) {
+          cfg = { ...cfg, ...e.data.config.chat };
+          applyConfig();
+        }
+        if (e.data.type === 'chat_message' && e.data.msg) {
+          const platform = (e.data.msg.platform || 'twitch').toLowerCase();
+          if (platform === 'twitch'   && !cfg.showTwitch)   return;
+          if (platform === 'youtube'  && !cfg.showYoutube)  return;
+          if (platform === 'facebook' && !cfg.showFacebook) return;
+          addMsg(e.data.msg, platform);
+        }
+      }
+    });
+
     function applyConfig() {
       // Background
       if (cfg.showBg) {

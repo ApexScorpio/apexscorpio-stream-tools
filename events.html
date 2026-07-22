@@ -40,6 +40,22 @@
       });
     }
 
+    window.addEventListener('message', (e) => {
+      if (e.data) {
+        if (e.data.type === 'config_update' && e.data.config && e.data.config.events) {
+          cfg = { ...cfg, ...e.data.config.events };
+          applyConfig();
+        }
+        if (e.data.type === 'new_event' && e.data.event) {
+          const platform = (e.data.event.platform || 'twitch').toLowerCase();
+          if (platform === 'twitch'   && !cfg.showTwitch)   return;
+          if (platform === 'youtube'  && !cfg.showYoutube)  return;
+          if (platform === 'facebook' && !cfg.showFacebook) return;
+          addCard(e.data.event, platform);
+        }
+      }
+    });
+
     function applyConfig() {
       if (cfg.showBg) {
         feed.classList.add('has-bg');
