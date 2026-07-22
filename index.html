@@ -216,7 +216,7 @@
         <button class="btn btn-options" onclick="toggleDrawer('drawer-viewers')">⚙️ Opções do Overlay</button>
       </h2>
       <p class="card-desc">Combina espectadores da Twitch, YouTube e Facebook Live num pill elegante. <strong>Resolução para o Streamlabs OBS: 600 px de Largura x 90 px de Altura.</strong></p>
-      
+
       <div class="options-drawer" id="drawer-viewers">
         <div style="font-weight: 800; font-size: 15px; margin-bottom: 14px; color: #E8181F;">⚙️ Personalização do Contador de Viewers:</div>
         <div style="background: rgba(56, 189, 248, 0.15); border: 1px solid #38BDF8; padding: 10px 14px; border-radius: 8px; margin-bottom: 16px; color: #38BDF8; font-weight: 800; font-size: 14px;">
@@ -283,7 +283,7 @@
         <button class="btn btn-options" onclick="toggleDrawer('drawer-chat')">⚙️ Opções do Overlay</button>
       </h2>
       <p class="card-desc">Chat em direto com retenção permanente e animações Cyberpunk. <strong>Resolução recomendada para o Streamlabs OBS: 440 px de Largura x 580 px de Altura.</strong></p>
-      
+
       <div class="options-drawer" id="drawer-chat">
         <div style="font-weight: 800; font-size: 15px; margin-bottom: 14px; color: #E8181F;">⚙️ Personalização do Chat Unificado:</div>
         <div style="background: rgba(56, 189, 248, 0.15); border: 1px solid #38BDF8; padding: 10px 14px; border-radius: 8px; margin-bottom: 16px; color: #38BDF8; font-weight: 800; font-size: 14px;">
@@ -357,7 +357,7 @@
         <button class="btn btn-options" onclick="toggleDrawer('drawer-events')">⚙️ Opções do Overlay</button>
       </h2>
       <p class="card-desc">Lista vertical de eventos com logótipo SVG da plataforma. <strong>Resolução recomendada no SLOBS: 380 px de Largura x 460 px de Altura.</strong></p>
-      
+
       <div class="options-drawer" id="drawer-events">
         <div style="font-weight: 800; font-size: 15px; margin-bottom: 14px; color: #E8181F;">⚙️ Personalização do Event List:</div>
         <div class="options-grid">
@@ -415,7 +415,7 @@
         <button class="btn btn-options" onclick="toggleDrawer('drawer-alerts')">⚙️ Opções do Overlay</button>
       </h2>
       <p class="card-desc">Alertas pop-up em direto com som sintetizado. <strong>Resolução recomendada no SLOBS: 600 px de Largura x 300 px de Altura.</strong></p>
-      
+
       <div class="options-drawer" id="drawer-alerts">
         <div style="font-weight: 800; font-size: 15px; margin-bottom: 14px; color: #E8181F;">⚙️ Personalização do Alert Box:</div>
         <div class="options-grid">
@@ -470,10 +470,10 @@
     <!-- CARD 5: CENAS DE ECRÃ ANIMADAS -->
     <div class="card">
       <h2>
-        <span>🎬 5. Cenas de Ecrã Animadas (Full Stream Scenes)</span>
+        <span>🎬 5. Cenas de Ecrã Animadas (1920x1080 px no SLOBS)</span>
         <button class="btn btn-options" onclick="toggleDrawer('drawer-starting')">⚙️ Opções do Overlay</button>
       </h2>
-      <p class="card-desc">Ecrãs de cena completa para o Streamlabs OBS com temporizadores, brilho do Escorpião e redes sociais.</p>
+      <p class="card-desc">Ecrãs de cena completa para o Streamlabs OBS com temporizadores, brilho do Escorpião e redes sociais. <strong>Todas as cenas usam 1920 px de Largura x 1080 px de Altura.</strong></p>
 
       <div class="options-drawer" id="drawer-starting">
         <div style="font-weight: 800; font-size: 15px; margin-bottom: 14px; color: #E8181F;">⚙️ Personalização das Cenas Animadas:</div>
@@ -485,30 +485,34 @@
         </div>
       </div>
 
+      <div style="background: rgba(56, 189, 248, 0.15); border: 1px solid #38BDF8; padding: 10px 14px; border-radius: 8px; margin-bottom: 16px; color: #38BDF8; font-weight: 800; font-size: 14px;">
+        📐 RESOLUÇÃO DE CADA CENA NO SLOBS / OBS: Largura = 1920px | Altura = 1080px
+      </div>
+
       <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 16px; margin-bottom: 16px;">
         <div>
-          <label style="font-weight: 700; font-size: 13px; color: #E8181F;">🎬 Stream Starting Soon:</label>
+          <label style="font-weight: 700; font-size: 13px; color: #E8181F;">🎬 Stream Starting Soon — 1920x1080:</label>
           <div style="display: flex; gap: 6px; align-items: center; margin-top: 6px; margin-bottom: 16px;">
             <input type="text" readonly class="url-box" id="url-starting" value="https://apexscorpio.github.io/apexscorpio-stream-tools/starting.html" style="margin-top: 0; margin-bottom: 0;">
             <button class="btn" style="padding: 8px 10px; font-size: 11px; white-space: nowrap; height: 38px;" onclick="copyUrl('url-starting', this)">📋 Copiar</button>
           </div>
         </div>
         <div>
-          <label style="font-weight: 700; font-size: 13px; color: #E8181F;">☕ Be Right Back (BRB):</label>
+          <label style="font-weight: 700; font-size: 13px; color: #E8181F;">☕ Be Right Back (BRB) — 1920x1080:</label>
           <div style="display: flex; gap: 6px; align-items: center; margin-top: 6px; margin-bottom: 16px;">
             <input type="text" readonly class="url-box" id="url-brb" value="https://apexscorpio.github.io/apexscorpio-stream-tools/brb.html" style="margin-top: 0; margin-bottom: 0;">
             <button class="btn" style="padding: 8px 10px; font-size: 11px; white-space: nowrap; height: 38px;" onclick="copyUrl('url-brb', this)">📋 Copiar</button>
           </div>
         </div>
         <div>
-          <label style="font-weight: 700; font-size: 13px; color: #F59E0B;">⚠️ Technical Issues:</label>
+          <label style="font-weight: 700; font-size: 13px; color: #F59E0B;">⚠️ Technical Issues — 1920x1080:</label>
           <div style="display: flex; gap: 6px; align-items: center; margin-top: 6px; margin-bottom: 16px;">
             <input type="text" readonly class="url-box" id="url-technical" value="https://apexscorpio.github.io/apexscorpio-stream-tools/technical.html" style="margin-top: 0; margin-bottom: 0;">
             <button class="btn" style="padding: 8px 10px; font-size: 11px; white-space: nowrap; height: 38px;" onclick="copyUrl('url-technical', this)">📋 Copiar</button>
           </div>
         </div>
         <div>
-          <label style="font-weight: 700; font-size: 13px; color: #9146FF;">🏁 Stream Ending:</label>
+          <label style="font-weight: 700; font-size: 13px; color: #9146FF;">🏁 Stream Ending — 1920x1080:</label>
           <div style="display: flex; gap: 6px; align-items: center; margin-top: 6px; margin-bottom: 16px;">
             <input type="text" readonly class="url-box" id="url-ending" value="https://apexscorpio.github.io/apexscorpio-stream-tools/ending.html" style="margin-top: 0; margin-bottom: 0;">
             <button class="btn" style="padding: 8px 10px; font-size: 11px; white-space: nowrap; height: 38px;" onclick="copyUrl('url-ending', this)">📋 Copiar</button>
@@ -653,7 +657,7 @@
 
     function updatePublicUrls() {
       const isLocal = window.location.protocol === 'file:';
-      const baseUrl = isLocal 
+      const baseUrl = isLocal
         ? window.location.href.replace('index.html', '').replace(/#.*$/, '').replace(/\?.*$/, '')
         : 'https://apexscorpio.github.io/apexscorpio-stream-tools/';
       const rand = isLocal ? '' : ('?v=' + Date.now());
@@ -789,7 +793,7 @@
       const types = ['follower', 'subscriber', 'raid'];
       const platforms = ['twitch', 'youtube', 'facebook'];
       const users = ['CyberScorpio_99', 'ApexGamer_PT', 'ShadowRider', 'ProStreamer_42', 'LegendaryPlayer'];
-      
+
       const type = types[Math.floor(Math.random() * types.length)];
       const platform = platforms[Math.floor(Math.random() * platforms.length)];
       const username = users[Math.floor(Math.random() * users.length)];

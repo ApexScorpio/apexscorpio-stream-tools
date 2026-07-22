@@ -39,7 +39,7 @@
     }
     .alert-box.pop-out {
       display: flex !important;
-      animation: alertPopOut 0.6s ease-in-out forwards !important;
+      animation: alertPopIn 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.275) reverse forwards !important;
     }
     .alert-header-img {
       max-width: 130px;
@@ -86,11 +86,6 @@
       100% { opacity: 1; transform: scale(1) translateY(0); filter: blur(0); }
     }
 
-    @keyframes alertPopOut {
-      0% { opacity: 1; transform: scale(1) translateY(0); filter: blur(0); }
-      30% { opacity: 1; transform: scale(1.05) translateY(-5px); filter: blur(0); }
-      100% { opacity: 0; transform: scale(0.4) translateY(60px); filter: blur(10px); }
-    }
   </style>
 </head>
 <body>
@@ -121,6 +116,8 @@
     let alertQueue = [];
     let isShowingAlert = false;
     let activeAlertTimer = null;
+    let exitFallbackTimer = null;
+    let exitInProgress = false;
     let currentAlert = null;
 
     function loadSavedConfig() {
@@ -150,25 +147,57 @@
       return false;
     }
 
+    function cancelAlertTimers() {
+      if (activeAlertTimer) clearTimeout(activeAlertTimer);
+      if (exitFallbackTimer) clearTimeout(exitFallbackTimer);
+      activeAlertTimer = null;
+      exitFallbackTimer = null;
+    }
+
+    function resetAlertVisual() {
+      exitInProgress = false;
+      alertBox.removeEventListener('animationend', finishAlertExit);
+      alertBox.style.removeProperty('animation');
+      alertBox.style.removeProperty('display');
+      alertBox.className = 'alert-box';
+    }
+
+    function finishAlertExit(event) {
+      if (event && (event.target !== alertBox || event.animationName !== 'alertPopIn')) return;
+      if (!exitInProgress) return;
+      exitInProgress = false;
+      if (exitFallbackTimer) clearTimeout(exitFallbackTimer);
+      exitFallbackTimer = null;
+      alertBox.removeEventListener('animationend', finishAlertExit);
+      alertBox.className = 'alert-box';
+      currentAlert = null;
+      isShowingAlert = false;
+      setTimeout(processAlertQueue, 200);
+    }
+
+    function beginAlertExit() {
+      exitInProgress = true;
+      alertBox.removeEventListener('animationend', finishAlertExit);
+      alertBox.className = 'alert-box pop-out';
+      alertBox.addEventListener('animationend', finishAlertExit);
+      exitFallbackTimer = setTimeout(finishAlertExit, 700);
+    }
+
     function doClearAlerts(onlyTests = true) {
       if (onlyTests) {
         alertQueue = alertQueue.filter(event => !event.isTest);
         if (currentAlert && currentAlert.isTest) {
-          if (activeAlertTimer) clearTimeout(activeAlertTimer);
-          if (alertBox) {
-            alertBox.style.animation = 'none';
-            alertBox.style.display = 'none';
-          }
+          cancelAlertTimers();
+          resetAlertVisual();
+          currentAlert = null;
           isShowingAlert = false;
-          setTimeout(processAlertQueue, 500);
+          setTimeout(processAlertQueue, 200);
         }
       } else {
         alertQueue = [];
-        if (activeAlertTimer) clearTimeout(activeAlertTimer);
-        if (alertBox) {
-          alertBox.style.animation = 'none';
-          alertBox.style.display = 'none';
-        }
+        cancelAlertTimers();
+        resetAlertVisual();
+        currentAlert = null;
         isShowingAlert = false;
         _seenIds.clear();
       }
@@ -328,18 +357,15 @@
       }
 
       playAlertSound();
+      cancelAlertTimers();
+      resetAlertVisual();
       alertBox.className = 'alert-box pop-in';
 
       const durationMs = (currentConfig.durationSeconds || 5) * 1000;
 
-      if (activeAlertTimer) clearTimeout(activeAlertTimer);
       activeAlertTimer = setTimeout(() => {
-        alertBox.className = 'alert-box pop-out';
-        setTimeout(() => {
-          alertBox.className = 'alert-box';
-          isShowingAlert = false;
-          setTimeout(processAlertQueue, 200);
-        }, 580);
+        activeAlertTimer = null;
+        beginAlertExit();
       }, durationMs);
     }
 
