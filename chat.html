@@ -85,7 +85,7 @@
       if (!type) return;
       const typeStr = String(type).toLowerCase();
       if (typeStr.includes('clear')) {
-        doClearChat(true);
+        doClearChat(typeStr.includes('test') || payload?.onlyTests || false);
         return;
       }
       if (type === 'config_update') {
@@ -131,10 +131,8 @@
               const dataStr = JSON.stringify(data).toLowerCase();
 
               if (topicStr.includes('clear') || dataStr.includes('clear')) {
-                if (topicStr.includes('clear_chat') || dataStr.includes('clear_chat') || topicStr.includes('clear_all') || dataStr.includes('clear_all') || data.type === 'clear_chat') {
-                  doClearChat(true);
-                  return;
-                }
+                doClearChat(data.onlyTests || topicStr.includes('test') || dataStr.includes('test'));
+                return;
               }
 
               if (topicStr.includes('/cfg/chat')) {
@@ -151,7 +149,7 @@
 
     if (bc) {
       bc.onmessage = (e) => {
-        if (e.data) handleIncomingData(e.data.type, e.data.data);
+        if (e.data) handleIncomingData(e.data.type, e.data.data || e.data);
       };
     }
 
@@ -250,8 +248,8 @@
         chatContainer.removeChild(chatContainer.firstChild);
       }
 
-      // Auto-expire test messages after 8 seconds, or follow fadeSeconds setting
-      const fadeDur = msg.isTest ? 8 : (cfg.fadeSeconds || 0);
+      // Auto-expire test messages or real messages if fadeSeconds > 0
+      const fadeDur = msg.isTest ? 8 : (cfg.fadeSeconds > 0 ? cfg.fadeSeconds : 0);
       if (fadeDur > 0) {
         setTimeout(() => {
           el.style.animation = 'none';

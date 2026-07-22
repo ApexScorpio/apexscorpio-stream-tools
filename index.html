@@ -585,12 +585,10 @@
       }
     }
 
-    // THE EXACT SAME EVENT BROADCASTER USED BY TEST TRIGGERS THAT ALREADY WORK IN SLOBS!
     function broadcastEvent(type, payload) {
       const data = { type, payload, timestamp: Date.now() };
 
       publishCloudMessage('apexscorpio/streamtools/v1/events', data);
-      publishCloudMessage(`apexscorpio/streamtools/v1/cfg/${type}`, data, { retain: true, qos: 1 });
 
       if (bc) {
         try { bc.postMessage({ type, data: payload }); } catch(e) {}
@@ -627,8 +625,11 @@
     }
 
     function updatePublicUrls() {
-      const baseUrl = 'https://apexscorpio.github.io/apexscorpio-stream-tools/';
-      const rand = '?v=' + Date.now();
+      const isLocal = window.location.protocol === 'file:';
+      const baseUrl = isLocal 
+        ? window.location.href.replace('index.html', '').replace(/#.*$/, '').replace(/\?.*$/, '')
+        : 'https://apexscorpio.github.io/apexscorpio-stream-tools/';
+      const rand = isLocal ? '' : ('?v=' + Date.now());
 
       document.getElementById('url-viewers').value = `${baseUrl}viewers.html${rand}`;
       document.getElementById('url-chat').value = `${baseUrl}chat.html${rand}`;
@@ -732,8 +733,8 @@
 
     // SIMPLIFIED Symmetrical Clear Functions using broadcastEvent!
     function clearChat() {
-      broadcastEvent('clear_chat', { timestamp: Date.now() });
-      showToast('🛑 Chat de teste limpo!');
+      broadcastEvent('clear_chat', { onlyTests: false, timestamp: Date.now() });
+      showToast('🛑 Chat de teste e mensagens limpos!');
     }
 
     function triggerAlert(type) {
