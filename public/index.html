@@ -483,10 +483,10 @@
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(cfg)
       });
-      document.getElementById('iframe-viewers').src = '/viewers.html';
+      // No iframe reload — socket config_update triggers live update in viewers.html
     }
 
-    // Save Chat Config
+    // Save Chat Config — sends via API (socket broadcasts to all overlays, no iframe reload)
     async function saveChatConfig() {
       const cfg = {
         chat: {
@@ -498,7 +498,7 @@
           showBg: document.getElementById('chat-bg').checked,
           showBadges: document.getElementById('chat-badges').checked,
           fontSize: Number(document.getElementById('chat-fontsize').value),
-          maxMessages: Number(document.getElementById('chat-maxmsg').value)
+          maxMessages: 50
         }
       };
       await fetch('/api/config', {
@@ -506,10 +506,10 @@
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(cfg)
       });
-      document.getElementById('iframe-chat').src = '/chat.html';
+      // No iframe reload — socket config_update triggers live update in chat.html
     }
 
-    // Save Events Config
+    // Save Events Config — socket broadcasts live, no iframe reload
     async function saveEventsConfig() {
       const cfg = {
         events: {
@@ -526,7 +526,7 @@
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(cfg)
       });
-      document.getElementById('iframe-events').src = '/events.html';
+      // No iframe reload — socket config_update triggers live update in events.html
     }
 
     // Save Alerts Config

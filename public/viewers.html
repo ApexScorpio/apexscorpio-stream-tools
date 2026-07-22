@@ -2,44 +2,39 @@
 <html lang="pt">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>ApexScorpio - Multi-Platform Viewer Counter Overlay</title>
+  <title>ApexScorpio - Viewers Counter</title>
   <link rel="stylesheet" href="/css/style.css">
   <script src="/socket.io/socket.io.js"></script>
 </head>
 <body class="viewers-page">
   <div class="viewer-counter-container has-bg" id="viewer-container">
-    
-    <!-- Twitch Pill -->
+
     <div class="platform-pill twitch" id="pill-twitch">
       <span class="platform-icon">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M11.571 4.714h1.715v5.143H11.571V4.714zm4.715 0H18v5.143h-1.714V4.714zM6 0L1.714 4.286v15.428h5.143V24l4.286-4.286h3.428L22.286 12V0H6zm14.571 11.143l-3.428 3.428h-3.429l-3 3v-3H6.857V1.714h13.714v9.429z"/></svg>
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor"><path d="M11.571 4.714h1.715v5.143H11.571V4.714zm4.715 0H18v5.143h-1.714V4.714zM6 0L1.714 4.286v15.428h5.143V24l4.286-4.286h3.428L22.286 12V0H6zm14.571 11.143l-3.428 3.428h-3.429l-3 3v-3H6.857V1.714h13.714v9.429z"/></svg>
       </span>
       <span class="status-dot" id="dot-twitch"></span>
       <span class="count-number" id="count-twitch">0</span>
     </div>
 
-    <!-- YouTube Pill -->
     <div class="platform-pill youtube" id="pill-youtube">
       <span class="platform-icon">
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/></svg>
+        <svg width="17" height="17" viewBox="0 0 24 24" fill="currentColor"><path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/></svg>
       </span>
       <span class="status-dot" id="dot-youtube"></span>
       <span class="count-number" id="count-youtube">0</span>
     </div>
 
-    <!-- Facebook Pill -->
-    <div class="platform-pill" id="pill-facebook" style="background: rgba(24, 119, 242, 0.2); border: 1px solid rgba(24, 119, 242, 0.5); color: #93C5FD;">
+    <div class="platform-pill facebook-pill" id="pill-facebook">
       <span class="platform-icon">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/></svg>
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor"><path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/></svg>
       </span>
       <span class="status-dot" id="dot-facebook"></span>
       <span class="count-number" id="count-facebook">0</span>
     </div>
 
-    <!-- Total Pill -->
     <div class="platform-pill total" id="pill-total">
-      <span style="font-size: 13px; font-weight: 900;">TOTAL</span>
+      <span style="font-size:12px;font-weight:900;font-family:'Outfit',sans-serif;">TOTAL</span>
       <span class="count-number" id="count-total">0</span>
     </div>
 
@@ -47,93 +42,82 @@
 
   <script>
     const socket = io();
-
     const container = document.getElementById('viewer-container');
-    const pillTwitch = document.getElementById('pill-twitch');
-    const pillYoutube = document.getElementById('pill-youtube');
-    const pillFacebook = document.getElementById('pill-facebook');
-    const pillTotal = document.getElementById('pill-total');
 
-    const dotTwitch = document.getElementById('dot-twitch');
-    const dotYoutube = document.getElementById('dot-youtube');
-    const dotFacebook = document.getElementById('dot-facebook');
-
-    const countTwitch = document.getElementById('count-twitch');
-    const countYoutube = document.getElementById('count-youtube');
-    const countFacebook = document.getElementById('count-facebook');
-    const countTotal = document.getElementById('count-total');
-
-    let currentConfig = {
-      showTwitch: true,
-      showYoutube: true,
-      showFacebook: true,
-      showTotal: true,
-      showBg: true,
-      layout: 'horizontal',
-      fontSize: 15
+    const pills = {
+      twitch:   document.getElementById('pill-twitch'),
+      youtube:  document.getElementById('pill-youtube'),
+      facebook: document.getElementById('pill-facebook'),
+      total:    document.getElementById('pill-total'),
     };
+    const dots = {
+      twitch:   document.getElementById('dot-twitch'),
+      youtube:  document.getElementById('dot-youtube'),
+      facebook: document.getElementById('dot-facebook'),
+    };
+    const counts = {
+      twitch:   document.getElementById('count-twitch'),
+      youtube:  document.getElementById('count-youtube'),
+      facebook: document.getElementById('count-facebook'),
+      total:    document.getElementById('count-total'),
+    };
+
+    let cfg = { showTwitch:true, showYoutube:true, showFacebook:true, showTotal:true, showBg:true, layout:'horizontal', fontSize:15 };
 
     socket.on('config_update', (config) => {
       if (config && config.viewers) {
-        currentConfig = { ...currentConfig, ...config.viewers };
-        applyConfigToDOM();
+        cfg = { ...cfg, ...config.viewers };
+        applyConfig();
       }
     });
 
-    function applyConfigToDOM() {
-      pillTwitch.style.display = currentConfig.showTwitch ? 'flex' : 'none';
-      pillYoutube.style.display = currentConfig.showYoutube ? 'flex' : 'none';
-      pillFacebook.style.display = currentConfig.showFacebook ? 'flex' : 'none';
-      pillTotal.style.display = currentConfig.showTotal ? 'flex' : 'none';
+    function applyConfig() {
+      pills.twitch.style.display   = cfg.showTwitch   ? 'flex' : 'none';
+      pills.youtube.style.display  = cfg.showYoutube  ? 'flex' : 'none';
+      pills.facebook.style.display = cfg.showFacebook ? 'flex' : 'none';
+      pills.total.style.display    = cfg.showTotal    ? 'flex' : 'none';
 
-      if (currentConfig.layout === 'vertical') {
-        container.style.flexDirection = 'column';
-        container.style.alignItems = 'stretch';
-        container.style.borderRadius = '24px';
-      } else {
-        container.style.flexDirection = 'row';
-        container.style.alignItems = 'center';
-        container.style.borderRadius = '50px';
-      }
-
-      if (currentConfig.showBg) {
+      // Background toggle
+      if (cfg.showBg) {
         container.classList.add('has-bg');
         container.classList.remove('no-bg');
       } else {
-        container.classList.add('no-bg');
         container.classList.remove('has-bg');
+        container.classList.add('no-bg');
       }
 
-      const fontSz = currentConfig.fontSize || 15;
-      document.querySelectorAll('.count-number').forEach(el => el.style.fontSize = `${fontSz}px`);
+      // Layout
+      if (cfg.layout === 'vertical') {
+        container.classList.add('layout-vertical');
+      } else {
+        container.classList.remove('layout-vertical');
+      }
+
+      // Font size
+      const fs = cfg.fontSize || 15;
+      document.querySelectorAll('.count-number').forEach(el => el.style.fontSize = fs + 'px');
     }
 
     socket.on('status_update', (state) => {
       if (state.twitch) {
-        countTwitch.innerText = formatNumber(state.twitch.viewers || 0);
-        if (state.twitch.isLive) dotTwitch.classList.add('online');
-        else dotTwitch.classList.remove('online');
+        counts.twitch.innerText = fmt(state.twitch.viewers);
+        dots.twitch.classList.toggle('online', state.twitch.isLive);
       }
-
       if (state.youtube) {
-        countYoutube.innerText = formatNumber(state.youtube.viewers || 0);
-        if (state.youtube.isLive) dotYoutube.classList.add('online');
-        else dotYoutube.classList.remove('online');
+        counts.youtube.innerText = fmt(state.youtube.viewers);
+        dots.youtube.classList.toggle('online', state.youtube.isLive);
       }
-
       if (state.facebook) {
-        countFacebook.innerText = formatNumber(state.facebook.viewers || 0);
-        if (state.facebook.isLive) dotFacebook.classList.add('online');
-        else dotFacebook.classList.remove('online');
+        counts.facebook.innerText = fmt(state.facebook.viewers);
+        dots.facebook.classList.toggle('online', state.facebook.isLive);
       }
-
-      countTotal.innerText = formatNumber(state.totalViewers || 0);
+      counts.total.innerText = fmt(state.totalViewers || 0);
     });
 
-    function formatNumber(num) {
-      if (num >= 1000000) return (num / 1000000).toFixed(1) + 'M';
-      if (num >= 1000) return (num / 1000).toFixed(1) + 'K';
-      return num.toString();
+    function fmt(n) {
+      if (n >= 1000000) return (n/1000000).toFixed(1)+'M';
+      if (n >= 1000)    return (n/1000).toFixed(1)+'K';
+      return String(n || 0);
     }
   </script>
 </body>

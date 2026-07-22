@@ -2,104 +2,76 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>ApexScorpio - Event List Overlay (Platform SVG Logos)</title>
+  <title>ApexScorpio - Event List Overlay</title>
   <link rel="stylesheet" href="/css/style.css">
   <script src="/socket.io/socket.io.js"></script>
 </head>
-<body>
+<body class="events-page">
   <div class="event-list-container has-bg" id="event-feed"></div>
 
   <script>
     const socket = io();
     const feed = document.getElementById('event-feed');
 
-    let currentConfig = {
-      showTwitch: true,
-      showYoutube: true,
-      showFacebook: true,
-      showBg: true,
-      showLogos: true,
-      maxItems: 8
-    };
+    let cfg = { showTwitch:true, showYoutube:true, showFacebook:true, showBg:true, showLogos:true, maxItems:8 };
 
-    const twitchSvg = `<svg width="16" height="16" viewBox="0 0 24 24" fill="#9146FF"><path d="M11.571 4.714h1.715v5.143H11.571V4.714zm4.715 0H18v5.143h-1.714V4.714zM6 0L1.714 4.286v15.428h5.143V24l4.286-4.286h3.428L22.286 12V0H6zm14.571 11.143l-3.428 3.428h-3.429l-3 3v-3H6.857V1.714h13.714v9.429z"/></svg>`;
-    const youtubeSvg = `<svg width="18" height="18" viewBox="0 0 24 24" fill="#E8181F"><path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/></svg>`;
-    const facebookSvg = `<svg width="17" height="17" viewBox="0 0 24 24" fill="#1877F2"><path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/></svg>`;
+    const svgIcons = {
+      twitch:   `<svg width="15" height="15" viewBox="0 0 24 24" fill="#9146FF"><path d="M11.571 4.714h1.715v5.143H11.571V4.714zm4.715 0H18v5.143h-1.714V4.714zM6 0L1.714 4.286v15.428h5.143V24l4.286-4.286h3.428L22.286 12V0H6zm14.571 11.143l-3.428 3.428h-3.429l-3 3v-3H6.857V1.714h13.714v9.429z"/></svg>`,
+      youtube:  `<svg width="17" height="17" viewBox="0 0 24 24" fill="#E8181F"><path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/></svg>`,
+      facebook: `<svg width="16" height="16" viewBox="0 0 24 24" fill="#1877F2"><path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/></svg>`,
+    };
 
     socket.on('config_update', (config) => {
       if (config && config.events) {
-        currentConfig = { ...currentConfig, ...config.events };
-        applyConfigToDOM();
+        cfg = { ...cfg, ...config.events };
+        applyConfig();
       }
     });
 
-    function applyConfigToDOM() {
-      if (currentConfig.showBg) {
+    function applyConfig() {
+      if (cfg.showBg) {
         feed.classList.add('has-bg');
         feed.classList.remove('no-bg');
       } else {
-        feed.classList.add('no-bg');
         feed.classList.remove('has-bg');
+        feed.classList.add('no-bg');
       }
-
-      const cards = document.querySelectorAll('.event-card');
-      cards.forEach(card => {
-        const badge = card.querySelector('.platform-logo-badge');
-        if (badge) {
-          badge.style.display = currentConfig.showLogos ? 'flex' : 'none';
-        }
+      // Show/hide logos on existing cards
+      feed.querySelectorAll('.platform-logo-badge').forEach(b => {
+        b.style.display = cfg.showLogos ? 'flex' : 'none';
       });
     }
 
     socket.on('new_event', (event) => {
       const platform = (event.platform || 'twitch').toLowerCase();
-      
-      if (platform === 'twitch' && !currentConfig.showTwitch) return;
-      if (platform === 'youtube' && !currentConfig.showYoutube) return;
-      if (platform === 'facebook' && !currentConfig.showFacebook) return;
-
-      addEventCard(event, platform);
+      if (platform === 'twitch'   && !cfg.showTwitch)   return;
+      if (platform === 'youtube'  && !cfg.showYoutube)  return;
+      if (platform === 'facebook' && !cfg.showFacebook) return;
+      addCard(event, platform);
     });
 
-    function addEventCard(event, platform) {
+    function addCard(event, platform) {
+      const platName = { twitch:'Twitch', youtube:'YouTube', facebook:'Facebook' }[platform] || 'Twitch';
+
+      let typeEmoji = '🔔', action = `followed on ${platName}`, evtClass = 'follower';
+      if (event.type === 'subscriber') { typeEmoji='⭐'; action=`subscribed on ${platName}`; evtClass='subscriber'; }
+      if (event.type === 'raid')       { typeEmoji='🚀'; action=`raided with ${event.viewers||15} viewers`; evtClass='raid'; }
+
       const card = document.createElement('div');
-      const platName = platform === 'youtube' ? 'YouTube' : (platform === 'facebook' ? 'Facebook' : 'Twitch');
-
-      let svgIcon = twitchSvg;
-      if (platform === 'youtube') svgIcon = youtubeSvg;
-      if (platform === 'facebook') svgIcon = facebookSvg;
-      
-      let typeEmoji = '🔔';
-      let actionText = `followed on ${platName}`;
-      let eventClass = 'follower';
-
-      if (event.type === 'subscriber') {
-        typeEmoji = '⭐';
-        actionText = `subscribed on ${platName}`;
-        eventClass = 'subscriber';
-      } else if (event.type === 'raid') {
-        typeEmoji = '🚀';
-        actionText = `raided with ${event.viewers || 15} viewers`;
-        eventClass = 'raid';
-      }
-
-      const logoDisplay = currentConfig.showLogos ? 'flex' : 'none';
-
-      card.className = `event-card ${eventClass}`;
+      card.className = `event-card ${evtClass}`;
       card.innerHTML = `
-        <div class="platform-logo-badge ${platform}" style="display: ${logoDisplay}">
-          ${svgIcon}
+        <div class="platform-logo-badge ${platform}" style="display:${cfg.showLogos ? 'flex' : 'none'}">
+          ${svgIcons[platform] || svgIcons.twitch}
         </div>
         <div class="event-info">
           <div class="event-user">@${event.username} ${typeEmoji}</div>
-          <div class="event-action">${actionText}</div>
+          <div class="event-action">${action}</div>
         </div>
       `;
 
       feed.insertBefore(card, feed.firstChild);
 
-      while (feed.children.length > (currentConfig.maxItems || 8)) {
+      while (feed.children.length > (cfg.maxItems || 8)) {
         feed.removeChild(feed.lastChild);
       }
     }

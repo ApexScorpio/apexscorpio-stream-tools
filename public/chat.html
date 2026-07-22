@@ -2,8 +2,7 @@
 <html lang="pt">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>ApexScorpio - Unified Live Chat Overlay</title>
+  <title>ApexScorpio - Unified Chat Overlay</title>
   <link rel="stylesheet" href="/css/style.css">
   <script src="/socket.io/socket.io.js"></script>
 </head>
@@ -14,114 +13,102 @@
     const socket = io();
     const chatContainer = document.getElementById('chat-container');
 
-    let currentConfig = {
-      showTwitch: true,
-      showYoutube: true,
-      showFacebook: true,
-      fadeSeconds: 0,
-      showBg: true,
-      displayMode: 'pill',
-      fontSize: 14,
-      showBadges: true,
-      maxMessages: 50
+    let cfg = {
+      showTwitch: true, showYoutube: true, showFacebook: true,
+      fadeSeconds: 0, showBg: true, displayMode: 'pill',
+      fontSize: 14, showBadges: true, maxMessages: 50
     };
 
-    const twitchIconSvg = `<svg width="14" height="14" viewBox="0 0 24 24" fill="#FFFFFF"><path d="M11.571 4.714h1.715v5.143H11.571V4.714zm4.715 0H18v5.143h-1.714V4.714zM6 0L1.714 4.286v15.428h5.143V24l4.286-4.286h3.428L22.286 12V0H6zm14.571 11.143l-3.428 3.428h-3.429l-3 3v-3H6.857V1.714h13.714v9.429z"/></svg>`;
-    const youtubeIconSvg = `<svg width="15" height="15" viewBox="0 0 24 24" fill="#FFFFFF"><path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/></svg>`;
-    const facebookIconSvg = `<svg width="15" height="15" viewBox="0 0 24 24" fill="#FFFFFF"><path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/></svg>`;
+    const icons = {
+      twitch:   `<svg width="13" height="13" viewBox="0 0 24 24" fill="#FFF"><path d="M11.571 4.714h1.715v5.143H11.571V4.714zm4.715 0H18v5.143h-1.714V4.714zM6 0L1.714 4.286v15.428h5.143V24l4.286-4.286h3.428L22.286 12V0H6zm14.571 11.143l-3.428 3.428h-3.429l-3 3v-3H6.857V1.714h13.714v9.429z"/></svg>`,
+      youtube:  `<svg width="14" height="14" viewBox="0 0 24 24" fill="#FFF"><path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/></svg>`,
+      facebook: `<svg width="14" height="14" viewBox="0 0 24 24" fill="#FFF"><path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/></svg>`,
+    };
+
+    const platformColors = { twitch: '#9146FF', youtube: '#E8181F', facebook: '#1877F2' };
 
     socket.on('config_update', (config) => {
       if (config && config.chat) {
-        currentConfig = { ...currentConfig, ...config.chat };
-        applyConfigToDOM();
+        cfg = { ...cfg, ...config.chat };
+        applyConfig();
       }
     });
 
-    function applyConfigToDOM() {
-      // Toggle Full Container Background
-      if (currentConfig.showBg) {
+    function applyConfig() {
+      // Background
+      if (cfg.showBg) {
         chatContainer.classList.add('has-bg');
         chatContainer.classList.remove('no-bg');
       } else {
-        chatContainer.classList.add('no-bg');
         chatContainer.classList.remove('has-bg');
+        chatContainer.classList.add('no-bg');
       }
 
-      const messages = document.querySelectorAll('.chat-message');
-      messages.forEach(msg => {
-        msg.style.fontSize = `${currentConfig.fontSize || 14}px`;
-        
-        // Mode toggle (pill vs compact)
-        if (currentConfig.displayMode === 'compact') {
-          msg.classList.add('mode-compact');
-          msg.classList.remove('mode-pill');
-        } else {
-          msg.classList.add('mode-pill');
-          msg.classList.remove('mode-compact');
-        }
+      // Apply font size + mode to all existing messages
+      chatContainer.querySelectorAll('.chat-message').forEach(msg => {
+        msg.style.fontSize = (cfg.fontSize || 14) + 'px';
+        msg.classList.toggle('mode-pill', cfg.displayMode !== 'compact');
+        msg.classList.toggle('mode-compact', cfg.displayMode === 'compact');
+      });
+      chatContainer.querySelectorAll('.chat-text').forEach(el => {
+        el.style.fontSize = (cfg.fontSize || 14) + 'px';
       });
     }
 
     socket.on('chat_message', (msg) => {
       const platform = (msg.platform || 'twitch').toLowerCase();
-      
-      // Platform filtering check
-      if (platform === 'twitch' && !currentConfig.showTwitch) return;
-      if (platform === 'youtube' && !currentConfig.showYoutube) return;
-      if (platform === 'facebook' && !currentConfig.showFacebook) return;
-
-      addMessageToDOM(msg, platform);
+      if (platform === 'twitch'   && !cfg.showTwitch)   return;
+      if (platform === 'youtube'  && !cfg.showYoutube)  return;
+      if (platform === 'facebook' && !cfg.showFacebook) return;
+      addMsg(msg, platform);
     });
 
-    function addMessageToDOM(msg, platform) {
-      const msgElement = document.createElement('div');
-      const modeClass = currentConfig.displayMode === 'compact' ? 'mode-compact' : 'mode-pill';
-      msgElement.className = `chat-message ${platform} ${modeClass}`;
-      msgElement.style.fontSize = `${currentConfig.fontSize || 14}px`;
-
-      let iconSvg = twitchIconSvg;
-      if (platform === 'youtube') iconSvg = youtubeIconSvg;
-      if (platform === 'facebook') iconSvg = facebookIconSvg;
+    function addMsg(msg, platform) {
+      const el = document.createElement('div');
+      const mode = cfg.displayMode === 'compact' ? 'mode-compact' : 'mode-pill';
+      el.className = `chat-message ${platform} ${mode}`;
+      el.style.fontSize = (cfg.fontSize || 14) + 'px';
 
       let badgesHtml = '';
-      if (currentConfig.showBadges) {
-        badgesHtml += `<span class="platform-badge ${platform}">${iconSvg}</span>`;
+      if (cfg.showBadges) {
+        badgesHtml = `<span class="platform-badge ${platform}">${icons[platform] || icons.twitch}</span>`;
         if (msg.badges) {
-          if (msg.badges.broadcaster) badgesHtml += `<span class="role-badge" style="background:#E8181F">STREAMER</span>`;
-          else if (msg.badges.mod) badgesHtml += `<span class="role-badge" style="background:#00F0FF; color:#000">MOD</span>`;
-          else if (msg.badges.subscriber) badgesHtml += `<span class="role-badge" style="background:#F59E0B; color:#000">SUB</span>`;
+          if (msg.badges.broadcaster) badgesHtml += `<span class="role-badge" style="background:#E8181F">HOST</span>`;
+          else if (msg.badges.mod)    badgesHtml += `<span class="role-badge" style="background:#00C8FF;color:#000">MOD</span>`;
+          else if (msg.badges.subscriber) badgesHtml += `<span class="role-badge" style="background:#F59E0B;color:#000">SUB</span>`;
         }
       }
 
-      msgElement.innerHTML = `
+      const color = msg.userColor || platformColors[platform] || '#FFF';
+      el.innerHTML = `
         <div class="chat-header">
           ${badgesHtml}
-          <span class="user-name" style="color: ${msg.userColor || (platform === 'youtube' ? '#E8181F' : (platform === 'facebook' ? '#1877F2' : '#9146FF'))}">${msg.username}</span>
+          <span class="user-name" style="color:${color}">${msg.username}</span>
         </div>
-        <div class="chat-text">${escapeHtml(msg.message)}</div>
+        <div class="chat-text" style="font-size:${cfg.fontSize || 14}px">${esc(msg.message)}</div>
       `;
 
-      chatContainer.appendChild(msgElement);
+      chatContainer.appendChild(el);
       chatContainer.scrollTop = chatContainer.scrollHeight;
 
-      // Auto-fade timer with REVERSE animation
-      if (currentConfig.fadeSeconds > 0) {
-        setTimeout(() => {
-          msgElement.classList.add('exiting');
-          setTimeout(() => msgElement.remove(), 400); // 400ms duration of reverse exit animation
-        }, currentConfig.fadeSeconds * 1000);
+      // Trim old messages
+      while (chatContainer.children.length > (cfg.maxMessages || 50)) {
+        chatContainer.removeChild(chatContainer.firstChild);
       }
 
-      // Keep DOM under maxMessages limit
-      while (chatContainer.children.length > (currentConfig.maxMessages || 50)) {
-        chatContainer.removeChild(chatContainer.firstChild);
+      // Auto-fade with reverse animation
+      if (cfg.fadeSeconds > 0) {
+        setTimeout(() => {
+          el.classList.add('exiting');
+          setTimeout(() => el.remove(), 380);
+        }, cfg.fadeSeconds * 1000);
       }
     }
 
-    function escapeHtml(text) {
-      const div = document.createElement('div');
-      div.innerText = text;
-      return div.innerHTML;
+    function esc(str) {
+      const d = document.createElement('div');
+      d.innerText = str;
+      return d.innerHTML;
     }
   </script>
 </body>
