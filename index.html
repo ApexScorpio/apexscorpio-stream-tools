@@ -332,10 +332,10 @@
       </div>
 
       <div class="controls-group">
-        <button class="btn btn-twitch" onclick="sendTestChat('twitch')">💬 Chat Twitch (8s)</button>
-        <button class="btn btn-youtube" onclick="sendTestChat('youtube')">💬 Chat YouTube (8s)</button>
-        <button class="btn btn-facebook" onclick="sendTestChat('facebook')">💬 Chat Facebook (8s)</button>
-        <button class="btn" style="background: linear-gradient(135deg, #9146FF, #E8181F);" onclick="triggerRandomChat()">🎲 Testar Chat Aleatório (8s)</button>
+        <button class="btn btn-twitch" onclick="sendTestChat('twitch')">💬 Chat Twitch</button>
+        <button class="btn btn-youtube" onclick="sendTestChat('youtube')">💬 Chat YouTube</button>
+        <button class="btn btn-facebook" onclick="sendTestChat('facebook')">💬 Chat Facebook</button>
+        <button class="btn" style="background: linear-gradient(135deg, #9146FF, #E8181F);" onclick="triggerRandomChat()">🎲 Testar Chat Aleatório</button>
         <button class="btn" style="background: #DC2626;" onclick="clearChat()">🛑 Limpar Chat de Teste</button>
       </div>
 
@@ -547,6 +547,7 @@
       'wss://broker.emqx.io:8084/mqtt'
     ];
     let activeClients = [];
+    let savedChatConfigRepublished = false;
 
     if (typeof mqtt !== 'undefined') {
       MQTT_BROKERS.forEach(url => {
@@ -561,6 +562,10 @@
             if (badge) {
               badge.style.color = '#10B981';
               badge.innerText = '● CLOUD RELAY ATIVO (Porta 443 WSS)';
+            }
+            if (!savedChatConfigRepublished && restoreChatControls()) {
+              savedChatConfigRepublished = true;
+              saveChatConfig();
             }
           });
           activeClients.push(client);
@@ -586,18 +591,19 @@
     }
 
     function publishConfig(overlayName, configData) {
-      const payload = { type: 'config_update', overlay: overlayName, config: configData, timestamp: Date.now() };
+      const updatedAt = Date.now();
+      const versionedConfig = { ...configData, _updatedAt: updatedAt };
 
-      publishCloudMessage(`apexscorpio/streamtools/v1/cfg/${overlayName}`, configData, { retain: true, qos: 1 });
-      publishCloudMessage('apexscorpio/streamtools/v1/events', { type: 'config_update', payload: { [overlayName]: configData } });
+      publishCloudMessage(`apexscorpio/streamtools/v1/cfg/${overlayName}`, versionedConfig, { retain: true, qos: 1 });
+      publishCloudMessage('apexscorpio/streamtools/v1/events', { type: 'config_update', payload: { [overlayName]: versionedConfig } });
 
       if (bc) {
-        try { bc.postMessage({ type: 'config_update', data: { [overlayName]: configData } }); } catch(e) {}
+        try { bc.postMessage({ type: 'config_update', data: { [overlayName]: versionedConfig } }); } catch(e) {}
       }
 
       try {
-        localStorage.setItem(`apex_cfg_${overlayName}`, JSON.stringify(configData));
-        localStorage.setItem('apex_event_config_update', JSON.stringify({ payload: { [overlayName]: configData }, timestamp: Date.now() }));
+        localStorage.setItem(`apex_cfg_${overlayName}`, JSON.stringify(versionedConfig));
+        localStorage.setItem('apex_event_config_update', JSON.stringify({ payload: { [overlayName]: versionedConfig }, timestamp: updatedAt }));
       } catch(e) {}
 
       const iframeMap = {
@@ -611,7 +617,7 @@
       if (iframeId) {
         const iframe = document.getElementById(iframeId);
         if (iframe && iframe.contentWindow) {
-          iframe.contentWindow.postMessage({ type: 'config_update', data: { [overlayName]: configData } }, '*');
+          iframe.contentWindow.postMessage({ type: 'config_update', data: { [overlayName]: versionedConfig } }, '*');
         }
       }
     }
@@ -691,6 +697,25 @@
       publishConfig('viewers', cfg);
     }
 
+    function restoreChatControls() {
+      try {
+        const saved = localStorage.getItem('apex_cfg_chat');
+        if (!saved) return false;
+        const config = JSON.parse(saved);
+        document.getElementById('chat-twitch').checked = config.showTwitch !== false;
+        document.getElementById('chat-youtube').checked = config.showYoutube !== false;
+        document.getElementById('chat-facebook').checked = config.showFacebook !== false;
+        document.getElementById('chat-mode').value = config.displayMode || 'pill';
+        document.getElementById('chat-fade').value = String(Number(config.fadeSeconds) > 0 ? Number(config.fadeSeconds) : 0);
+        document.getElementById('chat-bg').checked = config.showBg !== false;
+        document.getElementById('chat-badges').checked = config.showBadges !== false;
+        document.getElementById('chat-fontsize').value = String(Number(config.fontSize) || 14);
+        return true;
+      } catch(e) {
+        return false;
+      }
+    }
+
     function saveChatConfig() {
       const cfg = {
         showTwitch: document.getElementById('chat-twitch').checked,
@@ -750,7 +775,7 @@
         userColor: colors[platform] || '#E8181F',
         message: msgs[platform] || 'Test chat message',
         badges: { broadcaster: false, mod: Math.random() > 0.5, subscriber: true },
-        isTest: false,
+        isTest: true,
         timestamp: new Date().toISOString()
       };
       broadcastEvent('chat_message', testMsg);
@@ -765,8 +790,8 @@
 
     // SIMPLIFIED Symmetrical Clear Functions using broadcastEvent!
     function clearChat() {
-      broadcastEvent('clear_chat', { onlyTests: false, timestamp: Date.now() });
-      showToast('🛑 Chat de teste e mensagens limpos!');
+      broadcastEvent('clear_chat', { onlyTests: true, timestamp: Date.now() });
+      showToast('🛑 Mensagens de teste removidas; mensagens reais mantidas!');
     }
 
     function triggerAlert(type) {
@@ -907,6 +932,7 @@
     });
     window.addEventListener('resize', fitPreviews);
     document.addEventListener('DOMContentLoaded', () => {
+      restoreChatControls();
       updatePublicUrls();
       fitPreviews();
     });

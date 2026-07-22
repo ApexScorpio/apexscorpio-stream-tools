@@ -6,7 +6,7 @@
   <meta http-equiv="Pragma" content="no-cache">
   <meta http-equiv="Expires" content="0">
   <title>ApexScorpio - Event List Overlay</title>
-  <link rel="stylesheet" href="css/style.css?v=5.0">
+  <link rel="stylesheet" href="css/style.css?v=6.2">
   <script src="https://cdn.jsdelivr.net/npm/mqtt@5.3.4/dist/mqtt.min.js"></script>
 </head>
 <body class="events-page">
@@ -54,17 +54,21 @@
       return false;
     }
 
-    function doClearEvents() {
+    function doClearEvents(onlyTests = true) {
       const container = document.getElementById('event-feed') || feed;
       if (container) {
         Array.from(container.children).forEach(child => {
-          child.style.animation = 'none';
-          child.style.transition = 'none';
-          child.remove();
+          if (!onlyTests || child.classList.contains('is-test-msg')) {
+            child.style.animation = 'none';
+            child.style.transition = 'none';
+            child.remove();
+          }
         });
-        container.innerHTML = '';
-        while (container.firstChild) {
-          container.removeChild(container.firstChild);
+        if (!onlyTests) {
+          container.innerHTML = '';
+          while (container.firstChild) {
+            container.removeChild(container.firstChild);
+          }
         }
       }
       _seenIds.clear();
@@ -74,7 +78,7 @@
       if (!type) return;
       const typeStr = String(type).toLowerCase();
       if (typeStr.includes('clear')) {
-        doClearEvents();
+        doClearEvents(true);
         return;
       }
       if (type === 'config_update') {
@@ -121,7 +125,7 @@
 
               if (topicStr.includes('clear') || dataStr.includes('clear')) {
                 if (topicStr.includes('clear_events') || dataStr.includes('clear_events') || topicStr.includes('clear_all') || dataStr.includes('clear_all') || data.type === 'clear_events') {
-                  doClearEvents();
+                  doClearEvents(true);
                   return;
                 }
               }
@@ -178,8 +182,9 @@
       if (event.type === 'subscriber') { typeEmoji = '⭐'; action = `subscribed on ${platName}`; evtClass = 'subscriber'; }
       if (event.type === 'raid')       { typeEmoji = '🚀'; action = `raided with ${event.viewers||15} viewers`; evtClass = 'raid'; }
 
+      const testClass = event.isTest ? 'is-test-msg' : '';
       const card = document.createElement('div');
-      card.className = `event-card ${evtClass}`;
+      card.className = `event-card ${evtClass} platform-${platform} ${testClass}`;
       card.innerHTML = `
         <div class="platform-logo-badge ${platform}" style="display:${cfg.showLogos ? 'flex' : 'none'}">
           ${svgIcons[platform] || svgIcons.twitch}
