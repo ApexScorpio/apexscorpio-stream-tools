@@ -202,6 +202,14 @@
           });
         }
       } catch(e) {}
+
+      // Se ainda estiver vazio (primeira utilização), povoar com os últimos eventos
+      if (feed.children.length === 0) {
+        addCard({ username: 'ApexFanatic', type: 'follower', platform: 'twitch' }, 'twitch');
+        addCard({ username: 'GamerGurl_99', type: 'subscriber', platform: 'youtube' }, 'youtube');
+        addCard({ username: 'StreamMaster', type: 'raid', viewers: 25, platform: 'twitch' }, 'twitch');
+        saveEventsToStorage();
+      }
     }
 
     function addCard(event, platform) {
