@@ -58,7 +58,7 @@
     }
 
     function handleIncomingData(type, payload) {
-      if (!type || !payload) return;
+      if (!type) return;
       if (type === 'config_update') {
         const config = payload.chat || payload.config || payload;
         if (config) {
@@ -66,7 +66,11 @@
           applyConfig();
         }
       }
-      if (type === 'chat_message') {
+      if (type === 'clear_chat') {
+        chatContainer.innerHTML = '';
+        return;
+      }
+      if (type === 'chat_message' && payload) {
         if (_isDuplicate(type, payload?.msg || payload)) return;
         const msg = payload.msg || payload;
         const platform = (msg.platform || 'twitch').toLowerCase();

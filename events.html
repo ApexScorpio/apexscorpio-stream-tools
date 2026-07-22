@@ -52,7 +52,7 @@
     }
 
     function handleIncomingData(type, payload) {
-      if (!type || !payload) return;
+      if (!type) return;
       if (type === 'config_update') {
         const config = payload.events || payload.config || payload;
         if (config) {
@@ -60,7 +60,11 @@
           applyConfig();
         }
       }
-      if (type === 'new_event') {
+      if (type === 'clear_events') {
+        feed.innerHTML = '';
+        return;
+      }
+      if (type === 'new_event' && payload) {
         if (_isDuplicate(type, payload?.event || payload)) return;
         const event = payload.event || payload;
         const platform = (event.platform || 'twitch').toLowerCase();

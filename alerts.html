@@ -130,14 +130,20 @@
     }
 
     function handleIncomingData(type, payload) {
-      if (!type || !payload) return;
+      if (!type) return;
       if (type === 'config_update') {
         const config = payload.alerts || payload.config || payload;
         if (config) {
           currentConfig = { ...currentConfig, ...config };
         }
       }
-      if (type === 'new_event' || type === 'trigger_alert') {
+      if (type === 'clear_alerts') {
+        alertQueue = [];
+        alertBox.style.display = 'none';
+        isShowingAlert = false;
+        return;
+      }
+      if ((type === 'new_event' || type === 'trigger_alert') && payload) {
         if (_isDuplicate(type, payload?.event || payload)) return;
         const event = payload.event || payload;
         const platform = (event.platform || 'twitch').toLowerCase();

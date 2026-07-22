@@ -192,7 +192,7 @@
     <div style="background: linear-gradient(135deg, rgba(14,10,30,0.98), rgba(8,8,12,0.98)); border: 1px solid rgba(16,185,129,0.5); border-radius: 14px; padding: 16px 20px; margin-bottom: 18px;">
       <div style="font-size: 13px; font-weight: 800; color: #10B981; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 6px;">⚡ Sincronização 100% Pública e URLs Limpos para o Streamlabs OBS</div>
       <div style="font-size: 13px; color: #CBD5E1; line-height: 1.5;">
-        Usa sempre os <strong>URLs fixos e públicos</strong> abaixo no SLOBS. Ao alterares qualquer opção neste Dashboard, as tuas definições guardam-se no servidor Cloud WSS público e atualizam o SLOBS em tempo real! Os testes de simulação duram 8 segundos e restauram automaticamente os valores reais.
+        Usa sempre os <strong>URLs fixos e públicos</strong> abaixo no SLOBS. Todos os testes têm botões dedicados de <strong>🛑 Limpar / Parar Teste</strong> e restauram os valores reais!
       </div>
     </div>
 
@@ -243,7 +243,7 @@
 
       <div class="controls-group">
         <button class="btn" id="btn-sim-viewers" style="background: #10B981;" onclick="simulateViewers()">🎲 Simular Live (50 Twitch / 120 YouTube / 35 FB por 8s)</button>
-        <button class="btn" style="background: #64748B;" onclick="resetViewers()">🔄 Restaurar Valores Reais Agora</button>
+        <button class="btn" style="background: #DC2626;" onclick="resetViewers()">🛑 Terminar Teste & Restaurar Valores Reais</button>
       </div>
 
       <label style="font-weight: 700; font-size: 13px; color: #94A3B8; text-transform: uppercase;">Visualização da Source em Tempo Real:</label>
@@ -311,6 +311,7 @@
         <button class="btn btn-youtube" onclick="sendTestChat('youtube')">💬 Chat YouTube</button>
         <button class="btn btn-facebook" onclick="sendTestChat('facebook')">💬 Chat Facebook</button>
         <button class="btn" style="background: linear-gradient(135deg, #9146FF, #E8181F);" onclick="triggerRandomChat()">🎲 Testar Chat Aleatório</button>
+        <button class="btn" style="background: #DC2626;" onclick="clearChat()">🛑 Limpar Chat de Teste</button>
       </div>
 
       <label style="font-weight: 700; font-size: 13px; color: #94A3B8; text-transform: uppercase;">Visualização da Source em Tempo Real:</label>
@@ -365,6 +366,7 @@
         <button class="btn" style="background: #F59E0B;" onclick="triggerAlert('subscriber')">⭐ Testar Subscriber Event</button>
         <button class="btn" style="background: #9146FF;" onclick="triggerAlert('raid')">🚀 Testar Raid Event</button>
         <button class="btn" style="background: linear-gradient(135deg, #38BDF8, #9146FF);" onclick="triggerRandomEvent()">🎲 Disparar Evento Aleatório</button>
+        <button class="btn" style="background: #DC2626;" onclick="clearEvents()">🛑 Limpar Eventos de Teste</button>
       </div>
 
       <label style="font-weight: 700; font-size: 13px; color: #94A3B8; text-transform: uppercase;">Visualização da Source em Tempo Real:</label>
@@ -417,6 +419,7 @@
         <button class="btn" style="background: #F59E0B;" onclick="triggerAlert('subscriber')">⭐ Alerta Subscriber</button>
         <button class="btn" style="background: #9146FF;" onclick="triggerAlert('raid')">🚀 Alerta Raid</button>
         <button class="btn" style="background: linear-gradient(135deg, #E8181F, #F59E0B);" onclick="triggerRandomAlert()">🎲 Disparar Alerta Aleatório com Som</button>
+        <button class="btn" style="background: #DC2626;" onclick="clearAlerts()">🛑 Parar Alerta & Limpar Queue</button>
       </div>
 
       <label style="font-weight: 700; font-size: 13px; color: #94A3B8; text-transform: uppercase;">Visualização da Source em Tempo Real:</label>
@@ -678,6 +681,10 @@
       sendTestChat(p);
     }
 
+    function clearChat() {
+      broadcastEvent('clear_chat', {});
+    }
+
     function triggerAlert(type) {
       const names = {
         follower: ['GamerPro_99', 'ScorpioFan_42', 'TwitchLegend', 'CyberScorpio'],
@@ -716,8 +723,16 @@
       broadcastEvent('new_event', eventPayload);
     }
 
+    function clearEvents() {
+      broadcastEvent('clear_events', {});
+    }
+
     function triggerRandomAlert() {
       triggerRandomEvent();
+    }
+
+    function clearAlerts() {
+      broadcastEvent('clear_alerts', {});
     }
 
     let simTimer = null;
