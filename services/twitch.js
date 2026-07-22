@@ -54,23 +54,29 @@ class TwitchService {
 
   async checkStatus() {
     try {
-      // Query Twitch public GQL endpoint for live metadata
+      // Query Twitch public GQL endpoint for live metadata using ChannelShell query
       const gqlQuery = [
         {
-          operationName: "StreamMetadata",
-          variables: { channelLogin: this.channel },
-          extensions: {
-            persistedQuery: {
-              version: 1,
-              sha256Hash: "1c715dbd7342244de34714d07940a2d73c704a73f0598a76b069d2d46e2709e9"
+          operationName: "ChannelShell",
+          query: `query ChannelShell($login: String!) {
+            user(login: $login) {
+              id
+              login
+              displayName
+              stream {
+                id
+                viewersCount
+                type
+              }
             }
-          }
+          }`,
+          variables: { login: this.channel }
         }
       ];
 
       const response = await axios.post('https://gql.twitch.tv/gql', gqlQuery, {
         headers: {
-          'Client-ID': 'kimne78kx3ncx6br8ac4x563ca2409', // Twitch public web client ID
+          'Client-ID': 'kimne78kx3ncx6brgo4mv6wki5h1ko', // Active Twitch web client ID
           'Content-Type': 'application/json'
         },
         timeout: 5000
@@ -79,7 +85,7 @@ class TwitchService {
       const user = response.data?.[0]?.data?.user;
       const stream = user?.stream;
 
-      if (stream) {
+      if (stream && stream.type === 'live') {
         this.isLive = true;
         this.viewers = stream.viewersCount || 0;
       } else {
@@ -95,27 +101,7 @@ class TwitchService {
         });
       }
     } catch (err) {
-      // Fallback fallback: scrape public channel page if GQL fails
-      try {
-        const pageRes = await axios.get(`https://www.twitch.tv/${this.channel}`, {
-          headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)' },
-          timeout: 5000
-        });
-        const html = pageRes.data;
-        const isLive = html.includes('"isLiveBroadcast":true');
-        this.isLive = isLive;
-        if (!isLive) this.viewers = 0;
-        
-        if (this.onStatusUpdate) {
-          this.onStatusUpdate({
-            platform: 'twitch',
-            isLive: this.isLive,
-            viewers: this.viewers
-          });
-        }
-      } catch (fallbackErr) {
-        console.error('[Twitch Status Error]', err.message);
-      }
+      console.error('[Twitch Status Check Error]', err.message);
     }
   }
 
