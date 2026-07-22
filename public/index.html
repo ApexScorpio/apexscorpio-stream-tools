@@ -68,7 +68,7 @@
       border: none;
       color: #38BDF8;
       font-family: monospace;
-      font-size: 14px;
+      font-size: 13px;
     }
     .btn {
       background: #3B82F6;
@@ -81,6 +81,19 @@
       transition: background 0.2s;
     }
     .btn:hover { background: #2563EB; }
+    .btn-save {
+      background: linear-gradient(135deg, #10B981, #059669);
+      color: #FFF;
+      font-size: 16px;
+      padding: 14px 28px;
+      width: 100%;
+      border-radius: 12px;
+      margin-top: 15px;
+      box-shadow: 0 4px 14px rgba(16, 185, 129, 0.4);
+    }
+    .btn-save:hover {
+      background: linear-gradient(135deg, #059669, #047857);
+    }
     .btn-twitch { background: var(--twitch-color); }
     .btn-twitch:hover { background: #772CE8; }
     .btn-youtube { background: var(--youtube-color); }
@@ -153,6 +166,21 @@
     .toggle-switch:checked::before {
       transform: translateX(20px);
     }
+
+    #toast-notification {
+      display: none;
+      position: fixed;
+      bottom: 25px;
+      right: 25px;
+      background: #10B981;
+      color: #FFF;
+      padding: 14px 24px;
+      border-radius: 12px;
+      font-weight: 700;
+      box-shadow: 0 10px 25px rgba(0,0,0,0.5);
+      z-index: 9999;
+      animation: fadeIn 0.3s;
+    }
   </style>
 </head>
 <body>
@@ -163,6 +191,9 @@
         <span class="status-badge status-live">ONLINE DASHBOARD</span>
       </div>
     </div>
+
+    <!-- Toast Notification -->
+    <div id="toast-notification">✅ Configuração Guardada & URLs Geradas com Sucesso!</div>
 
     <!-- Status Overview Cards -->
     <div class="grid">
@@ -278,13 +309,18 @@
       </div>
     </div>
 
+    <!-- Save & Apply Button -->
+    <div style="margin-bottom: 30px;">
+      <button class="btn btn-save" onclick="saveAndGenerateUrls()">💾 GUARDAR CONFIGURAÇÕES & GERAR URLS DEDICADAS</button>
+    </div>
+
     <!-- Streamlabs Browser Sources Section -->
     <div class="card" style="margin-bottom: 30px;">
-      <h2>📺 Links das Fontes para o Streamlabs OBS</h2>
-      <p style="color: #94A3B8; font-size: 14px;">Colas um destes links na tua fonte do tipo <strong>Browser (Navegador)</strong> no Streamlabs:</p>
+      <h2>📺 Links Gerados para o Streamlabs OBS</h2>
+      <p style="color: #94A3B8; font-size: 14px;">Estes links já contêm todas as tuas personalizações (fundo, permanência, tamanhos) embutidas:</p>
 
       <div style="margin-top: 20px;">
-        <label style="font-weight: 600; font-size: 14px;">1. Viewer Counter Overlay</label>
+        <label style="font-weight: 600; font-size: 14px;">1. Viewer Counter Overlay URL</label>
         <div class="url-box">
           <input type="text" readonly id="url-viewers" class="url-input">
           <button class="btn" onclick="copyUrl('url-viewers')">Copiar Link</button>
@@ -292,7 +328,7 @@
       </div>
 
       <div style="margin-top: 20px;">
-        <label style="font-weight: 600; font-size: 14px;">2. Unified Live Chat Overlay</label>
+        <label style="font-weight: 600; font-size: 14px;">2. Unified Live Chat Overlay URL</label>
         <div class="url-box">
           <input type="text" readonly id="url-chat" class="url-input">
           <button class="btn" onclick="copyUrl('url-chat')">Copiar Link</button>
@@ -318,8 +354,6 @@
   <script src="/socket.io/socket.io.js"></script>
   <script>
     const baseUrl = window.location.origin;
-    document.getElementById('url-viewers').value = `${baseUrl}/viewers.html`;
-    document.getElementById('url-chat').value = `${baseUrl}/chat.html`;
 
     const socket = io();
 
@@ -358,45 +392,91 @@
         document.getElementById('cfg-view-bg').checked = config.viewers.showBg;
         document.getElementById('cfg-view-layout').value = config.viewers.layout;
       }
+
+      buildCustomizedUrls();
     });
 
-    function updateChatConfig() {
+    function getChatConfig() {
       const isPermanent = document.getElementById('cfg-chat-permanent').checked;
       const fadeSelect = document.getElementById('cfg-chat-fade');
       
       if (isPermanent) {
         fadeSelect.value = "0";
       } else if (fadeSelect.value === "0") {
-        fadeSelect.value = "20"; // default 20s if untoggled
+        fadeSelect.value = "20";
       }
 
-      const chatConfig = {
+      return {
         fadeSeconds: parseInt(fadeSelect.value, 10),
         showBg: document.getElementById('cfg-chat-bg').checked,
         fontSize: parseInt(document.getElementById('cfg-chat-font').value, 10),
         showBadges: document.getElementById('cfg-chat-badges').checked
       };
-
-      socket.emit('update_config', { chat: chatConfig });
     }
 
-    function updateViewersConfig() {
-      const viewersConfig = {
+    function getViewersConfig() {
+      return {
         showTwitch: document.getElementById('cfg-view-twitch').checked,
         showYoutube: document.getElementById('cfg-view-yt').checked,
         showTotal: document.getElementById('cfg-view-total').checked,
         showBg: document.getElementById('cfg-view-bg').checked,
         layout: document.getElementById('cfg-view-layout').value
       };
+    }
 
-      socket.emit('update_config', { viewers: viewersConfig });
+    function updateChatConfig() {
+      socket.emit('update_config', { chat: getChatConfig() });
+      buildCustomizedUrls();
+    }
+
+    function updateViewersConfig() {
+      socket.emit('update_config', { viewers: getViewersConfig() });
+      buildCustomizedUrls();
+    }
+
+    function saveAndGenerateUrls() {
+      const fullConfig = {
+        chat: getChatConfig(),
+        viewers: getViewersConfig()
+      };
+      
+      socket.emit('update_config', fullConfig);
+      buildCustomizedUrls();
+
+      // Show toast
+      const toast = document.getElementById('toast-notification');
+      toast.style.display = 'block';
+      setTimeout(() => {
+        toast.style.display = 'none';
+      }, 3000);
+    }
+
+    function buildCustomizedUrls() {
+      const chat = getChatConfig();
+      const viewers = getViewersConfig();
+
+      const chatParams = new URLSearchParams();
+      chatParams.set('fade', chat.fadeSeconds);
+      chatParams.set('bg', chat.showBg);
+      chatParams.set('font', chat.fontSize);
+      chatParams.set('badges', chat.showBadges);
+
+      const viewerParams = new URLSearchParams();
+      viewerParams.set('twitch', viewers.showTwitch);
+      viewerParams.set('yt', viewers.showYoutube);
+      viewerParams.set('total', viewers.showTotal);
+      viewerParams.set('bg', viewers.showBg);
+      viewerParams.set('layout', viewers.layout);
+
+      document.getElementById('url-viewers').value = `${baseUrl}/viewers.html?${viewerParams.toString()}`;
+      document.getElementById('url-chat').value = `${baseUrl}/chat.html?${chatParams.toString()}`;
     }
 
     function copyUrl(inputId) {
       const input = document.getElementById(inputId);
       input.select();
       document.execCommand('copy');
-      alert('Link copiado para a área de transferência! Pode colar no Streamlabs.');
+      alert('Link personalizado copiado para a área de transferência! Pode colar no Streamlabs.');
     }
 
     async function sendTestChat(platform) {
@@ -432,6 +512,8 @@
         })
       });
     }
+
+    buildCustomizedUrls();
   </script>
 </body>
 </html>

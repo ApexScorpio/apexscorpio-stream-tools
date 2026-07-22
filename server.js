@@ -26,6 +26,10 @@ const streamState = {
   totalViewers: 0
 };
 
+const fs = require('fs');
+
+const CONFIG_FILE = path.join(__dirname, 'config.json');
+
 // Global state for overlay customization
 let overlayConfig = {
   chat: {
@@ -44,6 +48,25 @@ let overlayConfig = {
   }
 };
 
+// Load saved config if exists
+if (fs.existsSync(CONFIG_FILE)) {
+  try {
+    const saved = JSON.parse(fs.readFileSync(CONFIG_FILE, 'utf8'));
+    overlayConfig = { ...overlayConfig, ...saved };
+    console.log('[Config] Loaded saved overlay settings from config.json');
+  } catch (e) {
+    console.error('[Config Error]', e.message);
+  }
+}
+
+function saveConfigToFile() {
+  try {
+    fs.writeFileSync(CONFIG_FILE, JSON.stringify(overlayConfig, null, 2), 'utf8');
+  } catch (e) {
+    console.error('[Config Save Error]', e.message);
+  }
+}
+
 // Calculate and broadcast status update
 function broadcastStatus() {
   streamState.totalViewers = streamState.twitch.viewers + streamState.youtube.viewers;
@@ -52,6 +75,7 @@ function broadcastStatus() {
 
 // Broadcast configuration updates to connected overlays
 function broadcastConfig() {
+  saveConfigToFile();
   io.emit('config_update', overlayConfig);
 }
 
