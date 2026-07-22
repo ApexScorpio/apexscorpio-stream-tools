@@ -97,7 +97,7 @@
     }
     .preview-frame {
       width: 100%;
-      height: 240px;
+      height: 250px;
       background: #000;
       border-radius: 12px;
       border: 1px solid rgba(232, 24, 31, 0.25);
@@ -114,13 +114,6 @@
       gap: 10px;
       flex-wrap: wrap;
       margin-bottom: 16px;
-    }
-    .form-group {
-      display: flex;
-      align-items: center;
-      gap: 12px;
-      margin-bottom: 12px;
-      font-size: 14px;
     }
   </style>
 </head>
@@ -156,7 +149,7 @@
     <!-- CARD 2: CHAT UNIFICADO -->
     <div class="card">
       <h2>💬 2. Chat Unificado (Twitch + YouTube + Facebook)</h2>
-      <p class="card-desc">Chat em direto com retenção permanente, animações Cyberpunk e badges de moderador e canal.</p>
+      <p class="card-desc">Chat em direto com retenção permanente, logótipos SVG oficiais sem texto e animações Cyberpunk.</p>
       
       <label style="font-weight: 700; font-size: 13px; color: #94A3B8; text-transform: uppercase;">URL para o Streamlabs OBS (Browser Source):</label>
       <input type="text" readonly class="url-box" id="url-chat">
@@ -177,7 +170,7 @@
     <!-- CARD 3: EVENT LIST (HISTÓRICO VERTICAL DE EVENTOS) -->
     <div class="card">
       <h2>📋 3. Event List (Histórico Vertical de Eventos)</h2>
-      <p class="card-desc">Lista vertical de eventos que regista novos followers, subs e raids em tempo real em inglês.</p>
+      <p class="card-desc">Lista vertical de eventos com logótipo SVG da plataforma antes de cada entrada em inglês.</p>
       
       <label style="font-weight: 700; font-size: 13px; color: #94A3B8; text-transform: uppercase;">URL para o Streamlabs OBS (Browser Source):</label>
       <input type="text" readonly class="url-box" id="url-events">
@@ -198,7 +191,7 @@
     <!-- CARD 4: ALERT BOX OVERLAY -->
     <div class="card">
       <h2>🔔 4. Alert Box Overlay (Follower, Sub, Raid Alerts)</h2>
-      <p class="card-desc">Alertas pop-up em direto com elementos do Brandkit v9 (Escorpião para Followers, Joia AS para Subs, Stinger A para Raids) e som sintetizado.</p>
+      <p class="card-desc">Alertas pop-up em direto com clipart exclusivo por tipo de alerta e som sintetizado.</p>
       
       <label style="font-weight: 700; font-size: 13px; color: #94A3B8; text-transform: uppercase;">URL para o Streamlabs OBS (Browser Source):</label>
       <input type="text" readonly class="url-box" id="url-alerts">
@@ -215,6 +208,43 @@
         <iframe src="/alerts.html"></iframe>
       </div>
     </div>
+
+    <!-- CARD 5: CENAS DE ECRÃ ANIMADAS -->
+    <div class="card">
+      <h2>🎬 5. Cenas de Ecrã Animadas (Full Stream Scenes)</h2>
+      <p class="card-desc">Ecrãs de cena completa para o Streamlabs OBS com temporizadores, brilho do Escorpião e redes sociais.</p>
+
+      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 16px; margin-bottom: 16px;">
+        <div>
+          <label style="font-weight: 700; font-size: 13px; color: #E8181F;">🎬 Stream Starting Soon:</label>
+          <input type="text" readonly class="url-box" id="url-starting">
+        </div>
+        <div>
+          <label style="font-weight: 700; font-size: 13px; color: #E8181F;">☕ Be Right Back (BRB):</label>
+          <input type="text" readonly class="url-box" id="url-brb">
+        </div>
+        <div>
+          <label style="font-weight: 700; font-size: 13px; color: #F59E0B;">⚠️ Technical Issues:</label>
+          <input type="text" readonly class="url-box" id="url-technical">
+        </div>
+        <div>
+          <label style="font-weight: 700; font-size: 13px; color: #9146FF;">🏁 Stream Ending:</label>
+          <input type="text" readonly class="url-box" id="url-ending">
+        </div>
+      </div>
+
+      <div class="controls-group">
+        <button class="btn" style="background: #E8181F;" onclick="switchScene('/starting.html')">🎬 Ver Starting Soon</button>
+        <button class="btn" style="background: #9146FF;" onclick="switchScene('/brb.html')">☕ Ver BRB</button>
+        <button class="btn" style="background: #F59E0B;" onclick="switchScene('/technical.html')">⚠️ Ver Technical Issues</button>
+        <button class="btn" style="background: #38BDF8;" onclick="switchScene('/ending.html')">🏁 Ver Stream Ending</button>
+      </div>
+
+      <label style="font-weight: 700; font-size: 13px; color: #94A3B8; text-transform: uppercase;">Visualização da Cena em Tempo Real:</label>
+      <div class="preview-frame" style="height: 320px;">
+        <iframe id="scene-preview" src="/starting.html"></iframe>
+      </div>
+    </div>
   </div>
 
   <script>
@@ -224,6 +254,15 @@
     document.getElementById('url-chat').value = `${baseUrl}/chat.html`;
     document.getElementById('url-events').value = `${baseUrl}/events.html`;
     document.getElementById('url-alerts').value = `${baseUrl}/alerts.html`;
+
+    document.getElementById('url-starting').value = `${baseUrl}/starting.html`;
+    document.getElementById('url-brb').value = `${baseUrl}/brb.html`;
+    document.getElementById('url-technical').value = `${baseUrl}/technical.html`;
+    document.getElementById('url-ending').value = `${baseUrl}/ending.html`;
+
+    function switchScene(url) {
+      document.getElementById('scene-preview').src = url;
+    }
 
     async function sendTestChat(platform) {
       const msgs = {

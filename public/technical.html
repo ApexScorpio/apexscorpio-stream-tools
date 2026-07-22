@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ApexScorpio - Technical Issues</title>
+  <link rel="stylesheet" href="/css/style.css">
+  <style>
+    body {
+      background: #08080C;
+      overflow: hidden;
+      width: 100vw;
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      color: #FFF;
+      position: relative;
+    }
+
+    .bg-grid {
+      position: absolute;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background: radial-gradient(circle at center, rgba(245, 158, 11, 0.18) 0%, rgba(8, 8, 12, 0.98) 70%);
+      z-index: 1;
+    }
+
+    .as-logo-container {
+      position: relative;
+      z-index: 2;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+
+    .as-logo-container img {
+      max-width: 160px;
+      height: auto;
+      filter: drop-shadow(0 0 25px rgba(245, 158, 11, 0.7));
+    }
+
+    .scene-title {
+      font-family: 'Orbitron', sans-serif;
+      font-size: 34px;
+      font-weight: 900;
+      color: #F59E0B;
+      margin-top: 24px;
+      letter-spacing: 3px;
+      text-transform: uppercase;
+      text-shadow: 0 0 20px rgba(245, 158, 11, 0.8);
+      z-index: 2;
+    }
+
+    .scene-subtitle {
+      font-family: 'Outfit', sans-serif;
+      font-size: 18px;
+      color: #94A3B8;
+      margin-top: 8px;
+      font-weight: 600;
+      letter-spacing: 1px;
+      z-index: 2;
+    }
+
+    .status-badge {
+      margin-top: 24px;
+      font-family: 'Outfit', sans-serif;
+      font-size: 15px;
+      font-weight: 800;
+      color: #FFF;
+      background: rgba(245, 158, 11, 0.2);
+      border: 1px solid #F59E0B;
+      padding: 10px 24px;
+      border-radius: 30px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      z-index: 2;
+    }
+  </style>
+</head>
+<body>
+  <div class="bg-grid"></div>
+
+  <div class="as-logo-container">
+    <img src="/brandkit/Apex_Scorpio_Brand_Assets/03_Scorpion/Apex_Scorpion_Full_Metallic.png" alt="Apex Scorpion">
+  </div>
+
+  <div class="scene-title">⚠️ PROBLEMAS TÉCNICOS</div>
+  <div class="scene-subtitle">A REAJUSTAR CONFIGURAÇÕES • TECHNICAL DIFFICULTIES</div>
+
+  <div class="status-badge">
+    <span>🔄 RECONECTANDO...</span>
+    <span>•</span>
+    <span>WE WILL BE BACK SHORTLY</span>
+  </div>
+</body>
+</html>

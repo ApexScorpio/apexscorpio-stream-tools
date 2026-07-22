@@ -3,136 +3,102 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Streamlabs Overlay - Unified Live Chat</title>
+  <title>ApexScorpio - Unified Live Chat Overlay</title>
   <link rel="stylesheet" href="/css/style.css">
   <script src="/socket.io/socket.io.js"></script>
 </head>
 <body class="chat-page">
-
-  <div class="chat-container" id="chat-container">
-    <!-- Chat messages dynamically append here -->
-  </div>
+  <div class="chat-container" id="chat-container"></div>
 
   <script>
     const socket = io();
     const chatContainer = document.getElementById('chat-container');
 
-    // Parse URL query params override
-    const urlParams = new URLSearchParams(window.location.search);
-    
-    // Live config state
-    let activeConfig = {
-      fadeSeconds: urlParams.has('fade') ? parseInt(urlParams.get('fade'), 10) : 0,
-      showBg: urlParams.has('bg') ? urlParams.get('bg') !== 'false' : true,
-      fontSize: urlParams.has('font') ? parseInt(urlParams.get('font'), 10) : 14,
-      showBadges: urlParams.has('badges') ? urlParams.get('badges') !== 'false' : true,
-      maxMessages: urlParams.has('max') ? parseInt(urlParams.get('max'), 10) : 30
+    let currentConfig = {
+      fadeSeconds: 0,
+      showBg: true,
+      fontSize: 14,
+      showBadges: true,
+      maxMessages: 50
     };
 
-    // Receive live config updates from server/dashboard
+    const twitchIconSvg = `<svg width="14" height="14" viewBox="0 0 24 24" fill="#FFFFFF"><path d="M11.571 4.714h1.715v5.143H11.571V4.714zm4.715 0H18v5.143h-1.714V4.714zM6 0L1.714 4.286v15.428h5.143V24l4.286-4.286h3.428L22.286 12V0H6zm14.571 11.143l-3.428 3.428h-3.429l-3 3v-3H6.857V1.714h13.714v9.429z"/></svg>`;
+    const youtubeIconSvg = `<svg width="15" height="15" viewBox="0 0 24 24" fill="#FFFFFF"><path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/></svg>`;
+    const facebookIconSvg = `<svg width="15" height="15" viewBox="0 0 24 24" fill="#FFFFFF"><path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/></svg>`;
+
     socket.on('config_update', (config) => {
       if (config && config.chat) {
-        // Only override if query params were not set explicitly
-        if (!urlParams.has('fade')) activeConfig.fadeSeconds = config.chat.fadeSeconds;
-        if (!urlParams.has('bg')) activeConfig.showBg = config.chat.showBg;
-        if (!urlParams.has('font')) activeConfig.fontSize = config.chat.fontSize;
-        if (!urlParams.has('badges')) activeConfig.showBadges = config.chat.showBadges;
-        if (!urlParams.has('max')) activeConfig.maxMessages = config.chat.maxMessages;
-        applyConfigStyles();
+        currentConfig = { ...currentConfig, ...config.chat };
+        applyConfigToDOM();
       }
     });
 
-    function applyConfigStyles() {
-      document.querySelectorAll('.chat-message').forEach(msg => {
-        msg.style.fontSize = `${activeConfig.fontSize}px`;
-        if (activeConfig.fadeSeconds === 0) {
-          msg.style.opacity = '1';
-          msg.style.transition = 'none';
-        }
-        if (activeConfig.showBg) {
-          msg.style.background = 'rgba(15, 23, 42, 0.88)';
-          msg.style.boxShadow = '0 4px 20px rgba(0, 0, 0, 0.3)';
-        } else {
+    function applyConfigToDOM() {
+      const messages = document.querySelectorAll('.chat-message');
+      messages.forEach(msg => {
+        msg.style.fontSize = `${currentConfig.fontSize || 14}px`;
+        if (!currentConfig.showBg) {
           msg.style.background = 'transparent';
-          msg.style.boxShadow = 'none';
-        }
-        const badgeEl = msg.querySelector('.platform-badge');
-        if (badgeEl) {
-          badgeEl.style.display = activeConfig.showBadges ? 'inline-flex' : 'none';
+          msg.style.backdropFilter = 'none';
+          msg.style.border = 'none';
         }
       });
     }
 
-    socket.on('chat_message', (data) => {
-      renderChatMessage(data);
+    socket.on('chat_message', (msg) => {
+      addMessageToDOM(msg);
     });
 
-    function renderChatMessage(data) {
+    function addMessageToDOM(msg) {
       const msgElement = document.createElement('div');
-      msgElement.className = `chat-message ${data.platform}`;
-      msgElement.id = `msg-${data.id}`;
-      msgElement.style.fontSize = `${activeConfig.fontSize}px`;
+      const platform = (msg.platform || 'twitch').toLowerCase();
+      msgElement.className = `chat-message ${platform}`;
+      msgElement.style.fontSize = `${currentConfig.fontSize || 14}px`;
 
-      if (!activeConfig.showBg) {
-        msgElement.style.background = 'transparent';
-        msgElement.style.boxShadow = 'none';
+      let iconSvg = twitchIconSvg;
+      if (platform === 'youtube') iconSvg = youtubeIconSvg;
+      if (platform === 'facebook') iconSvg = facebookIconSvg;
+
+      let badgesHtml = '';
+      if (currentConfig.showBadges) {
+        badgesHtml += `<span class="platform-badge ${platform}" style="padding: 3px 6px; display: inline-flex; align-items: center;">${iconSvg}</span>`;
+        if (msg.badges) {
+          if (msg.badges.broadcaster) badgesHtml += `<span class="role-badge" style="background:#E8181F">STREAMER</span>`;
+          else if (msg.badges.mod) badgesHtml += `<span class="role-badge" style="background:#00F0FF; color:#000">MOD</span>`;
+          else if (msg.badges.subscriber) badgesHtml += `<span class="role-badge" style="background:#F59E0B; color:#000">SUB</span>`;
+        }
       }
 
-      // Build role badges
-      let roleBadgesHtml = '';
-      if (data.badges) {
-        if (data.badges.broadcaster) roleBadgesHtml += `<span class="role-badge" style="background:#EF4444;">STREAMER</span>`;
-        if (data.badges.mod) roleBadgesHtml += `<span class="role-badge" style="background:#22C55E;">MOD</span>`;
-        if (data.badges.subscriber) roleBadgesHtml += `<span class="role-badge" style="background:#F59E0B;">SUB</span>`;
-      }
-
-      // Platform badge
-      const platformLabel = data.platform === 'twitch' ? 'Twitch' : 'YouTube';
-      const badgeDisplayStyle = activeConfig.showBadges ? 'inline-flex' : 'none';
-      const platformBadge = `<span class="platform-badge ${data.platform}" style="display: ${badgeDisplayStyle};">${platformLabel}</span>`;
-
-      // HTML Structure
       msgElement.innerHTML = `
         <div class="chat-header">
-          ${platformBadge}
-          <span class="user-name" style="color: ${data.userColor || '#F8FAFC'};">${escapeHtml(data.username)}</span>
-          ${roleBadgesHtml}
+          ${badgesHtml}
+          <span class="user-name" style="color: ${msg.userColor || (platform === 'youtube' ? '#E8181F' : (platform === 'facebook' ? '#1877F2' : '#9146FF'))}">${msg.username}</span>
         </div>
-        <div class="chat-text" style="font-size: ${activeConfig.fontSize}px;">${escapeHtml(data.message)}</div>
+        <div class="chat-text">${escapeHtml(msg.message)}</div>
       `;
 
       chatContainer.appendChild(msgElement);
-
-      // Limit max messages in DOM (default 200 for permanent history)
-      const messageLimit = activeConfig.fadeSeconds === 0 ? Math.max(activeConfig.maxMessages, 100) : activeConfig.maxMessages;
-      while (chatContainer.children.length > messageLimit) {
-        chatContainer.removeChild(chatContainer.firstChild);
-      }
-
-      // Auto-scroll chat container to show latest messages
       chatContainer.scrollTop = chatContainer.scrollHeight;
 
-      // Auto-fadeout timer ONLY if fadeSeconds > 0
-      if (activeConfig.fadeSeconds > 0) {
+      // Auto-fade timer if fadeSeconds > 0
+      if (currentConfig.fadeSeconds > 0) {
         setTimeout(() => {
+          msgElement.style.transition = 'opacity 1s ease';
           msgElement.style.opacity = '0';
-          setTimeout(() => {
-            if (msgElement.parentNode) {
-              msgElement.parentNode.removeChild(msgElement);
-            }
-          }, 500);
-        }, activeConfig.fadeSeconds * 1000);
+          setTimeout(() => msgElement.remove(), 1000);
+        }, currentConfig.fadeSeconds * 1000);
+      }
+
+      // Keep DOM under maxMessages limit
+      while (chatContainer.children.length > (currentConfig.maxMessages || 50)) {
+        chatContainer.removeChild(chatContainer.firstChild);
       }
     }
 
-    function escapeHtml(str) {
-      if (!str) return '';
-      return str
-        .replace(/&/g, "&amp;")
-        .replace(/</g, "&lt;")
-        .replace(/>/g, "&gt;")
-        .replace(/"/g, "&quot;")
-        .replace(/'/g, "&#039;");
+    function escapeHtml(text) {
+      const div = document.createElement('div');
+      div.innerText = text;
+      return div.innerHTML;
     }
   </script>
 </body>

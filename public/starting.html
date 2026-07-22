@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ApexScorpio - Stream Starting Soon</title>
+  <link rel="stylesheet" href="/css/style.css">
+  <style>
+    body {
+      background: #08080C;
+      overflow: hidden;
+      width: 100vw;
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      color: #FFF;
+      position: relative;
+    }
+
+    /* Cyber Background Glow Grid */
+    .bg-grid {
+      position: absolute;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background: radial-gradient(circle at center, rgba(232, 24, 31, 0.18) 0%, rgba(8, 8, 12, 0.98) 70%);
+      z-index: 1;
+    }
+
+    .as-logo-container {
+      position: relative;
+      z-index: 2;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      animation: pulseGlow 3s infinite ease-in-out;
+    }
+
+    .as-logo-container img {
+      max-width: 380px;
+      height: auto;
+      filter: drop-shadow(0 0 25px rgba(232, 24, 31, 0.7));
+    }
+
+    .scene-title {
+      font-family: 'Orbitron', sans-serif;
+      font-size: 36px;
+      font-weight: 900;
+      color: #E8181F;
+      margin-top: 24px;
+      letter-spacing: 4px;
+      text-transform: uppercase;
+      text-shadow: 0 0 20px rgba(232, 24, 31, 0.8);
+      animation: textGlow 2s infinite alternate;
+    }
+
+    .scene-subtitle {
+      font-family: 'Outfit', sans-serif;
+      font-size: 20px;
+      color: #94A3B8;
+      margin-top: 8px;
+      font-weight: 600;
+      letter-spacing: 1px;
+    }
+
+    .timer-box {
+      margin-top: 28px;
+      font-family: 'Orbitron', monospace;
+      font-size: 54px;
+      font-weight: 900;
+      color: #FFFFFF;
+      background: rgba(20, 23, 34, 0.9);
+      border: 2px solid #E8181F;
+      border-radius: 20px;
+      padding: 12px 36px;
+      box-shadow: 0 0 30px rgba(232, 24, 31, 0.4);
+      z-index: 2;
+    }
+
+    .social-footer {
+      position: absolute;
+      bottom: 40px;
+      z-index: 2;
+      display: flex;
+      gap: 24px;
+      font-family: 'Outfit', sans-serif;
+      font-size: 16px;
+      font-weight: 700;
+      color: #94A3B8;
+    }
+
+    .social-item {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      padding: 8px 18px;
+      border-radius: 30px;
+    }
+
+    @keyframes pulseGlow {
+      0%, 100% { transform: scale(1); filter: drop-shadow(0 0 20px rgba(232, 24, 31, 0.5)); }
+      50% { transform: scale(1.03); filter: drop-shadow(0 0 40px rgba(232, 24, 31, 0.9)); }
+    }
+
+    @keyframes textGlow {
+      from { text-shadow: 0 0 10px rgba(232, 24, 31, 0.4); }
+      to { text-shadow: 0 0 30px rgba(232, 24, 31, 1); }
+    }
+  </style>
+</head>
+<body>
+  <div class="bg-grid"></div>
+
+  <div class="as-logo-container">
+    <img src="/brandkit/Apex_Scorpio_Brand_Assets/01_Primary/Apex_Scorpio_Primary_Full_Colour.png" alt="Apex Scorpio">
+  </div>
+
+  <div class="scene-title" style="z-index: 2;">A INICIAR EM BREVE</div>
+  <div class="scene-subtitle" style="z-index: 2;">PREPARA-TE PARA A STREAM • STREAM STARTING SOON</div>
+
+  <div class="timer-box" id="timer">05:00</div>
+
+  <div class="social-footer">
+    <div class="social-item">🟣 Twitch: apexscorpio</div>
+    <div class="social-item">🔴 YouTube: @apexscorpio</div>
+    <div class="social-item">🔵 Facebook: apexscorpio</div>
+  </div>
+
+  <script>
+    let secondsLeft = 300;
+    const timerEl = document.getElementById('timer');
+
+    setInterval(() => {
+      if (secondsLeft > 0) {
+        secondsLeft--;
+        const m = Math.floor(secondsLeft / 60).toString().padStart(2, '0');
+        const s = (secondsLeft % 60).toString().padStart(2, '0');
+        timerEl.innerText = `${m}:${s}`;
+      } else {
+        timerEl.innerText = "AO VIVO!";
+      }
+    }, 1000);
+  </script>
+</body>
+</html>

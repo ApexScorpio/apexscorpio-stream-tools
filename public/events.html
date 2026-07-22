@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>ApexScorpio - Event List Overlay</title>
+  <title>ApexScorpio - Event List Overlay (Platform SVG Logos)</title>
   <link rel="stylesheet" href="/css/style.css">
   <script src="/socket.io/socket.io.js"></script>
   <style>
@@ -22,7 +22,7 @@
       flex-direction: column;
       gap: 10px;
       width: 100%;
-      max-width: 360px;
+      max-width: 380px;
       max-height: 90vh;
       overflow: hidden;
     }
@@ -38,7 +38,7 @@
       animation: slideInFromLeft 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
       display: flex;
       align-items: center;
-      gap: 12px;
+      gap: 10px;
     }
     .event-card.follower {
       border-left-color: #E8181F;
@@ -49,12 +49,19 @@
     .event-card.raid {
       border-left-color: #9146FF;
     }
-    .event-icon {
-      font-size: 18px;
+    .platform-logo-badge {
+      width: 28px;
+      height: 28px;
+      border-radius: 6px;
       display: flex;
       align-items: center;
       justify-content: center;
+      flex-shrink: 0;
     }
+    .platform-logo-badge.twitch { background: rgba(145, 70, 255, 0.25); border: 1px solid rgba(145, 70, 255, 0.5); }
+    .platform-logo-badge.youtube { background: rgba(232, 24, 31, 0.25); border: 1px solid rgba(232, 24, 31, 0.5); }
+    .platform-logo-badge.facebook { background: rgba(24, 119, 242, 0.25); border: 1px solid rgba(24, 119, 242, 0.5); }
+
     .event-info {
       display: flex;
       flex-direction: column;
@@ -64,6 +71,9 @@
       font-weight: 800;
       font-size: 15px;
       color: #FFFFFF;
+      display: flex;
+      align-items: center;
+      gap: 6px;
     }
     .event-action {
       font-family: 'Inter', sans-serif;
@@ -73,41 +83,31 @@
     }
 
     @keyframes slideInFromLeft {
-      0% {
-        opacity: 0;
-        transform: translateX(-30px);
-      }
-      100% {
-        opacity: 1;
-        transform: translateX(0);
-      }
+      0% { opacity: 0; transform: translateX(-30px); }
+      100% { opacity: 1; transform: translateX(0); }
     }
   </style>
 </head>
 <body>
   <div class="event-list-container" id="event-feed">
-    <!-- Initial Default Feed Items -->
+    <!-- Default initial list entries -->
     <div class="event-card subscriber">
-      <div class="event-icon">⭐</div>
+      <div class="platform-logo-badge youtube">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="#E8181F"><path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/></svg>
+      </div>
       <div class="event-info">
-        <div class="event-user">@ApexFanatic</div>
+        <div class="event-user">@ApexFanatic ⭐</div>
         <div class="event-action">subscribed on YouTube</div>
       </div>
     </div>
 
     <div class="event-card follower">
-      <div class="event-icon">🔔</div>
-      <div class="event-info">
-        <div class="event-user">@GamerGurl_99</div>
-        <div class="event-action">followed on Twitch</div>
+      <div class="platform-logo-badge twitch">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="#9146FF"><path d="M11.571 4.714h1.715v5.143H11.571V4.714zm4.715 0H18v5.143h-1.714V4.714zM6 0L1.714 4.286v15.428h5.143V24l4.286-4.286h3.428L22.286 12V0H6zm14.571 11.143l-3.428 3.428h-3.429l-3 3v-3H6.857V1.714h13.714v9.429z"/></svg>
       </div>
-    </div>
-
-    <div class="event-card raid">
-      <div class="event-icon">🚀</div>
       <div class="event-info">
-        <div class="event-user">@StreamMaster</div>
-        <div class="event-action">raided with 25 viewers</div>
+        <div class="event-user">@GamerGurl_99 🔔</div>
+        <div class="event-action">followed on Twitch</div>
       </div>
     </div>
   </div>
@@ -116,41 +116,50 @@
     const socket = io();
     const feed = document.getElementById('event-feed');
 
+    const twitchSvg = `<svg width="16" height="16" viewBox="0 0 24 24" fill="#9146FF"><path d="M11.571 4.714h1.715v5.143H11.571V4.714zm4.715 0H18v5.143h-1.714V4.714zM6 0L1.714 4.286v15.428h5.143V24l4.286-4.286h3.428L22.286 12V0H6zm14.571 11.143l-3.428 3.428h-3.429l-3 3v-3H6.857V1.714h13.714v9.429z"/></svg>`;
+    const youtubeSvg = `<svg width="18" height="18" viewBox="0 0 24 24" fill="#E8181F"><path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/></svg>`;
+    const facebookSvg = `<svg width="17" height="17" viewBox="0 0 24 24" fill="#1877F2"><path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/></svg>`;
+
     socket.on('new_event', (event) => {
       addEventCard(event);
     });
 
     function addEventCard(event) {
       const card = document.createElement('div');
-      const platName = event.platform ? event.platform.charAt(0).toUpperCase() + event.platform.slice(1) : 'Twitch';
+      const platform = (event.platform || 'twitch').toLowerCase();
+      const platName = platform === 'youtube' ? 'YouTube' : (platform === 'facebook' ? 'Facebook' : 'Twitch');
+
+      let svgIcon = twitchSvg;
+      if (platform === 'youtube') svgIcon = youtubeSvg;
+      if (platform === 'facebook') svgIcon = facebookSvg;
       
-      let icon = '🔔';
+      let typeEmoji = '🔔';
       let actionText = `followed on ${platName}`;
       let eventClass = 'follower';
 
       if (event.type === 'subscriber') {
-        icon = '⭐';
+        typeEmoji = '⭐';
         actionText = `subscribed on ${platName}`;
         eventClass = 'subscriber';
       } else if (event.type === 'raid') {
-        icon = '🚀';
+        typeEmoji = '🚀';
         actionText = `raided with ${event.viewers || 15} viewers`;
         eventClass = 'raid';
       }
 
       card.className = `event-card ${eventClass}`;
       card.innerHTML = `
-        <div class="event-icon">${icon}</div>
+        <div class="platform-logo-badge ${platform}">
+          ${svgIcon}
+        </div>
         <div class="event-info">
-          <div class="event-user">@${event.username}</div>
+          <div class="event-user">@${event.username} ${typeEmoji}</div>
           <div class="event-action">${actionText}</div>
         </div>
       `;
 
-      // Insert at top of vertical list
       feed.insertBefore(card, feed.firstChild);
 
-      // Keep maximum 8 events in history feed
       if (feed.children.length > 8) {
         feed.removeChild(feed.lastChild);
       }
