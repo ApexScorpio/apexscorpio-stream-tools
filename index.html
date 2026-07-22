@@ -7,7 +7,7 @@
   <meta http-equiv="Pragma" content="no-cache">
   <meta http-equiv="Expires" content="0">
   <title>ApexScorpio - Central de Overlays & Opções Avançadas</title>
-  <link rel="stylesheet" href="css/style.css?v=2.0">
+  <link rel="stylesheet" href="css/style.css?v=3.0">
   <script src="https://cdn.jsdelivr.net/npm/mqtt@5.3.4/dist/mqtt.min.js"></script>
   <style>
     body {
@@ -179,9 +179,27 @@
       font-weight: 600;
       cursor: pointer;
     }
+
+    #toast-notification {
+      position: fixed;
+      bottom: 24px;
+      right: 24px;
+      background: rgba(16, 185, 129, 0.95);
+      color: #FFF;
+      font-weight: 800;
+      font-size: 14px;
+      padding: 12px 24px;
+      border-radius: 10px;
+      box-shadow: 0 8px 25px rgba(0,0,0,0.5);
+      display: none;
+      z-index: 9999;
+      animation: fadeIn 0.3s ease;
+    }
   </style>
 </head>
 <body>
+  <div id="toast-notification">✅ Ação Executada!</div>
+
   <div class="dashboard-container">
     <div class="header">
       <div class="brand-title">
@@ -195,7 +213,7 @@
     <div style="background: linear-gradient(135deg, rgba(14,10,30,0.98), rgba(8,8,12,0.98)); border: 1px solid rgba(16,185,129,0.5); border-radius: 14px; padding: 16px 20px; margin-bottom: 18px;">
       <div style="font-size: 13px; font-weight: 800; color: #10B981; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 6px;">⚡ Sincronização 100% Pública e URLs Limpos para o Streamlabs OBS</div>
       <div style="font-size: 13px; color: #CBD5E1; line-height: 1.5;">
-        Usa sempre os <strong>URLs fixos e públicos</strong> abaixo no SLOBS. Todos os testes têm botões dedicados de <strong>🛑 Limpar / Parar Teste</strong> e restauram os valores reais!
+        Usa sempre os <strong>URLs fixos e públicos</strong> abaixo no SLOBS. Todos os testes têm botões dedicados de <strong>🛑 Limpar / Parar Teste</strong> e auto-revertem após 8 segundos!
       </div>
     </div>
 
@@ -310,10 +328,10 @@
       </div>
 
       <div class="controls-group">
-        <button class="btn btn-twitch" onclick="sendTestChat('twitch')">💬 Chat Twitch</button>
-        <button class="btn btn-youtube" onclick="sendTestChat('youtube')">💬 Chat YouTube</button>
-        <button class="btn btn-facebook" onclick="sendTestChat('facebook')">💬 Chat Facebook</button>
-        <button class="btn" style="background: linear-gradient(135deg, #9146FF, #E8181F);" onclick="triggerRandomChat()">🎲 Testar Chat Aleatório</button>
+        <button class="btn btn-twitch" onclick="sendTestChat('twitch')">💬 Chat Twitch (8s)</button>
+        <button class="btn btn-youtube" onclick="sendTestChat('youtube')">💬 Chat YouTube (8s)</button>
+        <button class="btn btn-facebook" onclick="sendTestChat('facebook')">💬 Chat Facebook (8s)</button>
+        <button class="btn" style="background: linear-gradient(135deg, #9146FF, #E8181F);" onclick="triggerRandomChat()">🎲 Testar Chat Aleatório (8s)</button>
         <button class="btn" style="background: #DC2626;" onclick="clearChat()">🛑 Limpar Chat de Teste</button>
       </div>
 
@@ -508,6 +526,14 @@
 
     const bc = typeof BroadcastChannel !== 'undefined' ? new BroadcastChannel('apex_scorpio_stream_tools') : null;
 
+    function showToast(msg) {
+      const el = document.getElementById('toast-notification');
+      if (!el) return;
+      el.innerText = msg;
+      el.style.display = 'block';
+      setTimeout(() => el.style.display = 'none', 2500);
+    }
+
     function publishConfig(overlayName, configData) {
       const payload = { type: 'config_update', overlay: overlayName, config: configData, timestamp: Date.now() };
 
@@ -555,6 +581,37 @@
       }
 
       try {
+        localStorage.removeItem(`apex_event_${type}`);
+        localStorage.setItem(`apex_event_${type}`, JSON.stringify({ payload, timestamp: Date.now() }));
+      } catch(e) {}
+
+      const iframes = ['iframe-viewers', 'iframe-chat', 'iframe-events', 'iframe-alerts', 'scene-preview'];
+      iframes.forEach(id => {
+        const iframe = document.getElementById(id);
+        if (iframe && iframe.contentWindow) {
+          iframe.contentWindow.postMessage({ type, data: payload }, '*');
+        }
+      });
+    }
+
+    function broadcastClear(target) {
+      const type = `clear_${target}`;
+      const payload = { timestamp: Date.now() };
+      const data = { type, payload, timestamp: Date.now() };
+
+      if (mqttClient) {
+        try {
+          mqttClient.publish('apexscorpio/streamtools/v1/events', JSON.stringify(data));
+          mqttClient.publish(`apexscorpio/streamtools/v1/cfg/${type}`, JSON.stringify(payload), { retain: true, qos: 1 });
+        } catch(e) {}
+      }
+
+      if (bc) {
+        try { bc.postMessage({ type, data: payload }); } catch(e) {}
+      }
+
+      try {
+        localStorage.removeItem(`apex_event_${type}`);
         localStorage.setItem(`apex_event_${type}`, JSON.stringify({ payload, timestamp: Date.now() }));
       } catch(e) {}
 
@@ -673,9 +730,11 @@
         userColor: colors[platform] || '#E8181F',
         message: msgs[platform] || 'Test chat message',
         badges: { broadcaster: false, mod: Math.random() > 0.5, subscriber: true },
+        isTest: true,
         timestamp: new Date().toISOString()
       };
       broadcastEvent('chat_message', testMsg);
+      showToast('💬 Mensagem de teste enviada (Auto-reverte após 8s)!');
     }
 
     function triggerRandomChat() {
@@ -685,7 +744,8 @@
     }
 
     function clearChat() {
-      broadcastEvent('clear_chat', {});
+      broadcastClear('chat');
+      showToast('🛑 Chat de teste limpo!');
     }
 
     function triggerAlert(type) {
@@ -701,9 +761,11 @@
         username: randomName,
         platform: 'twitch',
         viewers: 24,
+        isTest: true,
         timestamp: new Date().toISOString()
       };
       broadcastEvent('new_event', eventPayload);
+      showToast('🔔 Evento de teste disparado!');
     }
 
     function triggerRandomEvent() {
@@ -721,13 +783,16 @@
         username,
         platform,
         viewers,
+        isTest: true,
         timestamp: new Date().toISOString()
       };
       broadcastEvent('new_event', eventPayload);
+      showToast('🎲 Evento de teste aleatório disparado!');
     }
 
     function clearEvents() {
-      broadcastEvent('clear_events', {});
+      broadcastClear('events');
+      showToast('🛑 Eventos de teste limpos!');
     }
 
     function triggerRandomAlert() {
@@ -735,7 +800,8 @@
     }
 
     function clearAlerts() {
-      broadcastEvent('clear_alerts', {});
+      broadcastClear('alerts');
+      showToast('🛑 Alertas & Queue limpos!');
     }
 
     let simTimer = null;
@@ -751,6 +817,7 @@
         testDuration: durationSec
       };
       broadcastEvent('status_update', state);
+      showToast(`🎲 Simulação ativa por ${durationSec} segundos!`);
 
       const btn = document.getElementById('btn-sim-viewers');
       if (btn) btn.innerText = `⏳ Simulação Ativa (${durationSec}s restante)...`;
@@ -779,6 +846,7 @@
         isTest: false
       };
       broadcastEvent('status_update', state);
+      showToast('🛑 Teste do contador terminado. Valores reais restaurados!');
       const btn = document.getElementById('btn-sim-viewers');
       if (btn) btn.innerText = '🎲 Simular Live (50 Twitch / 120 YouTube / 35 FB por 8s)';
     }
