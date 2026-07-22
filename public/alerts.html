@@ -22,35 +22,41 @@
       align-items: center;
       justify-content: center;
       text-align: center;
-      padding: 24px 40px;
-      background: rgba(11, 15, 25, 0.94);
+      padding: 24px 44px;
+      background: rgba(8, 8, 12, 0.95);
       backdrop-filter: blur(20px);
       -webkit-backdrop-filter: blur(20px);
-      border: 2px solid #38BDF8;
+      border: 2px solid #E8181F;
       border-radius: 24px;
-      box-shadow: 0 10px 40px rgba(0, 0, 0, 0.8), 0 0 30px rgba(56, 189, 248, 0.4);
+      box-shadow: 0 10px 40px rgba(0, 0, 0, 0.9), 0 0 35px rgba(232, 24, 31, 0.45);
       animation: alertPopIn 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.275);
       position: relative;
+    }
+    .as-jewel-header {
+      width: 65px;
+      height: 65px;
+      margin-bottom: 12px;
+      filter: drop-shadow(0 0 12px rgba(232, 24, 31, 0.6));
     }
     .platform-logo-container {
       display: flex;
       align-items: center;
       justify-content: center;
       gap: 10px;
-      margin-bottom: 10px;
+      margin-bottom: 8px;
     }
     .alert-title {
       font-family: 'Orbitron', 'Outfit', sans-serif;
       font-size: 15px;
       font-weight: 800;
-      color: #38BDF8;
+      color: #E8181F;
       text-transform: uppercase;
       letter-spacing: 2px;
     }
     .alert-message {
       font-family: 'Outfit', sans-serif;
       font-size: 28px;
-      font-weight: 800;
+      font-weight: 900;
       color: #FFFFFF;
       margin-top: 6px;
     }
@@ -72,6 +78,7 @@
 </head>
 <body>
   <div class="alert-box" id="alert-box">
+    <img src="/brandkit/Apex_Scorpio_Brand_Assets/02_Jewel/AS_Jewel_Full_Metallic.png" class="as-jewel-header" alt="AS Jewel">
     <div class="platform-logo-container" id="logo-box"></div>
     <div class="alert-title" id="alert-title">NOVO SEGUIDOR!</div>
     <div class="alert-message" id="alert-message">GamerScorpio</div>
@@ -86,8 +93,8 @@
     const alertMessage = document.getElementById('alert-message');
     const alertSubtext = document.getElementById('alert-subtext');
 
-    const twitchSvg = `<svg width="32" height="32" viewBox="0 0 24 24" fill="#A855F7"><path d="M11.571 4.714h1.715v5.143H11.571V4.714zm4.715 0H18v5.143h-1.714V4.714zM6 0L1.714 4.286v15.428h5.143V24l4.286-4.286h3.428L22.286 12V0H6zm14.571 11.143l-3.428 3.428h-3.429l-3 3v-3H6.857V1.714h13.714v9.429z"/></svg>`;
-    const youtubeSvg = `<svg width="36" height="36" viewBox="0 0 24 24" fill="#EF4444"><path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/></svg>`;
+    const twitchSvg = `<svg width="28" height="28" viewBox="0 0 24 24" fill="#9146FF"><path d="M11.571 4.714h1.715v5.143H11.571V4.714zm4.715 0H18v5.143h-1.714V4.714zM6 0L1.714 4.286v15.428h5.143V24l4.286-4.286h3.428L22.286 12V0H6zm14.571 11.143l-3.428 3.428h-3.429l-3 3v-3H6.857V1.714h13.714v9.429z"/></svg>`;
+    const youtubeSvg = `<svg width="32" height="32" viewBox="0 0 24 24" fill="#E8181F"><path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/></svg>`;
 
     let alertQueue = [];
     let isShowingAlert = false;
@@ -130,8 +137,8 @@
 
       if (event.type === 'follower') {
         alertTitle.innerText = 'NOVO SEGUIDOR!';
-        alertTitle.style.color = '#38BDF8';
-        alertBox.style.borderColor = '#38BDF8';
+        alertTitle.style.color = '#E8181F';
+        alertBox.style.borderColor = '#E8181F';
         alertMessage.innerText = `@${event.username}`;
         alertSubtext.innerHTML = `Acabou de seguir no ${platformName}!`;
       } else if (event.type === 'subscriber') {
@@ -142,8 +149,8 @@
         alertSubtext.innerHTML = `Inscreveu-se com sucesso no ${platformName}!`;
       } else if (event.type === 'raid') {
         alertTitle.innerText = 'RAID EM DIRETO!';
-        alertTitle.style.color = '#A855F7';
-        alertBox.style.borderColor = '#A855F7';
+        alertTitle.style.color = '#9146FF';
+        alertBox.style.borderColor = '#9146FF';
         alertMessage.innerText = `@${event.username}`;
         alertSubtext.innerHTML = `Entrou em raid na Twitch com ${event.viewers || 15} espectadores!`;
       }
