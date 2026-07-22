@@ -1,16 +1,37 @@
 {
-  "chat": {
-    "fadeSeconds": 0,
-    "showBg": true,
-    "fontSize": 14,
-    "showBadges": true,
-    "maxMessages": 100
-  },
   "viewers": {
     "showTwitch": true,
     "showYoutube": true,
+    "showFacebook": true,
     "showTotal": true,
+    "showBg": false,
+    "layout": "horizontal",
+    "fontSize": 15
+  },
+  "chat": {
+    "fadeSeconds": 5,
     "showBg": true,
-    "layout": "horizontal"
+    "showBadges": true,
+    "fontSize": 14,
+    "maxMessages": 50
+  },
+  "events": {
+    "showBg": true,
+    "maxItems": 8,
+    "showLogos": true,
+    "fontSize": 14,
+    "language": "en"
+  },
+  "alerts": {
+    "playSound": true,
+    "volume": 80,
+    "durationSeconds": 5,
+    "showClipart": true,
+    "animationStyle": "popin"
+  },
+  "starting": {
+    "timerMinutes": 5,
+    "showSocials": true,
+    "pulseGlow": true
   }
 }
