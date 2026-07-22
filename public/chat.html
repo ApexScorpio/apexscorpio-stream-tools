@@ -99,12 +99,16 @@
 
       chatContainer.appendChild(msgElement);
 
-      // Limit max messages in DOM
-      while (chatContainer.children.length > activeConfig.maxMessages) {
+      // Limit max messages in DOM (default 200 for permanent history)
+      const messageLimit = activeConfig.fadeSeconds === 0 ? Math.max(activeConfig.maxMessages, 100) : activeConfig.maxMessages;
+      while (chatContainer.children.length > messageLimit) {
         chatContainer.removeChild(chatContainer.firstChild);
       }
 
-      // Auto-fadeout timer (if > 0)
+      // Auto-scroll chat container to show latest messages
+      chatContainer.scrollTop = chatContainer.scrollHeight;
+
+      // Auto-fadeout timer ONLY if fadeSeconds > 0
       if (activeConfig.fadeSeconds > 0) {
         setTimeout(() => {
           msgElement.style.opacity = '0';

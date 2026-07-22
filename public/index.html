@@ -265,6 +265,17 @@
           </div>
 
           <div class="control-item">
+            <label>Histórico no Ecrã (Máx. Mensagens)</label>
+            <select id="cfg-chat-max" onchange="updateChatConfig()">
+              <option value="30">30 Mensagens</option>
+              <option value="50">50 Mensagens</option>
+              <option value="100" selected>100 Mensagens</option>
+              <option value="200">200 Mensagens</option>
+              <option value="500">500 Mensagens (Máximo)</option>
+            </select>
+          </div>
+
+          <div class="control-item">
             <label>Mostrar Badges (Twitch/YouTube)</label>
             <input type="checkbox" id="cfg-chat-badges" class="toggle-switch" checked onchange="updateChatConfig()">
           </div>
@@ -411,7 +422,8 @@
         fadeSeconds: parseInt(fadeSelect.value, 10),
         showBg: document.getElementById('cfg-chat-bg').checked,
         fontSize: parseInt(document.getElementById('cfg-chat-font').value, 10),
-        showBadges: document.getElementById('cfg-chat-badges').checked
+        showBadges: document.getElementById('cfg-chat-badges').checked,
+        maxMessages: parseInt(document.getElementById('cfg-chat-max').value, 10)
       };
     }
 
