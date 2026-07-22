@@ -192,7 +192,7 @@
     <div style="background: linear-gradient(135deg, rgba(14,10,30,0.98), rgba(8,8,12,0.98)); border: 1px solid rgba(16,185,129,0.5); border-radius: 14px; padding: 16px 20px; margin-bottom: 18px;">
       <div style="font-size: 13px; font-weight: 800; color: #10B981; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 6px;">⚡ Sincronização 100% Pública e URLs Limpos para o Streamlabs OBS</div>
       <div style="font-size: 13px; color: #CBD5E1; line-height: 1.5;">
-        Usa sempre os <strong>URLs fixos e limpos</strong> abaixo no SLOBS. Ao alterares qualquer opção neste Dashboard, as tuas definições guardam-se no servidor Cloud WSS público e atualizam o SLOBS em tempo real!
+        Usa sempre os <strong>URLs fixos e públicos</strong> abaixo no SLOBS. Ao alterares qualquer opção neste Dashboard, as tuas definições guardam-se no servidor Cloud WSS público e atualizam o SLOBS em tempo real!
       </div>
     </div>
 
@@ -237,7 +237,7 @@
 
       <label style="font-weight: 700; font-size: 13px; color: #94A3B8; text-transform: uppercase;">URL para o Streamlabs OBS (Browser Source):</label>
       <div style="display: flex; gap: 8px; align-items: center; margin-top: 6px; margin-bottom: 16px;">
-        <input type="text" readonly class="url-box" id="url-viewers" style="margin-top: 0; margin-bottom: 0;">
+        <input type="text" readonly class="url-box" id="url-viewers" value="https://apexscorpio.github.io/apexscorpio-stream-tools/viewers.html" style="margin-top: 0; margin-bottom: 0;">
         <button class="btn" style="padding: 8px 14px; font-size: 12px; white-space: nowrap; height: 38px;" onclick="copyUrl('url-viewers', this)">📋 Copiar URL</button>
       </div>
 
@@ -302,7 +302,7 @@
 
       <label style="font-weight: 700; font-size: 13px; color: #94A3B8; text-transform: uppercase;">URL para o Streamlabs OBS (Browser Source):</label>
       <div style="display: flex; gap: 8px; align-items: center; margin-top: 6px; margin-bottom: 16px;">
-        <input type="text" readonly class="url-box" id="url-chat" style="margin-top: 0; margin-bottom: 0;">
+        <input type="text" readonly class="url-box" id="url-chat" value="https://apexscorpio.github.io/apexscorpio-stream-tools/chat.html" style="margin-top: 0; margin-bottom: 0;">
         <button class="btn" style="padding: 8px 14px; font-size: 12px; white-space: nowrap; height: 38px;" onclick="copyUrl('url-chat', this)">📋 Copiar URL</button>
       </div>
 
@@ -356,7 +356,7 @@
 
       <label style="font-weight: 700; font-size: 13px; color: #94A3B8; text-transform: uppercase;">URL para o Streamlabs OBS (Browser Source):</label>
       <div style="display: flex; gap: 8px; align-items: center; margin-top: 6px; margin-bottom: 16px;">
-        <input type="text" readonly class="url-box" id="url-events" style="margin-top: 0; margin-bottom: 0;">
+        <input type="text" readonly class="url-box" id="url-events" value="https://apexscorpio.github.io/apexscorpio-stream-tools/events.html" style="margin-top: 0; margin-bottom: 0;">
         <button class="btn" style="padding: 8px 14px; font-size: 12px; white-space: nowrap; height: 38px;" onclick="copyUrl('url-events', this)">📋 Copiar URL</button>
       </div>
 
@@ -408,7 +408,7 @@
 
       <label style="font-weight: 700; font-size: 13px; color: #94A3B8; text-transform: uppercase;">URL para o Streamlabs OBS (Browser Source):</label>
       <div style="display: flex; gap: 8px; align-items: center; margin-top: 6px; margin-bottom: 16px;">
-        <input type="text" readonly class="url-box" id="url-alerts" style="margin-top: 0; margin-bottom: 0;">
+        <input type="text" readonly class="url-box" id="url-alerts" value="https://apexscorpio.github.io/apexscorpio-stream-tools/alerts.html" style="margin-top: 0; margin-bottom: 0;">
         <button class="btn" style="padding: 8px 14px; font-size: 12px; white-space: nowrap; height: 38px;" onclick="copyUrl('url-alerts', this)">📋 Copiar URL</button>
       </div>
 
@@ -449,28 +449,28 @@
         <div>
           <label style="font-weight: 700; font-size: 13px; color: #E8181F;">🎬 Stream Starting Soon:</label>
           <div style="display: flex; gap: 6px; align-items: center; margin-top: 6px; margin-bottom: 16px;">
-            <input type="text" readonly class="url-box" id="url-starting" style="margin-top: 0; margin-bottom: 0;">
+            <input type="text" readonly class="url-box" id="url-starting" value="https://apexscorpio.github.io/apexscorpio-stream-tools/starting.html" style="margin-top: 0; margin-bottom: 0;">
             <button class="btn" style="padding: 8px 10px; font-size: 11px; white-space: nowrap; height: 38px;" onclick="copyUrl('url-starting', this)">📋 Copiar</button>
           </div>
         </div>
         <div>
           <label style="font-weight: 700; font-size: 13px; color: #E8181F;">☕ Be Right Back (BRB):</label>
           <div style="display: flex; gap: 6px; align-items: center; margin-top: 6px; margin-bottom: 16px;">
-            <input type="text" readonly class="url-box" id="url-brb" style="margin-top: 0; margin-bottom: 0;">
+            <input type="text" readonly class="url-box" id="url-brb" value="https://apexscorpio.github.io/apexscorpio-stream-tools/brb.html" style="margin-top: 0; margin-bottom: 0;">
             <button class="btn" style="padding: 8px 10px; font-size: 11px; white-space: nowrap; height: 38px;" onclick="copyUrl('url-brb', this)">📋 Copiar</button>
           </div>
         </div>
         <div>
           <label style="font-weight: 700; font-size: 13px; color: #F59E0B;">⚠️ Technical Issues:</label>
           <div style="display: flex; gap: 6px; align-items: center; margin-top: 6px; margin-bottom: 16px;">
-            <input type="text" readonly class="url-box" id="url-technical" style="margin-top: 0; margin-bottom: 0;">
+            <input type="text" readonly class="url-box" id="url-technical" value="https://apexscorpio.github.io/apexscorpio-stream-tools/technical.html" style="margin-top: 0; margin-bottom: 0;">
             <button class="btn" style="padding: 8px 10px; font-size: 11px; white-space: nowrap; height: 38px;" onclick="copyUrl('url-technical', this)">📋 Copiar</button>
           </div>
         </div>
         <div>
           <label style="font-weight: 700; font-size: 13px; color: #9146FF;">🏁 Stream Ending:</label>
           <div style="display: flex; gap: 6px; align-items: center; margin-top: 6px; margin-bottom: 16px;">
-            <input type="text" readonly class="url-box" id="url-ending" style="margin-top: 0; margin-bottom: 0;">
+            <input type="text" readonly class="url-box" id="url-ending" value="https://apexscorpio.github.io/apexscorpio-stream-tools/ending.html" style="margin-top: 0; margin-bottom: 0;">
             <button class="btn" style="padding: 8px 10px; font-size: 11px; white-space: nowrap; height: 38px;" onclick="copyUrl('url-ending', this)">📋 Copiar</button>
           </div>
         </div>
@@ -505,7 +505,6 @@
     function publishConfig(overlayName, configData) {
       const payload = { type: 'config_update', overlay: overlayName, config: configData, timestamp: Date.now() };
 
-      // 1. MQTT WSS with Retained Message (stores config on broker so overlays get it on load!)
       if (mqttClient && mqttClient.connected) {
         try {
           mqttClient.publish(`apexscorpio/streamtools/v1/cfg/${overlayName}`, JSON.stringify(configData), { retain: true, qos: 1 });
@@ -513,18 +512,15 @@
         } catch(e) {}
       }
 
-      // 2. BroadcastChannel fallback
       if (bc) {
         try { bc.postMessage({ type: 'config_update', data: { [overlayName]: configData } }); } catch(e) {}
       }
 
-      // 3. localStorage fallback
       try {
         localStorage.setItem(`apex_cfg_${overlayName}`, JSON.stringify(configData));
         localStorage.setItem('apex_event_config_update', JSON.stringify({ payload: { [overlayName]: configData }, timestamp: Date.now() }));
       } catch(e) {}
 
-      // 4. Update preview iframe inside dashboard
       const iframeMap = {
         viewers: 'iframe-viewers',
         chat: 'iframe-chat',
@@ -582,8 +578,7 @@
     }
 
     function updatePublicUrls() {
-      let loc = window.location.href;
-      let baseUrl = loc.substring(0, loc.lastIndexOf('/') + 1);
+      const baseUrl = 'https://apexscorpio.github.io/apexscorpio-stream-tools/';
 
       document.getElementById('url-viewers').value = `${baseUrl}viewers.html`;
       document.getElementById('url-chat').value = `${baseUrl}chat.html`;
