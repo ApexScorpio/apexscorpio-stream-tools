@@ -212,10 +212,10 @@
     <!-- CARD 1: CONTADOR DE ESPECTADORES -->
     <div class="card">
       <h2>
-        <span>📊 1. Contador de Espectadores (Viewers Counter)</span>
+        <span>📊 1. Contador de Espectadores (600x90 px no SLOBS)</span>
         <button class="btn btn-options" onclick="toggleDrawer('drawer-viewers')">⚙️ Opções do Overlay</button>
       </h2>
-      <p class="card-desc">Combina espectadores da Twitch, YouTube e Facebook Live num pill elegante com o estilo oficial do Brandkit v9.</p>
+      <p class="card-desc">Combina espectadores da Twitch, YouTube e Facebook Live num pill elegante. <strong>Resolução para o Streamlabs OBS: 600 px de Largura x 90 px de Altura.</strong></p>
       
       <div class="options-drawer" id="drawer-viewers">
         <div style="font-weight: 800; font-size: 15px; margin-bottom: 14px; color: #E8181F;">⚙️ Personalização do Contador de Viewers:</div>
@@ -279,10 +279,10 @@
     <!-- CARD 2: CHAT UNIFICADO -->
     <div class="card">
       <h2>
-        <span>💬 2. Chat Unificado (Twitch + YouTube + Facebook)</span>
+        <span>💬 2. Chat Unificado (440x580 px no SLOBS)</span>
         <button class="btn btn-options" onclick="toggleDrawer('drawer-chat')">⚙️ Opções do Overlay</button>
       </h2>
-      <p class="card-desc">Chat em direto com retenção permanente, logótipos SVG oficiais sem texto e animações Cyberpunk.</p>
+      <p class="card-desc">Chat em direto com retenção permanente e animações Cyberpunk. <strong>Resolução recomendada para o Streamlabs OBS: 440 px de Largura x 580 px de Altura.</strong></p>
       
       <div class="options-drawer" id="drawer-chat">
         <div style="font-weight: 800; font-size: 15px; margin-bottom: 14px; color: #E8181F;">⚙️ Personalização do Chat Unificado:</div>
@@ -325,11 +325,8 @@
         </div>
       </div>
 
-      <div style="background: rgba(56, 189, 248, 0.1); border: 1px solid rgba(56, 189, 248, 0.3); padding: 10px 14px; border-radius: 8px; margin-top: 10px; margin-bottom: 12px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px;">
-        <span style="font-weight: 700; font-size: 13px; color: #94A3B8; text-transform: uppercase;">URL para o Streamlabs OBS / OBS Studio:</span>
-        <span style="background: #38BDF8; color: #08080C; font-size: 12px; font-weight: 900; padding: 4px 12px; border-radius: 6px; box-shadow: 0 0 10px rgba(56,189,248,0.4);">📐 Resolução no SLOBS: Largura = 440px | Altura = 580px</span>
-      </div>
-      <div style="display: flex; gap: 8px; align-items: center; margin-bottom: 16px;">
+      <label style="font-weight: 700; font-size: 13px; color: #94A3B8; text-transform: uppercase;">URL para o Streamlabs OBS (Browser Source - 440x580):</label>
+      <div style="display: flex; gap: 8px; align-items: center; margin-bottom: 16px; margin-top: 6px;">
         <input type="text" readonly class="url-box" id="url-chat" value="https://apexscorpio.github.io/apexscorpio-stream-tools/chat.html" style="margin-top: 0; margin-bottom: 0;">
         <button class="btn" style="padding: 8px 14px; font-size: 12px; white-space: nowrap; height: 38px;" onclick="copyUrl('url-chat', this)">📋 Copiar URL</button>
       </div>
@@ -343,7 +340,7 @@
       </div>
 
       <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 14px; margin-bottom: 6px;">
-        <label style="font-weight: 700; font-size: 13px; color: #94A3B8; text-transform: uppercase;">Visualização da Source em Tempo Real:</label>
+        <label style="font-weight: 700; font-size: 13px; color: #94A3B8; text-transform: uppercase;">Visualização da Source em Tempo Real (440x580):</label>
         <span style="background: #38BDF8; color: #08080C; font-size: 12px; font-weight: 900; padding: 3px 10px; border-radius: 6px;">📐 Resolução no SLOBS: 440 x 580</span>
       </div>
       <div class="preview-frame" id="pf-chat" data-src-w="440" data-src-h="580" data-max-h="260">
@@ -356,10 +353,10 @@
     <!-- CARD 3: EVENT LIST -->
     <div class="card">
       <h2>
-        <span>📋 3. Event List (Histórico Vertical de Eventos)</span>
+        <span>📋 3. Event List (380x460 px no SLOBS)</span>
         <button class="btn btn-options" onclick="toggleDrawer('drawer-events')">⚙️ Opções do Overlay</button>
       </h2>
-      <p class="card-desc">Lista vertical de eventos com logótipo SVG da plataforma antes de cada entrada em inglês.</p>
+      <p class="card-desc">Lista vertical de eventos com logótipo SVG da plataforma. <strong>Resolução recomendada no SLOBS: 380 px de Largura x 460 px de Altura.</strong></p>
       
       <div class="options-drawer" id="drawer-events">
         <div style="font-weight: 800; font-size: 15px; margin-bottom: 14px; color: #E8181F;">⚙️ Personalização do Event List:</div>
@@ -386,11 +383,8 @@
         </div>
       </div>
 
-      <div style="background: rgba(56, 189, 248, 0.1); border: 1px solid rgba(56, 189, 248, 0.3); padding: 10px 14px; border-radius: 8px; margin-top: 10px; margin-bottom: 12px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px;">
-        <span style="font-weight: 700; font-size: 13px; color: #94A3B8; text-transform: uppercase;">URL para o Streamlabs OBS / OBS Studio:</span>
-        <span style="background: #38BDF8; color: #08080C; font-size: 12px; font-weight: 900; padding: 4px 12px; border-radius: 6px; box-shadow: 0 0 10px rgba(56,189,248,0.4);">📐 Resolução no SLOBS: Largura = 380px | Altura = 460px</span>
-      </div>
-      <div style="display: flex; gap: 8px; align-items: center; margin-bottom: 16px;">
+      <label style="font-weight: 700; font-size: 13px; color: #94A3B8; text-transform: uppercase;">URL para o Streamlabs OBS (Browser Source - 380x460):</label>
+      <div style="display: flex; gap: 8px; align-items: center; margin-bottom: 16px; margin-top: 6px;">
         <input type="text" readonly class="url-box" id="url-events" value="https://apexscorpio.github.io/apexscorpio-stream-tools/events.html" style="margin-top: 0; margin-bottom: 0;">
         <button class="btn" style="padding: 8px 14px; font-size: 12px; white-space: nowrap; height: 38px;" onclick="copyUrl('url-events', this)">📋 Copiar URL</button>
       </div>
@@ -404,7 +398,7 @@
       </div>
 
       <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 14px; margin-bottom: 6px;">
-        <label style="font-weight: 700; font-size: 13px; color: #94A3B8; text-transform: uppercase;">Visualização da Source em Tempo Real:</label>
+        <label style="font-weight: 700; font-size: 13px; color: #94A3B8; text-transform: uppercase;">Visualização da Source em Tempo Real (380x460):</label>
         <span style="background: #38BDF8; color: #08080C; font-size: 12px; font-weight: 900; padding: 3px 10px; border-radius: 6px;">📐 Resolução no SLOBS: 380 x 460</span>
       </div>
       <div class="preview-frame" id="pf-events" data-src-w="380" data-src-h="460" data-max-h="260">
@@ -417,10 +411,10 @@
     <!-- CARD 4: ALERT BOX OVERLAY -->
     <div class="card">
       <h2>
-        <span>🔔 4. Alert Box Overlay (Follower, Sub, Raid Alerts)</span>
+        <span>🔔 4. Alert Box Overlay (600x300 px no SLOBS)</span>
         <button class="btn btn-options" onclick="toggleDrawer('drawer-alerts')">⚙️ Opções do Overlay</button>
       </h2>
-      <p class="card-desc">Alertas pop-up em direto com clipart exclusivo por tipo de alerta e som sintetizado.</p>
+      <p class="card-desc">Alertas pop-up em direto com som sintetizado. <strong>Resolução recomendada no SLOBS: 600 px de Largura x 300 px de Altura.</strong></p>
       
       <div class="options-drawer" id="drawer-alerts">
         <div style="font-weight: 800; font-size: 15px; margin-bottom: 14px; color: #E8181F;">⚙️ Personalização do Alert Box:</div>
