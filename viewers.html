@@ -303,29 +303,55 @@
         let videoIdFound = null;
         let countFound = 0;
 
-        // 1. Tentar primeiro via scraping direto do HTML da Live (sem consumir cota da API da Google)
+        // 1. Tentar scraping do HTML publico da live do canal @apexscorpio
         try {
-          const resp = await fetch('https://www.youtube.com/@apexscorpio/live');
+          const resp = await fetch('https://www.youtube.com/@apexscorpio/live', { cache: 'no-store' });
           const html = await resp.text();
           
-          const matchVid = html.match(/"watchEndpoint":\{"videoId":"([a-zA-Z0-9_-]{11})"/);
+          // Deteção 1: Canonical link ou watchEndpoint
+          const matchVid = html.match(/<link rel="canonical" href="https:\/\/www\.youtube\.com\/watch\?v=([a-zA-Z0-9_-]{11})">/) ||
+                           html.match(/"watchEndpoint":\{"videoId":"([a-zA-Z0-9_-]{11})"/);
           if (matchVid && matchVid[1]) {
             videoIdFound = matchVid[1];
+          }
+
+          // Deteção 2: Presença de tags de emissão ao vivo
+          const hasLiveFlag = html.includes('"isLiveBroadcast":true') || 
+                              html.includes('"isLive":true') || 
+                              html.includes('"isLiveContent":true') ||
+                              html.includes('"is_viewed_live":"True"') ||
+                              html.includes('"status":"LIVE"');
+
+          const isUpcoming = html.includes('"isUpcoming":true');
+
+          if (videoIdFound && hasLiveFlag && !isUpcoming) {
             isLiveFound = true;
           }
 
-          const matchViewers = html.match(/"viewCount":\s*\{\s*"runs":\s*\[\s*\{\s*"text":\s*"([\d,\.\s]+)"/);
-          if (matchViewers && matchViewers[1]) {
-            countFound = parseInt(matchViewers[1].replace(/[^\d]/g, ''), 10) || 0;
+          // Deteção 3: Contagem de espectadores
+          const viewerPatterns = [
+            /"viewCount":\s*\{\s*"runs":\s*\[\s*\{\s*"text":\s*"([\d,\.\s]+)"/,
+            /"shortViewCount":\s*\{\s*"runs":\s*\[\s*\{\s*"text":\s*"([\d,\.\s]+)"/,
+            /([\d,\.]+)\s*(?:a assistir|watching now|espectadores|espectadores ao vivo)/i
+          ];
+
+          for (const pattern of viewerPatterns) {
+            const match = html.match(pattern);
+            if (match && match[1]) {
+              const rawStr = match[1].replace(/[^\d]/g, '');
+              if (rawStr) {
+                countFound = parseInt(rawStr, 10);
+                break;
+              }
+            }
           }
         } catch(e) {}
 
-        // 2. Se o scraping direto identificou a live, atualizar o estado
+        // 2. Atualizar estado do YouTube
         if (isLiveFound) {
           realState.youtube = { isLive: true, viewers: countFound || 1 };
           ytLiveVideoId = videoIdFound;
         } else {
-          // Se não encontrou ao vivo
           realState.youtube = { isLive: false, viewers: 0 };
           ytLiveVideoId = null;
         }
