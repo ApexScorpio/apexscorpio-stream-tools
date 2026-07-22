@@ -22,8 +22,8 @@ app.use(express.static(path.join(__dirname, 'public')));
 
 const CONFIG_FILE = path.join(__dirname, 'config.json');
 
-// Permanent Online Cloud URL
-let publicBaseUrl = process.env.PUBLIC_URL || 'https://apexscorpio-stream-tools.onrender.com';
+// Permanent GitHub Pages / Cloud domain URL for Apex Scorpio Stream Tools
+let publicBaseUrl = process.env.PUBLIC_URL || 'https://apexscorpio.github.io/apexscorpio-stream-tools';
 
 // Global state for multi-platform stream status (Twitch, YouTube, Facebook)
 const streamState = {
@@ -168,6 +168,13 @@ app.get('/api/public-url', (req, res) => {
   res.json({ publicBaseUrl: detectedUrl });
 });
 
+app.post('/api/public-url', (req, res) => {
+  if (req.body.publicBaseUrl) {
+    publicBaseUrl = req.body.publicBaseUrl;
+  }
+  res.json({ success: true, publicBaseUrl });
+});
+
 app.post('/api/config', (req, res) => {
   overlayConfig = { ...overlayConfig, ...req.body };
   broadcastConfig();
@@ -235,6 +242,6 @@ app.post('/api/simulate-counts', (req, res) => {
 server.listen(PORT, () => {
   console.log(`=======================================================`);
   console.log(`🚀 ApexScorpio Streamlabs Overlay Suite is LIVE!`);
-  console.log(`👉 Permanent Online Base URL: ${publicBaseUrl}`);
+  console.log(`👉 GitHub Pages Base URL: ${publicBaseUrl}`);
   console.log(`=======================================================`);
 });
