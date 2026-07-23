@@ -7,3 +7,13 @@
   from = "/youtube-status"
   to = "/.netlify/functions/youtube-status"
   status = 200
+
+[[redirects]]
+  from = "/oauth/youtube/start"
+  to = "/.netlify/functions/youtube-oauth-start"
+  status = 200
+
+[[redirects]]
+  from = "/oauth/youtube/callback"
+  to = "/.netlify/functions/youtube-oauth-callback"
+  status = 200

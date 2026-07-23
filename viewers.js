@@ -1,4 +1,4 @@
-/* ApexScorpio Viewers Counter Overlay v3.0 */
+/* ApexScorpio Viewers Counter Overlay v3.1 (Multi-Source Reliability) */
 (function () {
   'use strict';
 
@@ -30,14 +30,17 @@
     layout: 'horizontal',
     fontSize: 15
   };
+
   let realState = {
-    twitch: { isLive: false, viewers: 0 },
-    youtube: { isLive: false, viewers: null },
-    facebook: { isLive: false, viewers: 0 },
-    totalViewers: 0
+    twitch: { isLive: false, viewers: null, status: "confirmed" },
+    youtube: { isLive: false, viewers: null, status: "confirmed" },
+    facebook: { isLive: false, viewers: null, status: "confirmed" },
+    totalText: "0"
   };
+
   let isTestActive = false;
   let testTimer = null;
+  let lastTwitchFetch = 0;
 
   function loadSavedConfig() {
     const params = new URLSearchParams(location.search);
@@ -68,13 +71,39 @@
   }
 
   function recalculateTotal() {
-    realState.totalViewers = ['twitch', 'youtube', 'facebook']
-      .reduce((sum, platform) => sum + Number(realState[platform]?.viewers || 0), 0);
+    let knownSum = 0;
+    let hasNullViewerOnLive = false;
+    let anyLive = false;
+
+    for (const platform of ['twitch', 'youtube', 'facebook']) {
+      const pState = realState[platform];
+      if (pState && pState.isLive) {
+        anyLive = true;
+        if (pState.viewers !== null && pState.viewers !== undefined && !isNaN(pState.viewers)) {
+          knownSum += Number(pState.viewers);
+        } else {
+          hasNullViewerOnLive = true;
+        }
+      }
+    }
+
+    if (!anyLive) {
+      realState.totalText = "0";
+    } else if (hasNullViewerOnLive) {
+      realState.totalText = `≥${knownSum}`;
+    } else {
+      realState.totalText = `${knownSum}`;
+    }
   }
 
   function animateCount(element, value) {
     if (value === null || value === undefined || value === '—') {
       element.innerText = '—';
+      return;
+    }
+    const valueStr = String(value);
+    if (valueStr.startsWith('≥')) {
+      element.innerText = valueStr;
       return;
     }
     const formatted = Math.max(0, Number(value || 0)).toLocaleString('pt-PT');
@@ -96,7 +125,7 @@
         animateCount(counts[platform], current.viewers !== null ? current.viewers : '—');
       }
     }
-    animateCount(counts.total, state.totalViewers || 0);
+    animateCount(counts.total, state.totalText || "0");
   }
 
   async function checkPublicTwitchLive() {
@@ -115,12 +144,25 @@
       });
       const data = await response.json();
       const stream = data?.data?.user?.stream;
-      realState.twitch = stream && stream.type === 'live'
-        ? { isLive: true, viewers: Number(stream.viewersCount || 0) }
-        : { isLive: false, viewers: 0 };
+      if (stream && stream.type === 'live') {
+        const rawCount = stream.viewersCount;
+        const parsed = (rawCount !== null && rawCount !== undefined && !isNaN(rawCount)) ? Number(rawCount) : null;
+        realState.twitch = {
+          isLive: true,
+          viewers: parsed,
+          status: parsed !== null ? "confirmed" : "unknown"
+        };
+      } else {
+        realState.twitch = { isLive: false, viewers: null, status: "confirmed" };
+      }
+      lastTwitchFetch = Date.now();
       recalculateTotal();
       if (!isTestActive) renderStatus(realState);
     } catch (_) {
+      if (Date.now() - lastTwitchFetch > 30000) {
+        realState.twitch.status = "stale";
+        realState.twitch.viewers = null;
+      }
       if (!isTestActive) renderStatus(realState);
     }
   }
@@ -133,8 +175,10 @@
         const data = await res.json();
         realState.youtube = {
           isLive: Boolean(data.isLive),
-          viewers: data.isLive ? (data.viewers !== null ? Number(data.viewers) : null) : 0,
-          videoId: data.videoId
+          viewers: data.isLive ? (data.viewers !== null && data.viewers !== undefined ? Number(data.viewers) : null) : null,
+          videoId: data.videoId,
+          confidence: data.confidence || "none",
+          viewerState: data.viewerState || "unknown"
         };
         recalculateTotal();
         if (!isTestActive) renderStatus(realState);
@@ -179,7 +223,7 @@
   }
 
   window.ApexYoutubeScrapeDebug = async function() {
-    console.log('--- ApexScorpio YouTube Scrape Debug ---');
+    console.log('--- ApexScorpio Multi-Source Scrape Debug ---');
     try {
       const res = await fetch('https://apexscorpio-youtube-scraper-6e2678f9.netlify.app/youtube-status?cb=' + Date.now());
       const json = await res.json();
@@ -252,7 +296,7 @@
       if (ytState && ytState.isLive) {
         realState.youtube = {
           isLive: true,
-          viewers: ytState.viewers !== null ? Number(ytState.viewers) : realState.youtube.viewers,
+          viewers: (ytState.viewers !== null && ytState.viewers !== undefined) ? Number(ytState.viewers) : realState.youtube.viewers,
           videoId: ytState.videoId || realState.youtube.videoId
         };
         recalculateTotal();
