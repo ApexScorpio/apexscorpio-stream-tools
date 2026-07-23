@@ -1,7 +1,9 @@
 import { withLambda } from "@netlify/aws-lambda-compat";
-import { createRequire } from "module";
+import { createRequire } from "node:module";
 
 const require = createRequire(import.meta.url);
-const { handler } = require("./handlers/youtube-oauth-start-handler.js");
+const { handler: lambdaHandler } = require("./handlers/youtube-oauth-start-handler.js");
 
-export default withLambda(handler);
+export default withLambda(async (event, context) => {
+  return lambdaHandler(event, context);
+});

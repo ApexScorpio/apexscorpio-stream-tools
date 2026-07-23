@@ -1070,7 +1070,7 @@ describe('Testes de Arquitetura e Segurança OAuth (Node Native Runner - Sem Ass
       );
 
       assert.strictEqual(
-        code.includes('export default withLambda(handler)'),
+        code.includes('export default withLambda('),
         true,
         `${relativeFile} não exporta o handler moderno`
       );
