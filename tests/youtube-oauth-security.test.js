@@ -4,9 +4,9 @@ const crypto = require('crypto');
 const fs = require('fs');
 const path = require('path');
 
-const startFunc = require('../netlify/functions/youtube-oauth-start.js');
-const callbackFunc = require('../netlify/functions/youtube-oauth-callback.js');
-const statusFunc = require('../netlify/functions/youtube-status.js');
+const startFunc = require('../netlify/functions/handlers/youtube-oauth-start-handler.js');
+const callbackFunc = require('../netlify/functions/handlers/youtube-oauth-callback-handler.js');
+const statusFunc = require('../netlify/functions/handlers/youtube-status-handler.js');
 const { encryptRefreshToken, decryptRefreshToken, safeCompare } = require('../netlify/functions/utils/oauth-helpers.js');
 
 // Mock in-memory Store do Netlify Blobs para testes unitários 100% sem rede
@@ -1035,34 +1035,100 @@ describe('Testes de Arquitetura e Segurança OAuth (Node Native Runner - Sem Ass
     assert.throws(() => { tls.connect(443, 'example.com'); }, { message: 'NETWORK ACCESS BLOCKED DURING TESTS' });
   });
 
-  it('57. initializeBlobsLambdaRuntime ignora connectLambda quando customStores são fornecidas', () => {
-    const { initializeBlobsLambdaRuntime } = require('../netlify/functions/utils/oauth-helpers.js');
-    assert.doesNotThrow(() => {
-      initializeBlobsLambdaRuntime(null, createDefaultMocks());
-    });
+  it('57. Os handlers e helpers de produção não utilizam connectLambda', () => {
+    const files = [
+      '../netlify/functions/handlers/youtube-oauth-start-handler.js',
+      '../netlify/functions/handlers/youtube-oauth-callback-handler.js',
+      '../netlify/functions/handlers/youtube-status-handler.js',
+      '../netlify/functions/utils/oauth-helpers.js'
+    ];
+
+    for (const relativeFile of files) {
+      const code = fs.readFileSync(path.join(__dirname, relativeFile), 'utf8');
+      assert.strictEqual(
+        code.includes('connectLambda'),
+        false,
+        `${relativeFile} ainda contém connectLambda`
+      );
+    }
   });
 
-  it('58. Sem customStores, initializeBlobsLambdaRuntime exige event válido', () => {
-    const { initializeBlobsLambdaRuntime } = require('../netlify/functions/utils/oauth-helpers.js');
-    assert.throws(() => {
-      initializeBlobsLambdaRuntime(null, null);
-    }, { message: 'Event inválido para inicialização do Lambda Blobs runtime' });
+  it('58. Os três entrypoints modernos utilizam withLambda e default export', () => {
+    const files = [
+      '../netlify/functions/youtube-oauth-start.mjs',
+      '../netlify/functions/youtube-oauth-callback.mjs',
+      '../netlify/functions/youtube-status.mjs'
+    ];
+
+    for (const relativeFile of files) {
+      const code = fs.readFileSync(path.join(__dirname, relativeFile), 'utf8');
+
+      assert.strictEqual(
+        code.includes('import { withLambda } from "@netlify/aws-lambda-compat"'),
+        true,
+        `${relativeFile} não importa withLambda`
+      );
+
+      assert.strictEqual(
+        code.includes('export default withLambda(handler)'),
+        true,
+        `${relativeFile} não exporta o handler moderno`
+      );
+    }
   });
 
-  it('59. Falha de connectLambda mantém comportamento fail-closed sem vazar dados', () => {
-    const { initializeBlobsLambdaRuntime } = require('../netlify/functions/utils/oauth-helpers.js');
-    assert.throws(() => {
-      initializeBlobsLambdaRuntime({ blobs: 'invalid-payload' }, null);
-    });
+  it('59. Os entrypoints antigos foram removidos e os handlers internos existem', () => {
+    const removedFiles = [
+      '../netlify/functions/youtube-oauth-start.js',
+      '../netlify/functions/youtube-oauth-callback.js',
+      '../netlify/functions/youtube-status.js'
+    ];
+
+    const currentFiles = [
+      '../netlify/functions/handlers/youtube-oauth-start-handler.js',
+      '../netlify/functions/handlers/youtube-oauth-callback-handler.js',
+      '../netlify/functions/handlers/youtube-status-handler.js',
+      '../netlify/functions/youtube-oauth-start.mjs',
+      '../netlify/functions/youtube-oauth-callback.mjs',
+      '../netlify/functions/youtube-status.mjs'
+    ];
+
+    for (const relativeFile of removedFiles) {
+      assert.strictEqual(
+        fs.existsSync(path.join(__dirname, relativeFile)),
+        false,
+        `${relativeFile} não deveria existir`
+      );
+    }
+
+    for (const relativeFile of currentFiles) {
+      assert.strictEqual(
+        fs.existsSync(path.join(__dirname, relativeFile)),
+        true,
+        `${relativeFile} está ausente`
+      );
+    }
   });
 
-  it('60. Start e Callback chamam initializeBlobsLambdaRuntime com o event fornecido', async () => {
+  it('60. Start, Callback e Status continuam testáveis através dos handlers internos', async () => {
     const mocks = createDefaultMocks();
-    const resStart = await startFunc.handler({ httpMethod: 'GET' }, {}, mocks);
+
+    const resStart = await startFunc.handler(
+      { httpMethod: 'GET' },
+      {},
+      mocks
+    );
+
     assert.strictEqual(resStart.statusCode, 200);
 
-    const resCallback = await callbackFunc.handler({ queryStringParameters: {} }, {}, mocks);
+    const resCallback = await callbackFunc.handler(
+      { queryStringParameters: {} },
+      {},
+      mocks
+    );
+
     assert.strictEqual(resCallback.statusCode, 400);
+    assert.strictEqual(statusFunc.parseViewersText('123 watching'), 123);
   });
 
 });

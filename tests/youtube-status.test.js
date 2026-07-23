@@ -1,7 +1,7 @@
 const assert = require('assert');
 const fs = require('fs');
 const path = require('path');
-const { parseViewersText } = require('../netlify/functions/youtube-status');
+const { parseViewersText } = require('../netlify/functions/handlers/youtube-status-handler.js');
 
 console.log('=== EXECUTA TESTES DE FALHA E FIABILIDADE MULTIFONTE ===\n');
 
@@ -22,7 +22,7 @@ function runTest(name, fn) {
 // -------------------------------------------------------------
 // FASE 8.1: TESTES ESTÁTICOS DE CÓDIGO FONTE (SEM SECRETS NO GIT)
 // -------------------------------------------------------------
-const prodCodePath = path.join(__dirname, '../netlify/functions/youtube-status.js');
+const prodCodePath = path.join(__dirname, '../netlify/functions/handlers/youtube-status-handler.js');
 const prodCode = fs.readFileSync(prodCodePath, 'utf8');
 
 runTest('Ficheiro de produção não contém credenciais ou tokens gravados', () => {

@@ -1,0 +1,14 @@
+{
+    "timestampUtc":  "2026-07-23T18:10:01Z",
+    "branch":  "fix/migrate-oauth-to-modern-netlify-functions",
+    "headBeforeCommit":  "00628044022bd907273d212ae709179d9a5709ae",
+    "npmTestExitCode":  1,
+    "syntaxCheckExitCode":  0,
+    "gitDiffCheckExitCode":  0,
+    "changedFiles":  [
+                         " M netlify/functions/utils/oauth-helpers.js",
+                         " M tests/youtube-oauth-security.test.js",
+                         " M tests/youtube-status.test.js",
+                         "?? artifacts/antigravity/manual-modern-functions-migration/test-fix/"
+                     ]
+}
