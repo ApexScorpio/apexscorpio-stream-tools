@@ -1,0 +1,29 @@
+{
+  "timestampUtc": "2026-07-23T22:41:20.804Z",
+  "branch": "fix/migrate-oauth-to-modern-netlify-functions",
+  "headBeforeCommit": "cc29c97a1f663c76ded43ec9ba254e0a07457231",
+  "netlifyCliEntry": "node_modules\\netlify-cli\\bin\\run.js",
+  "deployExitCode": 0,
+  "deployId": "6a629871839ef42b51904ae6",
+  "deployUrl": "https://6a629871839ef42b51904ae6--apexscorpio-youtube-scraper-6e2678f9.netlify.app",
+  "probeCount": 6,
+  "probeStatuses": {
+    "youtube-status-direct": 200,
+    "youtube-status-redirect": 200,
+    "oauth-start-direct": 200,
+    "oauth-start-redirect": 200,
+    "oauth-callback-direct": 400,
+    "oauth-callback-redirect": 400
+  },
+  "noHttp502": true,
+  "modernRuntimeGatePassed": true,
+  "productionDeployExecuted": false,
+  "oauthAuthorizationStarted": false,
+  "credentialsRotated": false,
+  "operationError": "nenhum",
+  "nextAction": [
+    "Confirmar o resultado no GitHub.",
+    "Executar auditoria final antes do merge.",
+    "Não iniciar OAuth antes da validação de produção."
+  ]
+}
