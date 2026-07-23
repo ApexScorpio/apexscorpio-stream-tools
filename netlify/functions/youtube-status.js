@@ -183,7 +183,7 @@ async function fetchSourcePlayer(videoId) {
       },
       {
         headers: { 'Content-Type': 'application/json' },
-        timeout: 5000
+        timeout: 4000
       }
     );
 
@@ -191,7 +191,7 @@ async function fetchSourcePlayer(videoId) {
     const microformat = res.data?.microformat?.playerMicroformatRenderer?.liveBroadcastDetails || {};
 
     const isLiveNow = microformat.isLiveNow === true;
-    const isLive = vDetails.isLive === true && res.data?.playabilityStatus?.status === 'OK';
+    const isLive = isLiveNow || vDetails.isLive === true;
 
     return {
       status: "confirmed",
@@ -199,7 +199,8 @@ async function fetchSourcePlayer(videoId) {
       videoId: vDetails.videoId || videoId,
       title: vDetails.title || "",
       isLiveNow,
-      isLive: isLiveNow || isLive
+      isLive: isLive,
+      playabilityStatus: res.data?.playabilityStatus?.status || "UNKNOWN"
     };
   } catch (err) {
     return { status: "error", observedAt, error: err.message };
@@ -207,7 +208,7 @@ async function fetchSourcePlayer(videoId) {
 }
 
 /**
- * FONTE D: InnerTube /next (espectadores)
+ * FONTE D: InnerTube /next (espectadores em tempo real)
  */
 async function fetchSourceNext(videoId) {
   const observedAt = new Date().toISOString();
@@ -229,27 +230,33 @@ async function fetchSourceNext(videoId) {
       },
       {
         headers: { 'Content-Type': 'application/json' },
-        timeout: 5000
+        timeout: 4000
       }
     );
 
     let viewerText = null;
+    let title = "";
     let viewers = null;
 
     const contents = res.data?.contents?.twoColumnWatchNextResults?.results?.results?.contents || [];
     for (const item of contents) {
       const primary = item.videoPrimaryInfoRenderer;
-      if (primary && primary.viewCount?.videoViewCountRenderer) {
-        const vvcr = primary.viewCount.videoViewCountRenderer;
-        if (vvcr.viewCount?.runs) {
-          const txt = vvcr.viewCount.runs.map(r => r.text || '').join('');
-          if (/(?:a ver|watching|espectadores|viewers)/i.test(txt)) {
-            viewerText = txt;
-          }
-        } else if (vvcr.viewCount?.simpleText) {
-          const txt = vvcr.viewCount.simpleText;
-          if (/(?:a ver|watching|espectadores|viewers)/i.test(txt)) {
-            viewerText = txt;
+      if (primary) {
+        if (primary.title?.runs) {
+          title = primary.title.runs.map(r => r.text || '').join('');
+        }
+        if (primary.viewCount?.videoViewCountRenderer) {
+          const vvcr = primary.viewCount.videoViewCountRenderer;
+          if (vvcr.viewCount?.runs) {
+            const txt = vvcr.viewCount.runs.map(r => r.text || '').join('');
+            if (/(?:a ver|watching|espectadores|viewers)/i.test(txt)) {
+              viewerText = txt;
+            }
+          } else if (vvcr.viewCount?.simpleText) {
+            const txt = vvcr.viewCount.simpleText;
+            if (/(?:a ver|watching|espectadores|viewers)/i.test(txt)) {
+              viewerText = txt;
+            }
           }
         }
       }
@@ -263,8 +270,10 @@ async function fetchSourceNext(videoId) {
       status: "confirmed",
       observedAt,
       videoId,
+      title,
       viewerText,
-      viewers
+      viewers,
+      isLive: viewers !== null
     };
   } catch (err) {
     return { status: "error", observedAt, error: err.message };
@@ -272,61 +281,80 @@ async function fetchSourceNext(videoId) {
 }
 
 /**
- * FONTE E: HTML Scraping Público (/c/apexscorpio/live)
+ * FONTE E: Descoberta Dinâmica de Candidatos e HTML Scraping
  */
 async function fetchSourceHTML() {
   const observedAt = new Date().toISOString();
-  let resolvedUrl = "https://www.youtube.com/c/apexscorpio/live";
-  try {
-    const res = await axios.get(resolvedUrl, {
-      headers: HTTP_HEADERS,
-      maxRedirects: 5,
-      timeout: 5000,
-      validateStatus: () => true
-    });
+  const candidateIds = new Set();
+  const discoveryUrls = [
+    'https://www.youtube.com/@apexscorpio/streams',
+    'https://www.youtube.com/c/apexscorpio/streams',
+    'https://www.youtube.com/@apexscorpio/live',
+    'https://www.youtube.com/c/apexscorpio/live',
+    'https://www.youtube.com/@apexscorpio'
+  ];
 
-    if (res.request?.res?.responseUrl) {
-      resolvedUrl = res.request.res.responseUrl;
-    }
+  let resolvedUrl = discoveryUrls[0];
 
-    const html = typeof res.data === 'string' ? res.data : '';
+  for (const u of discoveryUrls) {
+    try {
+      const res = await axios.get(u, {
+        headers: HTTP_HEADERS,
+        maxRedirects: 5,
+        timeout: 4000,
+        validateStatus: () => true
+      });
 
-    const canonicalMatch = html.match(/<link rel="canonical" href="https:\/\/www\.youtube\.com\/watch\?v=([a-zA-Z0-9_-]{11})">/) ||
-                           html.match(/"videoId":"([a-zA-Z0-9_-]{11})"/);
-
-    let videoId = canonicalMatch ? canonicalMatch[1] : null;
-    if (!videoId && resolvedUrl.includes('watch?v=')) {
-      const m = resolvedUrl.match(/watch\?v=([a-zA-Z0-9_-]{11})/);
-      if (m) videoId = m[1];
-    }
-
-    let viewerText = null;
-    const viewerPatterns = [
-      /"viewCount":\s*\{\s*"runs":\s*\[\s*\{\s*"text":\s*"([^"]+)"/,
-      /"viewCount":\s*\{\s*"simpleText":\s*"([^"]+)"/,
-      /([\d,\.\s\u00a0]+)\s*(?:a ver agora|watching now|espectadores ao vivo)/i
-    ];
-    for (const p of viewerPatterns) {
-      const m = html.match(p);
-      if (m && m[1] && /(?:a ver|watching|espectadores|viewers)/i.test(m[1])) {
-        viewerText = m[1];
-        break;
+      if (res.request?.res?.responseUrl) {
+        resolvedUrl = res.request.res.responseUrl;
       }
-    }
 
-    const viewers = parseViewersText(viewerText);
-
-    return {
-      status: "confirmed",
-      observedAt,
-      resolvedUrl,
-      videoId,
-      viewerText,
-      viewers
-    };
-  } catch (err) {
-    return { status: "error", observedAt, resolvedUrl, error: err.message };
+      const html = typeof res.data === 'string' ? res.data : '';
+      const matches = [...html.matchAll(/"videoId":"([a-zA-Z0-9_-]{11})"/g)].map(m => m[1]);
+      for (const id of matches) {
+        candidateIds.add(id);
+      }
+    } catch (err) {}
   }
+
+  const topCandidates = Array.from(candidateIds).slice(0, 5);
+
+  let liveVideoId = null;
+  let liveTitle = "";
+  let liveViewers = null;
+  let liveViewerText = null;
+
+  for (const vId of topCandidates) {
+    const [playerResp, nextResp] = await Promise.all([
+      fetchSourcePlayer(vId),
+      fetchSourceNext(vId)
+    ]);
+
+    const isCandidateLive = (playerResp && playerResp.isLive) || (nextResp && nextResp.isLive);
+
+    if (isCandidateLive) {
+      liveVideoId = vId;
+      liveTitle = playerResp?.title || nextResp?.title || "";
+      if (nextResp && nextResp.viewers !== null) {
+        liveViewers = nextResp.viewers;
+        liveViewerText = nextResp.viewerText;
+      }
+      break; // Encontrou a live ativa com sucesso no primeiro candidato válido!
+    }
+  }
+
+  return {
+    status: "confirmed",
+    observedAt,
+    resolvedUrl,
+    checkedIdsCount: candidateIds.size,
+    checkedIds: topCandidates,
+    videoId: liveVideoId,
+    title: liveTitle,
+    viewerText: liveViewerText,
+    viewers: liveViewers,
+    isLive: Boolean(liveVideoId)
+  };
 }
 
 /**
@@ -370,8 +398,10 @@ async function getLiveStatus() {
   if (sourceOAuthBroadcast.isLive) liveSignalsCount++;
   if (sourceOAuthVideo.isLive) liveSignalsCount++;
   if (sourcePlayer.isLive) liveSignalsCount++;
+  if (sourceNext.isLive) liveSignalsCount++;
+  if (sourceHTML.isLive) liveSignalsCount++;
 
-  if (sourceOAuthBroadcast.isLive || sourcePlayer.isLive || (sourceOAuthVideo.isLive && liveSignalsCount >= 1)) {
+  if (sourceOAuthBroadcast.isLive || sourcePlayer.isLive || sourceNext.isLive || sourceHTML.isLive || (sourceOAuthVideo.isLive && liveSignalsCount >= 1)) {
     isLive = true;
   }
 
@@ -416,7 +446,7 @@ async function getLiveStatus() {
     confidence = (sourceOAuthBroadcast.status === "confirmed" || sourcePlayer.status === "confirmed") ? "high" : "medium";
   }
 
-  let title = sourceOAuthBroadcast.title || sourceOAuthVideo.title || sourcePlayer.title || "";
+  let title = sourceOAuthBroadcast.title || sourceOAuthVideo.title || sourcePlayer.title || sourceNext.title || sourceHTML.title || "";
   let liveChatId = sourceOAuthBroadcast.liveChatId || sourceOAuthVideo.liveChatId || null;
 
   const responseObj = {
@@ -438,7 +468,7 @@ async function getLiveStatus() {
       html: sourceHTML
     },
     diagnostic: {
-      version: "5.0",
+      version: "5.5",
       liveSignalsCount: liveSignalsCount,
       validViewerSourcesCount: validViewerSourcesCount,
       cached: false
