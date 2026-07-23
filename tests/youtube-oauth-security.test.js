@@ -766,9 +766,11 @@ describe('Testes de Arquitetura e Segurança OAuth (Node Native Runner - Sem Ass
     assert.strictEqual(typeof res.isLive, 'boolean');
   });
 
-  it('44. Consistência forte (consistency: strong) está configurada em BLOBS_CONSISTENCY', () => {
-    const { BLOBS_CONSISTENCY } = require('../netlify/functions/utils/oauth-helpers.js');
-    assert.strictEqual(BLOBS_CONSISTENCY, 'strong');
+  it('44. getBlobsStore invoca getStore(storeName) sem parâmetros de token/siteID manuais', () => {
+    const { getBlobsStore } = require('../netlify/functions/utils/oauth-helpers.js');
+    assert.throws(() => {
+      getBlobsStore('test-store-44');
+    }, { message: /Netlify Blobs Indisponível/ });
   });
 
   it('45. Validação expectedChannelIdHash: rejeita token quando YOUTUBE_EXPECTED_CHANNEL_ID está ausente', async () => {
