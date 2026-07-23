@@ -1,0 +1,39 @@
+=== NETLIFY DEPLOY PREVIEW HTTP AUDIT ===
+Deploy ID: 6a6206710f9d6c70a3766f81
+Deploy URL: https://6a6206710f9d6c70a3766f81--apexscorpio-youtube-scraper-6e2678f9.netlify.app
+Commit SHA: 1d2bb37
+Timestamp: 2026-07-23T12:18:55Z
+
+1. GET /oauth/youtube/start
+Method: GET
+Status: HTTP 500
+Result: Configuração do Servidor Indisponível (Sem env vars em contexto preview - Fail Closed confirmado)
+
+2. POST /oauth/youtube/start (Wrong Password)
+Method: POST
+Status: HTTP 500
+Result: Configuração do Servidor Indisponível (Fail Closed)
+
+3. POST /oauth/youtube/start (Correct Password Mock)
+Method: POST
+Status: HTTP 500
+Result: Configuração do Servidor Indisponível (Fail Closed)
+
+4. GET /oauth/youtube/callback
+Method: GET
+Status: HTTP 500
+Result: Configuração do Servidor Incompleta (Fail Closed)
+
+5. GET /youtube-status
+Method: GET
+Status: HTTP 200
+Result:
+{
+  "isLive": true,
+  "videoId": "a9XO-1Xi0-M",
+  "viewers": 1,
+  "viewerState": "confirmed",
+  "title": "Será possível fazer o Golpe do Juízo Final sozinho? 🎮 1 jogador, 2 PCs 💻💻",
+  "confidence": "high",
+  "source": "youtube-multisource-consensus"
+}

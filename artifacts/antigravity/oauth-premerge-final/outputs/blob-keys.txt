@@ -1,0 +1,15 @@
+=== NETLIFY BLOBS STORE KEYS AUDIT ===
+Timestamp: 2026-07-23T12:20:00Z
+
+Store: youtube-oauth-sessions
+Consistency: strong
+Keys: [] (Store limpa e vazia)
+
+Store: youtube-oauth-secrets
+Consistency: strong
+Keys: [] (Store limpa e vazia)
+
+Confirmação:
+- Nenhuma sessão temporária pendente;
+- Nenhum token cifrado acumulado;
+- Nenhum artefacto de teste residual.

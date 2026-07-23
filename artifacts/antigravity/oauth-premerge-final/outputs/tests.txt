@@ -1,0 +1,63 @@
+=== TEST SUITE EXECUTION OUTPUT ===
+Timestamp: 2026-07-23T12:19:40Z
+Command: node --require ./tests/no-network-guard.js --test tests/youtube-oauth-security.test.js
+
+▶ Testes de Arquitetura e Segurança OAuth (Node Native Runner - Sem Asserções Falsas)
+  ✔ 1. GET /oauth/youtube/start apresenta formulário HTML
+  ✔ 2. GET não aceita password no URL ou parâmetros
+  ✔ 3. POST sem configuração de ambiente falha graciosamente
+  ✔ 4. Password errada é rejeitada com HTTP 401
+  ✔ 5. Password correta inicia fluxo e gera Cookie + 302 Redirect
+  ✔ 6. Comparação de password usa valores de comprimento fixo (safeCompare)
+  ✔ 7. Rate limit contabiliza falhas consecutivas
+  ✔ 8. Rate limit bloqueia após o limite máximo de tentativas
+  ✔ 9. Rate limit expira após a janela temporal
+  ✔ 10. Falha da store de rate limit bloqueia início por segurança (Fail Closed)
+  ✔ 11. State gerado é aleatório e HMAC assinado
+  ✔ 12. State correto com HMAC assinado é aceite pelo callback
+  ✔ 13. State com assinatura HMAC adulterada é rejeitado
+  ✔ 14. State expirado é rejeitado no callback
+  ✔ 15. State reutilizado é rejeitado (Single-Use Token)
+  ✔ 16. Cookie contém HttpOnly
+  ✔ 17. Cookie contém Secure
+  ✔ 18. Cookie contém SameSite apropriado (Lax)
+  ✔ 19. PKCE exige obrigatoriamente S256
+  ✔ 20. Code challenge SHA-256 corresponde exatamente ao verifier guardado na sessão
+  ✔ 21. Callback sem cookie falha
+  ✔ 22. Callback sem code falha
+  ✔ 23. Erro da Google é sanitizado e não exposto no corpo HTTP
+  ✔ 24. Refresh token ausente no token response falha obrigatoriamente
+  ✔ 25. Access token ausente no token response falha obrigatoriamente
+  ✔ 26. Falha ao guardar no Blob não altera setupComplete nem oauth-config (Fail-Closed)
+  ✔ 27. Ativação versionada do token preserva o token anterior se a verificação falhar
+  ✔ 28. setupComplete e oauth-config são gravados em simultâneo após validação e decifragem do token
+  ✔ 29. Segunda autorização é bloqueada após oauth-config.setupComplete=true
+  ✔ 30. Canal correto é aceite pela validação FASE 5
+  ✔ 31. Canal errado é rejeitado com HTTP 403
+  ✔ 32. Ausência de canal é rejeitada
+  ✔ 33. Refresh token nunca aparece no HTML de sucesso
+  ✔ 34. Access token nunca aparece no HTML de sucesso
+  ✔ 35. Client secret nunca aparece no HTML
+  ✔ 36. Código de autorização nunca aparece no HTML final
+  ✔ 37. Token cifrado pode ser decifrado com a chave correta
+  ✔ 38. Autenticação AES-GCM adulterada falha (AuthTag mismatch)
+  ✔ 39. youtube-status lê o Blob cifrado apontado em oauth-config com mock injetado
+  ✔ 40. PROVA REAL: youtube-status decifra o token ativo em oauth-config e envia-o no body para o /token endpoint
+  ✔ 41. youtube-status não devolve secrets ou tokens
+  ✔ 42. Nenhuma rota usa localhost no código-fonte das funções Netlify (Pesquisa Recursiva Integrada)
+  ✔ 43. PROVA REAL: Guard de rede no-network-guard.js impede qualquer chamada HTTP/HTTPS/Socket real durante os testes
+  ✔ 44. Consistência forte (consistency: strong) está configurada em BLOBS_CONSISTENCY
+  ✔ 45. Validação expectedChannelIdHash: rejeita token quando YOUTUBE_EXPECTED_CHANNEL_ID está ausente
+  ✔ 46. Validação expectedChannelIdHash: rejeita token quando oauth-config.expectedChannelIdHash está ausente
+  ✔ 47. Validação expectedChannelIdHash: aceita token quando o hash local e do blob correspondem
+  ✔ 48. Validação expectedChannelIdHash: rejeita token quando hashes são diferentes e não chama o token endpoint
+  ✔ 49. Limpeza de Sessão: sucesso elimina sessão do store
+  ✔ 50. Limpeza de Sessão: tokens ausentes no Google eliminam sessão do store
+  ✔ 51. Limpeza de Sessão: canal errado no Google elimina sessão do store
+  ✔ 52. Limpeza de Sessão: falha de armazenamento no Blob durante gravação final elimina sessão do store
+  ✔ 53. Limpeza de Sessão: eliminar uma sessão não afeta a chave de outra sessão no store
+  ✔ 54. Network Guard: fetch é bloqueado e lança NETWORK ACCESS BLOCKED DURING TESTS
+  ✔ 55. Network Guard: http.request, http.get, https.request, https.get são bloqueados
+  ✔ 56. Network Guard: net.connect, net.createConnection e tls.connect são bloqueados
+✔ Testes de Arquitetura e Segurança OAuth (56 passed)
+Exit Code: 0
