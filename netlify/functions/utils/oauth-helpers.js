@@ -13,15 +13,12 @@ function safeCompare(a, b) {
 
 /**
  * Obter Store do Netlify Blobs (Fail-Closed)
+ * Depende exclusivamente do contexto de deploy Netlify injetado automaticamente.
+ * Não utiliza NETLIFY_AUTH_TOKEN, NETLIFY_BLOBS_TOKEN nem NETLIFY_SITE_ID manuais.
  */
 function getBlobsStore(storeName, customStore = null) {
   if (customStore) return customStore;
   try {
-    const siteID = process.env.NETLIFY_SITE_ID;
-    const token = process.env.NETLIFY_AUTH_TOKEN || process.env.NETLIFY_BLOBS_TOKEN;
-    if (siteID && token) {
-      return getStore({ name: storeName, siteID, token });
-    }
     return getStore(storeName);
   } catch (err) {
     throw new Error(`Netlify Blobs Indisponível [${storeName}]: ${err.message}`);

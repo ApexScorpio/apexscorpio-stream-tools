@@ -15,7 +15,8 @@ function createMockStore(initialData = {}) {
   return {
     get: async (key) => memory.get(key) || null,
     getJSON: async (key) => memory.get(key) || null,
-    setJSON: async (key, val) => memory.set(key, val)
+    setJSON: async (key, val) => memory.set(key, val),
+    delete: async (key) => memory.delete(key)
   };
 }
 

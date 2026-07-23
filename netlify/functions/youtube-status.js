@@ -48,9 +48,8 @@ function parseViewersText(text) {
 
 /**
  * Obter Access Token do OAuth 2.0:
- * Ordem:
- * 1. process.env.YOUTUBE_OAUTH_REFRESH_TOKEN (se configurado como Secret Netlify)
- * 2. Ler 'oauth-config' no Netlify Blobs para obter 'activeTokenKey' e decifrar com AES-256-GCM
+ * Origem exclusiva: Netlify Blobs → 'oauth-config' → 'activeTokenKey' → AES-256-GCM
+ * Não utiliza YOUTUBE_OAUTH_REFRESH_TOKEN como fallback (proibido por design de segurança).
  */
 async function getOAuthAccessToken(customSecretsStore = null, customAxios = null) {
   const http = customAxios || axios;
@@ -58,27 +57,26 @@ async function getOAuthAccessToken(customSecretsStore = null, customAxios = null
   const clientSecret = process.env.YOUTUBE_OAUTH_CLIENT_SECRET;
   const encryptionKey = process.env.YOUTUBE_OAUTH_TOKEN_ENCRYPTION_KEY;
 
-  if (!clientId || !clientSecret) {
+  if (!clientId || !clientSecret || !encryptionKey) {
     return null;
   }
 
-  let refreshToken = process.env.YOUTUBE_OAUTH_REFRESH_TOKEN || null;
+  let refreshToken = null;
 
-  // Se não estiver em env var, procurar no Netlify Blobs a chave ativa indicada em oauth-config (SEM FALLBACKS)
-  if (!refreshToken && encryptionKey) {
-    try {
-      const secretsStore = getBlobsStore('youtube-oauth-secrets', customSecretsStore);
-      const oauthConfig = await secretsStore.getJSON('oauth-config');
+  // Procurar no Netlify Blobs a chave ativa indicada em oauth-config (SEM FALLBACKS)
+  try {
+    const secretsStore = getBlobsStore('youtube-oauth-secrets', customSecretsStore);
+    const oauthConfig = await secretsStore.getJSON('oauth-config');
 
-      if (oauthConfig && oauthConfig.setupComplete === true && oauthConfig.activeTokenKey) {
-        const encryptedBlob = await secretsStore.getJSON(oauthConfig.activeTokenKey);
-        if (encryptedBlob) {
-          refreshToken = decryptRefreshToken(encryptedBlob, encryptionKey);
-        }
+    if (oauthConfig && oauthConfig.setupComplete === true && oauthConfig.activeTokenKey) {
+      const encryptedBlob = await secretsStore.getJSON(oauthConfig.activeTokenKey);
+      if (encryptedBlob) {
+        refreshToken = decryptRefreshToken(encryptedBlob, encryptionKey);
       }
-    } catch (err) {
-      // Blobs indisponível ou falha na decifragem - continua para scraping sem crashar
     }
+  } catch (err) {
+    // Blobs indisponível ou falha na decifragem — fail-closed
+    return null;
   }
 
   if (!refreshToken) {

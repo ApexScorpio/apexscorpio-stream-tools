@@ -233,7 +233,13 @@ exports.handler = async function(event, context, customStores = null, customAxio
       updatedAt: new Date().toISOString()
     });
 
-    // Apagar cookie de sessão temporário
+    // Apagar cookie de sessão temporário e eliminar o blob de sessão (limpeza pós-uso)
+    try {
+      await sessionsStore.delete(sessionIdHash);
+    } catch (_deleteErr) {
+      // Falha no delete não é crítica — a sessão já está marcada como usada
+    }
+
     return {
       statusCode: 200,
       headers: {
