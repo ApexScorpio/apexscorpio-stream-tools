@@ -1,0 +1,8 @@
+ M artifacts/antigravity/OAUTH-MIGRATION-HANDOFF.md
+?? artifacts/antigravity/manual-modern-functions-migration/preview-modern-runtime-v7-static-injection/probes.json
+?? artifacts/antigravity/manual-modern-functions-migration/preview-modern-runtime-v7-static-injection/summary.json
+?? artifacts/antigravity/manual-modern-functions-migration/preview-modern-runtime-v7-static-injection/syntax.txt
+?? artifacts/antigravity/manual-modern-functions-migration/preview-modern-runtime-v7-static-injection/tests.txt
+?? erslopes.geminiantigravity-idescratchapexscorpio-stream-tools'
+?? erslopes.geminiantigravity-idescratchapexscorpio-stream-toolsartifactsantigravityOAUTH-MIGRATION-HANDOFF.md'
+?? "ummaryPath, $probesPath, $syntaxPath, $testsPath)) {"

@@ -1,0 +1,25 @@
+{
+    "timestampUtc":  "2026-07-23T21:21:47Z",
+    "branch":  "fix/migrate-oauth-to-modern-netlify-functions",
+    "headBeforeCommit":  "f9e1d0e046c3d1a700b6d27d402d50e88313dac1",
+    "functionalProgress":  "99.0%",
+    "cleanupCompleted":  true,
+    "codeFilesChanged":  false,
+    "productionDeployExecuted":  false,
+    "oauthAuthorizationStarted":  false,
+    "credentialsRotated":  false,
+    "rootCause":  "Windows PowerShell 5.1 treated normal git fetch stderr output as a terminating error because ErrorActionPreference was Stop.",
+    "removedResidues":  [
+                            "artifacts/antigravity/manual-modern-functions-migration/preview-modern-runtime-v7-static-injection",
+                            "erslopes.geminiantigravity-idescratchapexscorpio-stream-tools\u0027",
+                            "erslopes.geminiantigravity-idescratchapexscorpio-stream-toolsartifactsantigravityOAUTH-MIGRATION-HANDOFF.md\u0027",
+                            "ummaryPath, $probesPath, $syntaxPath, $testsPath)) {"
+                        ],
+    "nextAction":  [
+                       "Verify this report and the remote SHA directly on GitHub.",
+                       "Run a newly generated v7 command without PowerShell history recovery.",
+                       "Capture Node, npm, Netlify and Git processes explicitly.",
+                       "Run syntax validation and all 60 tests.",
+                       "Create a deploy preview and validate all six routes."
+                   ]
+}

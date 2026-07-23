@@ -1,0 +1,7 @@
+Working tree limpa antes da criação do relatório: True
+Código das Functions alterado: False
+Deploy preview executado: False
+Deploy de produção executado: False
+Autorização OAuth iniciada: False
+Credenciais rodadas: False
+Próximo passo: executar um v7 novo de raiz.
