@@ -1,0 +1,19 @@
+{
+    "timestampUtc":  "2026-07-23T20:46:09Z",
+    "branch":  "fix/migrate-oauth-to-modern-netlify-functions",
+    "headBeforeCommit":  "fb2bc356a39fd1f7e272494f2e69fc5d281034b7",
+    "functionalProgress":  "99.0%",
+    "handoffReadiness":  "100%",
+    "latestValidPreview":  "preview-modern-runtime-v6-inline-dependencies",
+    "testsPassed":  "60/60",
+    "latestValidDeployId":  "6a6276bd8868869463abcda4",
+    "latestGatePassed":  false,
+    "lastFailedCommand":  "Repetição do comando v6; external_node_modules já estava removido",
+    "lastFailedCommandChangedFiles":  false,
+    "staticDependencyV7Executed":  false,
+    "nextAction":  "Executar v7: imports estáticos e injeção de axios/getStore nos módulos CommonJS",
+    "responseRulesAdded":  true,
+    "commandMustBeLastInResponse":  true,
+    "powerShellMustStartWithClear":  true,
+    "verifyGitHubAfterUserSaysFeito":  true
+}
