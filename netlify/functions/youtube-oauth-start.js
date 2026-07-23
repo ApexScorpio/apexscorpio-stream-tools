@@ -38,10 +38,10 @@ exports.handler = async function(event, context, customStores = null) {
     };
   }
 
-  // 3. Verificar se a configuração já foi concluída
+  // 3. Verificar se a configuração já foi concluída (Consultar exclusivamente oauth-config)
   try {
-    const setupStatus = await secretsStore.getJSON('setup-status');
-    if (setupStatus && setupStatus.setupComplete === true) {
+    const oauthConfig = await secretsStore.getJSON('oauth-config');
+    if (oauthConfig && oauthConfig.setupComplete === true) {
       return {
         statusCode: 200,
         headers: genericHeaders,
@@ -66,7 +66,7 @@ exports.handler = async function(event, context, customStores = null) {
     return {
       statusCode: 500,
       headers: genericHeaders,
-      body: `<h2>Serviço Indisponível</h2><p>Falha ao verificar o estado da configuração no armazenamento backend.</p>`
+      body: `<h2>Serviço Indisponível</h2><p>Falha ao verificar a configuração no armazenamento backend.</p>`
     };
   }
 

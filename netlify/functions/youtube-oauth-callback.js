@@ -222,14 +222,14 @@ exports.handler = async function(event, context, customStores = null, customAxio
       throw new Error('Falha na verificação de decifragem do token gravado');
     }
 
-    // 4. Apenas após verificação total concluída com sucesso, atualizar o ponteiro fixo 'oauth-config'
+    // 4. Apenas após verificação total concluída com sucesso, executar a gravação ÚNICA de ativação em 'oauth-config'
+    const expectedChannelIdHash = crypto.createHash('sha256').update(expectedChannelId).digest('hex');
     await secretsStore.setJSON('oauth-config', {
-      activeTokenKey: randomTokenKey,
-      updatedAt: new Date().toISOString()
-    });
-
-    await secretsStore.setJSON('setup-status', {
+      version: '1.0',
       setupComplete: true,
+      activeTokenKey: randomTokenKey,
+      expectedChannelIdHash: expectedChannelIdHash,
+      scope: 'https://www.googleapis.com/auth/youtube.readonly',
       updatedAt: new Date().toISOString()
     });
 

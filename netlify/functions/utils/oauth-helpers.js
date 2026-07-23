@@ -17,6 +17,11 @@ function safeCompare(a, b) {
 function getBlobsStore(storeName, customStore = null) {
   if (customStore) return customStore;
   try {
+    const siteID = process.env.NETLIFY_SITE_ID;
+    const token = process.env.NETLIFY_AUTH_TOKEN || process.env.NETLIFY_BLOBS_TOKEN;
+    if (siteID && token) {
+      return getStore({ name: storeName, siteID, token });
+    }
     return getStore(storeName);
   } catch (err) {
     throw new Error(`Netlify Blobs Indisponível [${storeName}]: ${err.message}`);

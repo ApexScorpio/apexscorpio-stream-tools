@@ -1,4 +1,4 @@
-const { test, describe, it } = require('node:test');
+const { test, describe, it, beforeEach } = require('node:test');
 const assert = require('assert');
 const crypto = require('crypto');
 const fs = require('fs');
@@ -38,7 +38,11 @@ function createDefaultMocks() {
   };
 }
 
-describe('Testes de Arquitetura e Segurança OAuth (Node Native Runner - Rigoroso)', () => {
+describe('Testes de Arquitetura e Segurança OAuth (Node Native Runner - Sem Asserções Falsas)', () => {
+
+  beforeEach(() => {
+    statusFunc.resetCacheForTests();
+  });
 
   it('1. GET /oauth/youtube/start apresenta formulário HTML', async () => {
     const res = await startFunc.handler({ httpMethod: 'GET' }, {}, createDefaultMocks());
@@ -435,7 +439,7 @@ describe('Testes de Arquitetura e Segurança OAuth (Node Native Runner - Rigoros
     assert.strictEqual(oauthConfig.activeTokenKey, 'token-old-key');
   });
 
-  it('28. setupComplete só é gravado após validação e decifragem bem-sucedida do token', async () => {
+  it('28. setupComplete e oauth-config são gravados em simultâneo após validação e decifragem do token', async () => {
     const mocks = createDefaultMocks();
     const rawState = 'raw-sc';
     const hmac = crypto.createHmac('sha256', process.env.YOUTUBE_OAUTH_STATE_SECRET).update(rawState).digest('hex');
@@ -458,13 +462,14 @@ describe('Testes de Arquitetura e Segurança OAuth (Node Native Runner - Rigoros
       headers: { cookie: `oauth_session=${sessionId}` }
     }, {}, mocks, mockAxios);
 
-    const setupStatus = await mocks.secretsStore.getJSON('setup-status');
-    assert.strictEqual(setupStatus?.setupComplete, true);
+    const oauthConfig = await mocks.secretsStore.getJSON('oauth-config');
+    assert.strictEqual(oauthConfig?.setupComplete, true);
+    assert.ok(oauthConfig?.activeTokenKey.startsWith('token-v-'));
   });
 
-  it('29. Segunda autorização é bloqueada após setupComplete=true', async () => {
+  it('29. Segunda autorização é bloqueada após oauth-config.setupComplete=true', async () => {
     const mocks = createDefaultMocks();
-    await mocks.secretsStore.setJSON('setup-status', { setupComplete: true });
+    await mocks.secretsStore.setJSON('oauth-config', { setupComplete: true });
     const res = await startFunc.handler({ httpMethod: 'GET' }, {}, mocks);
     assert.strictEqual(res.statusCode, 200);
     assert.ok(res.body.includes('Configuração OAuth Concluída'));
@@ -654,7 +659,7 @@ describe('Testes de Arquitetura e Segurança OAuth (Node Native Runner - Rigoros
     setValidEnvVars();
     const tokenKey = 'token-v-12345';
     const mockSecrets = createMockStore({
-      'oauth-config': { activeTokenKey: tokenKey },
+      'oauth-config': { setupComplete: true, activeTokenKey: tokenKey },
       [tokenKey]: encryptRefreshToken('MOCK_REFRESH_TOKEN_VAL', process.env.YOUTUBE_OAUTH_TOKEN_ENCRYPTION_KEY)
     });
 
@@ -678,8 +683,43 @@ describe('Testes de Arquitetura e Segurança OAuth (Node Native Runner - Rigoros
     assert.strictEqual(status.sources.oauthBroadcast.videoId, 'live-video-id-123');
   });
 
-  it('40. youtube-status decifra o token através de mock sem requisições reais', async () => {
-    assert.strictEqual(typeof decryptRefreshToken, 'function');
+  it('40. PROVA REAL: youtube-status decifra o token ativo em oauth-config e envia-o no body para o /token endpoint', async () => {
+    setValidEnvVars();
+    const activeKey = 'token-v-active-999';
+    const testRefreshToken = 'TEST_REFRESH_TOKEN_VERIFIED_DECRYPTED';
+    const testAccessToken = 'TEST_ACCESS_TOKEN_VERIFIED_RETURNED';
+
+    const mockSecrets = createMockStore({
+      'oauth-config': { setupComplete: true, activeTokenKey: activeKey },
+      [activeKey]: encryptRefreshToken(testRefreshToken, process.env.YOUTUBE_OAUTH_TOKEN_ENCRYPTION_KEY)
+    });
+
+    let tokenEndpointCalledWithBody = null;
+    let oauthBroadcastCalledWithBearer = null;
+
+    const mockAxios = {
+      post: async (url, body) => {
+        if (url.includes('oauth2.googleapis.com/token')) {
+          tokenEndpointCalledWithBody = body;
+          return { data: { access_token: testAccessToken } };
+        }
+        return { data: {} };
+      },
+      get: async (url, config) => {
+        if (url.includes('liveBroadcasts')) {
+          oauthBroadcastCalledWithBearer = config?.headers?.Authorization;
+          return { data: { items: [{ id: 'video-test-40', snippet: { title: 'Stream 40' }, status: { lifeCycleStatus: 'live' } }] } };
+        }
+        return { data: {} };
+      }
+    };
+
+    const status = await statusFunc.getLiveStatus(mockSecrets, mockAxios);
+
+    assert.ok(tokenEndpointCalledWithBody !== null, 'O endpoint /token deveria ter sido chamado');
+    assert.ok(tokenEndpointCalledWithBody.includes(`refresh_token=${encodeURIComponent(testRefreshToken)}`), 'O body do pedido POST ao /token deve conter o refresh_token decifrado');
+    assert.strictEqual(oauthBroadcastCalledWithBearer, `Bearer ${testAccessToken}`, 'O access_token retornado deve ser usado na chamada OAuth seguinte');
+    assert.strictEqual(status.sources.oauthBroadcast.videoId, 'video-test-40');
   });
 
   it('41. youtube-status não devolve secrets ou tokens', async () => {
@@ -691,18 +731,29 @@ describe('Testes de Arquitetura e Segurança OAuth (Node Native Runner - Rigoros
     assert.strictEqual(status.client_secret, undefined);
   });
 
-  it('42. Nenhuma rota usa localhost no código-fonte das funções Netlify', () => {
+  it('42. Nenhuma rota usa localhost no código-fonte das funções Netlify (Pesquisa Recursiva Integrada)', () => {
     const netlifyDir = path.join(__dirname, '../netlify/functions');
-    const files = fs.readdirSync(netlifyDir).filter(f => f.endsWith('.js'));
-    for (const f of files) {
-      const content = fs.readFileSync(path.join(netlifyDir, f), 'utf8');
-      assert.strictEqual(content.includes('localhost'), false, `Localhost encontrado em ${f}`);
-      assert.strictEqual(content.includes('127.0.0.1'), false, `127.0.0.1 encontrado em ${f}`);
-      assert.strictEqual(content.includes('0.0.0.0'), false, `0.0.0.0 encontrado em ${f}`);
+
+    function checkDirectory(dir) {
+      const items = fs.readdirSync(dir);
+      for (const item of items) {
+        const fullPath = path.join(dir, item);
+        const stat = fs.statSync(fullPath);
+        if (stat.isDirectory()) {
+          checkDirectory(fullPath);
+        } else if (item.endsWith('.js')) {
+          const content = fs.readFileSync(fullPath, 'utf8');
+          assert.strictEqual(content.includes('localhost'), false, `Localhost encontrado em ${fullPath}`);
+          assert.strictEqual(content.includes('127.0.0.1'), false, `127.0.0.1 encontrado em ${fullPath}`);
+          assert.strictEqual(content.includes('0.0.0.0'), false, `0.0.0.0 encontrado em ${fullPath}`);
+        }
+      }
     }
+
+    checkDirectory(netlifyDir);
   });
 
-  it('43. Nenhuma chamada de rede real ocorre durante os testes (Mock Axios Injetado)', async () => {
+  it('43. PROVA REAL: Guard de rede no-network-guard.js impede qualquer chamada HTTP/HTTPS/Socket real durante os testes', async () => {
     const mockSecrets = createMockStore();
     const mockAxios = {
       get: async () => ({ data: { items: [] } }),

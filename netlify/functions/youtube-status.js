@@ -6,6 +6,14 @@ let cachedResponse = null;
 let lastFetchTimestamp = 0;
 const CACHE_TTL_MS = 12000;
 
+/**
+ * Função utilitária para resetar a cache em memória durante os testes
+ */
+function resetCacheForTests() {
+  cachedResponse = null;
+  lastFetchTimestamp = 0;
+}
+
 const HTTP_HEADERS = {
   'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
   'Accept-Language': 'pt-PT,pt;q=0.9,en-US;q=0.8,en;q=0.7',
@@ -56,16 +64,17 @@ async function getOAuthAccessToken(customSecretsStore = null, customAxios = null
 
   let refreshToken = process.env.YOUTUBE_OAUTH_REFRESH_TOKEN || null;
 
-  // Se não estiver em env var, procurar no Netlify Blobs a chave ativa indicada em oauth-config
+  // Se não estiver em env var, procurar no Netlify Blobs a chave ativa indicada em oauth-config (SEM FALLBACKS)
   if (!refreshToken && encryptionKey) {
     try {
       const secretsStore = getBlobsStore('youtube-oauth-secrets', customSecretsStore);
       const oauthConfig = await secretsStore.getJSON('oauth-config');
-      const activeTokenKey = oauthConfig?.activeTokenKey || 'primary-refresh-token';
 
-      const encryptedBlob = await secretsStore.getJSON(activeTokenKey);
-      if (encryptedBlob) {
-        refreshToken = decryptRefreshToken(encryptedBlob, encryptionKey);
+      if (oauthConfig && oauthConfig.setupComplete === true && oauthConfig.activeTokenKey) {
+        const encryptedBlob = await secretsStore.getJSON(oauthConfig.activeTokenKey);
+        if (encryptedBlob) {
+          refreshToken = decryptRefreshToken(encryptedBlob, encryptionKey);
+        }
       }
     } catch (err) {
       // Blobs indisponível ou falha na decifragem - continua para scraping sem crashar
@@ -527,3 +536,4 @@ exports.handler = async function(event, context) {
 
 exports.parseViewersText = parseViewersText;
 exports.getLiveStatus = getLiveStatus;
+exports.resetCacheForTests = resetCacheForTests;
