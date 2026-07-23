@@ -1,0 +1,9 @@
+{
+    "timestampUtc":  "2026-07-23T19:40:05Z",
+    "branch":  "fix/migrate-oauth-to-modern-netlify-functions",
+    "headBeforeCommit":  "5128cb7a0073de493951f26a6f9fb9a21f6e2d53",
+    "npmTestExitCode":  1,
+    "change":  "Atualização tolerante do mock e da leitura oauth-config no teste 27",
+    "deployExecuted":  false,
+    "nextAction":  "Analisar tests.txt antes de qualquer deploy"
+}

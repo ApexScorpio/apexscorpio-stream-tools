@@ -401,8 +401,7 @@ describe('Testes de Arquitetura e Segurança OAuth (Node Native Runner - Sem Ass
     memory.set('token-old-key', encryptRefreshToken('OLD_REFRESH_TOKEN', process.env.YOUTUBE_OAUTH_TOKEN_ENCRYPTION_KEY));
 
     const mockSecretsStoreWithFailure = {
-      get: async (key) => memory.get(key) || null,
-      getJSON: async (key) => {
+      get: async (key) => {
         if (key.startsWith('token-v-')) return null; // Simular falha de verificação na nova chave
         return memory.get(key) || null;
       },
@@ -436,7 +435,7 @@ describe('Testes de Arquitetura e Segurança OAuth (Node Native Runner - Sem Ass
     assert.strictEqual(res.statusCode, 500);
 
     // Confirmar que o ponteiro ativo de oauth-config continuou a ser 'token-old-key'
-    const oauthConfig = await mocks.secretsStore.getJSON('oauth-config');
+    const oauthConfig = await mocks.secretsStore.get('oauth-config', { type: 'json' });
     assert.strictEqual(oauthConfig.activeTokenKey, 'token-old-key');
   });
 
