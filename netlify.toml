@@ -19,4 +19,3 @@
   status = 200
 [functions]
   node_bundler = "esbuild"
-  external_node_modules = ["@netlify/blobs", "axios"]

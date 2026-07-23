@@ -1,6 +1,6 @@
 # Handoff — Migração OAuth YouTube para Modern Netlify Functions
 
-Última atualização UTC: 2026-07-23T20:04:44Z
+Última atualização UTC: 2026-07-23T20:16:41Z
 
 ## Como retomar numa nova conversa
 
@@ -10,9 +10,11 @@ fix/migrate-oauth-to-modern-netlify-functions
 
 Depois ler:
 
-artifacts/antigravity/manual-modern-functions-migration/preview-modern-runtime-v4/summary.json
+artifacts/antigravity/manual-modern-functions-migration/preview-modern-runtime-v6-inline-dependencies/summary.json
 
-artifacts/antigravity/manual-modern-functions-migration/preview-modern-runtime-v4/probes.json
+artifacts/antigravity/manual-modern-functions-migration/preview-modern-runtime-v6-inline-dependencies/probes.json
+
+artifacts/antigravity/manual-modern-functions-migration/preview-modern-runtime-v6-inline-dependencies/tests.txt
 
 ## Objetivo final
 
@@ -36,19 +38,19 @@ Colocar o OAuth oficial do YouTube totalmente funcional na Netlify:
 - Netlify Project ID: 76ea2513-2651-4965-8241-a40070af3502
 - Produção: https://apexscorpio-youtube-scraper-6e2678f9.netlify.app
 - Head antes deste passo: d2610a6180e0c88e914b429a79fa2d890403f783
-- Relatório mais recente: artifacts/antigravity/manual-modern-functions-migration/preview-modern-runtime-v5-final
+- Relatório mais recente: artifacts/antigravity/manual-modern-functions-migration/preview-modern-runtime-v6-inline-dependencies
 
 ## Estado atual
 
 - Testes: exit code 0
 - Deploy preview: exit code 0
-- Deploy ID: 6a6273f1508e4303f204d30f
-- Deploy URL: https://6a6273f1508e4303f204d30f--apexscorpio-youtube-scraper-6e2678f9.netlify.app
+- Deploy ID: 6a6276bd8868869463abcda4
+- Deploy URL: https://6a6276bd8868869463abcda4--apexscorpio-youtube-scraper-6e2678f9.netlify.app
 - Netlify Blobs no runtime moderno: confirmado
 - Bundler: esbuild
-- Dependências empacotadas: @netlify/blobs e axios
+- Dependências incorporadas no bundle: @netlify/blobs e axios
 - Gate das Functions modernas: NÃO APROVADO
-- Progresso atual: 98,7%
+- Progresso atual: 98,9%
 - Erro operacional:
 
 ### Probes
@@ -81,7 +83,7 @@ Colocar o OAuth oficial do YouTube totalmente funcional na Netlify:
 ## O que falta fazer
 
 1. Ler summary.json, probes.json e tests.txt deste relatório.
-2. Corrigir o erro indicado.
+2. Corrigir o erro exato indicado.
 3. Repetir o deploy preview.
 4. Não fazer merge nem deploy de produção antes do gate aprovado.
 5. Depois: merge, produção, autorização OAuth e validação dos Blobs.
@@ -114,3 +116,5 @@ Colocar o OAuth oficial do YouTube totalmente funcional na Netlify:
 - 2026-07-23T19:53:20Z: verificação do upload v5-final=NÃO APROVADA; SHA local/remoto iguais=True; summary remoto=False; probes remotos=False; correção AES=False; relatório=artifacts/antigravity/manual-modern-functions-migration/remote-state-verification.
 
 - 2026-07-23T20:04:44Z: correção AES-GCM aplicada; testes=0; deploy=0; gate=NÃO APROVADO; deployId=6a6273f1508e4303f204d30f; relatório=artifacts/antigravity/manual-modern-functions-migration/preview-modern-runtime-v5-final.
+
+- 2026-07-23T20:16:41Z: external_node_modules removido para permitir incorporação de axios e @netlify/blobs pelo esbuild; testes=0; deploy=0; gate=NÃO APROVADO; deployId=6a6276bd8868869463abcda4; relatório=artifacts/antigravity/manual-modern-functions-migration/preview-modern-runtime-v6-inline-dependencies.
