@@ -1,0 +1,21 @@
+{
+  "timestampUtc": "2026-07-23T22:28:47.586Z",
+  "branch": "fix/migrate-oauth-to-modern-netlify-functions",
+  "headBeforeCommit": "aafb08d899ae6a4d34b88c7a0bbab0d1881fc9cf",
+  "deployExitCode": 1,
+  "deployId": null,
+  "deployUrl": null,
+  "probeCount": 0,
+  "probeStatuses": {},
+  "noHttp502": false,
+  "modernRuntimeGatePassed": false,
+  "productionDeployExecuted": false,
+  "oauthAuthorizationStarted": false,
+  "credentialsRotated": false,
+  "operationError": "O deploy preview falhou com exit code 1.",
+  "nextAction": [
+    "Ler probes.json e deploy-stderr.txt.",
+    "Corrigir apenas a primeira falha real.",
+    "Não fazer merge nem deploy de produção."
+  ]
+}
