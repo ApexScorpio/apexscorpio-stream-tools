@@ -659,8 +659,9 @@ describe('Testes de Arquitetura e Segurança OAuth (Node Native Runner - Sem Ass
   it('39. youtube-status lê o Blob cifrado apontado em oauth-config com mock injetado', async () => {
     setValidEnvVars();
     const tokenKey = 'token-v-12345';
+    const expectedChannelIdHash = crypto.createHash('sha256').update(process.env.YOUTUBE_EXPECTED_CHANNEL_ID).digest('hex');
     const mockSecrets = createMockStore({
-      'oauth-config': { setupComplete: true, activeTokenKey: tokenKey },
+      'oauth-config': { setupComplete: true, activeTokenKey: tokenKey, expectedChannelIdHash: expectedChannelIdHash },
       [tokenKey]: encryptRefreshToken('MOCK_REFRESH_TOKEN_VAL', process.env.YOUTUBE_OAUTH_TOKEN_ENCRYPTION_KEY)
     });
 
@@ -690,8 +691,9 @@ describe('Testes de Arquitetura e Segurança OAuth (Node Native Runner - Sem Ass
     const testRefreshToken = 'TEST_REFRESH_TOKEN_VERIFIED_DECRYPTED';
     const testAccessToken = 'TEST_ACCESS_TOKEN_VERIFIED_RETURNED';
 
+    const expectedChannelIdHash = crypto.createHash('sha256').update(process.env.YOUTUBE_EXPECTED_CHANNEL_ID).digest('hex');
     const mockSecrets = createMockStore({
-      'oauth-config': { setupComplete: true, activeTokenKey: activeKey },
+      'oauth-config': { setupComplete: true, activeTokenKey: activeKey, expectedChannelIdHash: expectedChannelIdHash },
       [activeKey]: encryptRefreshToken(testRefreshToken, process.env.YOUTUBE_OAUTH_TOKEN_ENCRYPTION_KEY)
     });
 
@@ -762,6 +764,273 @@ describe('Testes de Arquitetura e Segurança OAuth (Node Native Runner - Sem Ass
     };
     const res = await statusFunc.getLiveStatus(mockSecrets, mockAxios);
     assert.strictEqual(typeof res.isLive, 'boolean');
+  });
+
+  it('44. Consistência forte (consistency: strong) está configurada em BLOBS_CONSISTENCY', () => {
+    const { BLOBS_CONSISTENCY } = require('../netlify/functions/utils/oauth-helpers.js');
+    assert.strictEqual(BLOBS_CONSISTENCY, 'strong');
+  });
+
+  it('45. Validação expectedChannelIdHash: rejeita token quando YOUTUBE_EXPECTED_CHANNEL_ID está ausente', async () => {
+    setValidEnvVars();
+    delete process.env.YOUTUBE_EXPECTED_CHANNEL_ID;
+    const activeKey = 'token-v-active-45';
+    const testRefreshToken = 'TEST_REFRESH_TOKEN_45';
+    const mockSecrets = createMockStore({
+      'oauth-config': { setupComplete: true, activeTokenKey: activeKey, expectedChannelIdHash: 'somehash' },
+      [activeKey]: encryptRefreshToken(testRefreshToken, process.env.YOUTUBE_OAUTH_TOKEN_ENCRYPTION_KEY)
+    });
+    let calledToken = false;
+    const mockAxios = {
+      post: async () => { calledToken = true; return { data: {} }; },
+      get: async () => ({ data: { items: [] } })
+    };
+    const status = await statusFunc.getLiveStatus(mockSecrets, mockAxios);
+    assert.strictEqual(calledToken, false);
+    assert.strictEqual(status.sources.oauthBroadcast.status, 'unknown');
+  });
+
+  it('46. Validação expectedChannelIdHash: rejeita token quando oauth-config.expectedChannelIdHash está ausente', async () => {
+    setValidEnvVars();
+    const activeKey = 'token-v-active-46';
+    const testRefreshToken = 'TEST_REFRESH_TOKEN_46';
+    const mockSecrets = createMockStore({
+      'oauth-config': { setupComplete: true, activeTokenKey: activeKey },
+      [activeKey]: encryptRefreshToken(testRefreshToken, process.env.YOUTUBE_OAUTH_TOKEN_ENCRYPTION_KEY)
+    });
+    let calledToken = false;
+    const mockAxios = {
+      post: async () => { calledToken = true; return { data: {} }; },
+      get: async () => ({ data: { items: [] } })
+    };
+    const status = await statusFunc.getLiveStatus(mockSecrets, mockAxios);
+    assert.strictEqual(calledToken, false);
+    assert.strictEqual(status.sources.oauthBroadcast.status, 'unknown');
+  });
+
+  it('47. Validação expectedChannelIdHash: aceita token quando o hash local e do blob correspondem', async () => {
+    setValidEnvVars();
+    const activeKey = 'token-v-active-47';
+    const testRefreshToken = 'TEST_REFRESH_TOKEN_47';
+    const expectedChannelIdHash = crypto.createHash('sha256').update(process.env.YOUTUBE_EXPECTED_CHANNEL_ID).digest('hex');
+    const mockSecrets = createMockStore({
+      'oauth-config': { setupComplete: true, activeTokenKey: activeKey, expectedChannelIdHash: expectedChannelIdHash },
+      [activeKey]: encryptRefreshToken(testRefreshToken, process.env.YOUTUBE_OAUTH_TOKEN_ENCRYPTION_KEY)
+    });
+    let calledToken = false;
+    const mockAxios = {
+      post: async () => { calledToken = true; return { data: { access_token: 'acc-47' } }; },
+      get: async () => ({ data: { items: [] } })
+    };
+    await statusFunc.getLiveStatus(mockSecrets, mockAxios);
+    assert.strictEqual(calledToken, true);
+  });
+
+  it('48. Validação expectedChannelIdHash: rejeita token quando hashes são diferentes e não chama o token endpoint', async () => {
+    setValidEnvVars();
+    const activeKey = 'token-v-active-48';
+    const testRefreshToken = 'TEST_REFRESH_TOKEN_48';
+    const wrongHash = crypto.createHash('sha256').update('WRONG_CHANNEL_ID').digest('hex');
+    const mockSecrets = createMockStore({
+      'oauth-config': { setupComplete: true, activeTokenKey: activeKey, expectedChannelIdHash: wrongHash },
+      [activeKey]: encryptRefreshToken(testRefreshToken, process.env.YOUTUBE_OAUTH_TOKEN_ENCRYPTION_KEY)
+    });
+    let calledToken = false;
+    const mockAxios = {
+      post: async () => { calledToken = true; return { data: {} }; },
+      get: async () => ({ data: { items: [] } })
+    };
+    const status = await statusFunc.getLiveStatus(mockSecrets, mockAxios);
+    assert.strictEqual(calledToken, false);
+    assert.strictEqual(status.sources.oauthBroadcast.status, 'unknown');
+  });
+
+  it('49. Limpeza de Sessão: sucesso elimina sessão do store', async () => {
+    const mocks = createDefaultMocks();
+    const rawState = 'state12345678901234567890123456789012';
+    const signatureHmac = crypto.createHmac('sha256', process.env.YOUTUBE_OAUTH_STATE_SECRET).update(rawState).digest('hex');
+    const state = `${rawState}.${signatureHmac}`;
+    const stateHash = crypto.createHash('sha256').update(state).digest('hex');
+
+    const sessionId = 'session12345678901234567890123456789012';
+    const sessionIdHash = crypto.createHash('sha256').update(sessionId).digest('hex');
+
+    await mocks.sessionsStore.setJSON(sessionIdHash, {
+      stateHash,
+      codeVerifier: 'verifier123',
+      expiresAt: Date.now() + 600000,
+      used: false
+    });
+
+    const mockAxios = {
+      post: async () => ({ data: { refresh_token: 'ref123', access_token: 'acc123' } }),
+      get: async () => ({ data: { items: [{ id: process.env.YOUTUBE_EXPECTED_CHANNEL_ID }] } })
+    };
+
+    const res = await callbackFunc.handler({
+      queryStringParameters: { code: 'valid_code', state: state },
+      headers: { cookie: `oauth_session=${sessionId}` }
+    }, {}, mocks, mockAxios);
+
+    assert.strictEqual(res.statusCode, 200);
+    const sessionAfter = await mocks.sessionsStore.getJSON(sessionIdHash);
+    assert.strictEqual(sessionAfter, null);
+  });
+
+  it('50. Limpeza de Sessão: tokens ausentes no Google eliminam sessão do store', async () => {
+    const mocks = createDefaultMocks();
+    const rawState = 'state50505050505050505050505050505050';
+    const signatureHmac = crypto.createHmac('sha256', process.env.YOUTUBE_OAUTH_STATE_SECRET).update(rawState).digest('hex');
+    const state = `${rawState}.${signatureHmac}`;
+    const stateHash = crypto.createHash('sha256').update(state).digest('hex');
+
+    const sessionId = 'session50505050505050505050505050505050';
+    const sessionIdHash = crypto.createHash('sha256').update(sessionId).digest('hex');
+
+    await mocks.sessionsStore.setJSON(sessionIdHash, {
+      stateHash,
+      codeVerifier: 'verifier50',
+      expiresAt: Date.now() + 600000,
+      used: false
+    });
+
+    const mockAxios = {
+      post: async () => ({ data: { access_token: 'only_access_token' } }), // missing refresh_token
+      get: async () => ({ data: { items: [] } })
+    };
+
+    const res = await callbackFunc.handler({
+      queryStringParameters: { code: 'code50', state: state },
+      headers: { cookie: `oauth_session=${sessionId}` }
+    }, {}, mocks, mockAxios);
+
+    assert.strictEqual(res.statusCode, 400);
+    const sessionAfter = await mocks.sessionsStore.getJSON(sessionIdHash);
+    assert.strictEqual(sessionAfter, null);
+  });
+
+  it('51. Limpeza de Sessão: canal errado no Google elimina sessão do store', async () => {
+    const mocks = createDefaultMocks();
+    const rawState = 'state51515151515151515151515151515151';
+    const signatureHmac = crypto.createHmac('sha256', process.env.YOUTUBE_OAUTH_STATE_SECRET).update(rawState).digest('hex');
+    const state = `${rawState}.${signatureHmac}`;
+    const stateHash = crypto.createHash('sha256').update(state).digest('hex');
+
+    const sessionId = 'session51515151515151515151515151515151';
+    const sessionIdHash = crypto.createHash('sha256').update(sessionId).digest('hex');
+
+    await mocks.sessionsStore.setJSON(sessionIdHash, {
+      stateHash,
+      codeVerifier: 'verifier51',
+      expiresAt: Date.now() + 600000,
+      used: false
+    });
+
+    const mockAxios = {
+      post: async () => ({ data: { refresh_token: 'ref51', access_token: 'acc51' } }),
+      get: async () => ({ data: { items: [{ id: 'WRONG_CHANNEL_ID_51' }] } })
+    };
+
+    const res = await callbackFunc.handler({
+      queryStringParameters: { code: 'code51', state: state },
+      headers: { cookie: `oauth_session=${sessionId}` }
+    }, {}, mocks, mockAxios);
+
+    assert.strictEqual(res.statusCode, 403);
+    const sessionAfter = await mocks.sessionsStore.getJSON(sessionIdHash);
+    assert.strictEqual(sessionAfter, null);
+  });
+
+  it('52. Limpeza de Sessão: falha de armazenamento no Blob durante gravação final elimina sessão do store', async () => {
+    const mocks = createDefaultMocks();
+    const rawState = 'state52525252525252525252525252525252';
+    const signatureHmac = crypto.createHmac('sha256', process.env.YOUTUBE_OAUTH_STATE_SECRET).update(rawState).digest('hex');
+    const state = `${rawState}.${signatureHmac}`;
+    const stateHash = crypto.createHash('sha256').update(state).digest('hex');
+
+    const sessionId = 'session52525252525252525252525252525252';
+    const sessionIdHash = crypto.createHash('sha256').update(sessionId).digest('hex');
+
+    await mocks.sessionsStore.setJSON(sessionIdHash, {
+      stateHash,
+      codeVerifier: 'verifier52',
+      expiresAt: Date.now() + 600000,
+      used: false
+    });
+
+    // Fazer a secretsStore falhar no setJSON
+    mocks.secretsStore.setJSON = async () => { throw new Error('Blob store failure simulation'); };
+
+    const mockAxios = {
+      post: async () => ({ data: { refresh_token: 'ref52', access_token: 'acc52' } }),
+      get: async () => ({ data: { items: [{ id: process.env.YOUTUBE_EXPECTED_CHANNEL_ID }] } })
+    };
+
+    const res = await callbackFunc.handler({
+      queryStringParameters: { code: 'code52', state: state },
+      headers: { cookie: `oauth_session=${sessionId}` }
+    }, {}, mocks, mockAxios);
+
+    assert.strictEqual(res.statusCode, 500);
+    const sessionAfter = await mocks.sessionsStore.getJSON(sessionIdHash);
+    assert.strictEqual(sessionAfter, null);
+  });
+
+  it('53. Limpeza de Sessão: eliminar uma sessão não afeta a chave de outra sessão no store', async () => {
+    const mocks = createDefaultMocks();
+    const rawState = 'state53535353535353535353535353535353';
+    const signatureHmac = crypto.createHmac('sha256', process.env.YOUTUBE_OAUTH_STATE_SECRET).update(rawState).digest('hex');
+    const state = `${rawState}.${signatureHmac}`;
+    const stateHash = crypto.createHash('sha256').update(state).digest('hex');
+
+    const sessionId1 = 'session53_111111111111111111111111111';
+    const sessionIdHash1 = crypto.createHash('sha256').update(sessionId1).digest('hex');
+
+    const sessionId2 = 'session53_222222222222222222222222222';
+    const sessionIdHash2 = crypto.createHash('sha256').update(sessionId2).digest('hex');
+
+    await mocks.sessionsStore.setJSON(sessionIdHash1, { stateHash, codeVerifier: 'v1', expiresAt: Date.now() + 600000, used: false });
+    await mocks.sessionsStore.setJSON(sessionIdHash2, { stateHash: 'other', codeVerifier: 'v2', expiresAt: Date.now() + 600000, used: false });
+
+    const mockAxios = {
+      post: async () => ({ data: { access_token: 'invalid_missing_refresh' } }),
+      get: async () => ({ data: { items: [] } })
+    };
+
+    await callbackFunc.handler({
+      queryStringParameters: { code: 'c53', state: state },
+      headers: { cookie: `oauth_session=${sessionId1}` }
+    }, {}, mocks, mockAxios);
+
+    const s1 = await mocks.sessionsStore.getJSON(sessionIdHash1);
+    const s2 = await mocks.sessionsStore.getJSON(sessionIdHash2);
+
+    assert.strictEqual(s1, null);
+    assert.notStrictEqual(s2, null);
+    assert.strictEqual(s2.codeVerifier, 'v2');
+  });
+
+  it('54. Network Guard: fetch é bloqueado e lança NETWORK ACCESS BLOCKED DURING TESTS', () => {
+    assert.throws(() => {
+      globalThis.fetch('https://example.com');
+    }, { message: 'NETWORK ACCESS BLOCKED DURING TESTS' });
+  });
+
+  it('55. Network Guard: http.request, http.get, https.request, https.get são bloqueados', () => {
+    const http = require('http');
+    const https = require('https');
+    assert.throws(() => { http.request('http://example.com'); }, { message: 'NETWORK ACCESS BLOCKED DURING TESTS' });
+    assert.throws(() => { http.get('http://example.com'); }, { message: 'NETWORK ACCESS BLOCKED DURING TESTS' });
+    assert.throws(() => { https.request('https://example.com'); }, { message: 'NETWORK ACCESS BLOCKED DURING TESTS' });
+    assert.throws(() => { https.get('https://example.com'); }, { message: 'NETWORK ACCESS BLOCKED DURING TESTS' });
+  });
+
+  it('56. Network Guard: net.connect, net.createConnection e tls.connect são bloqueados', () => {
+    const net = require('net');
+    const tls = require('tls');
+    assert.throws(() => { net.connect(80, 'example.com'); }, { message: 'NETWORK ACCESS BLOCKED DURING TESTS' });
+    assert.throws(() => { net.createConnection(80, 'example.com'); }, { message: 'NETWORK ACCESS BLOCKED DURING TESTS' });
+    assert.throws(() => { tls.connect(443, 'example.com'); }, { message: 'NETWORK ACCESS BLOCKED DURING TESTS' });
   });
 
 });

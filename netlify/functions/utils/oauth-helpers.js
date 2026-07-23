@@ -12,14 +12,20 @@ function safeCompare(a, b) {
 }
 
 /**
- * Obter Store do Netlify Blobs (Fail-Closed)
+ * Opção de consistência forte para todos os Stores do Netlify Blobs.
+ * Exportada para inspeção nos testes sem necessidade de mock da API do SDK.
+ */
+const BLOBS_CONSISTENCY = 'strong';
+
+/**
+ * Obter Store do Netlify Blobs (Fail-Closed) com consistência forte.
  * Depende exclusivamente do contexto de deploy Netlify injetado automaticamente.
  * Não utiliza NETLIFY_AUTH_TOKEN, NETLIFY_BLOBS_TOKEN nem NETLIFY_SITE_ID manuais.
  */
 function getBlobsStore(storeName, customStore = null) {
   if (customStore) return customStore;
   try {
-    return getStore(storeName);
+    return getStore({ name: storeName, consistency: BLOBS_CONSISTENCY });
   } catch (err) {
     throw new Error(`Netlify Blobs Indisponível [${storeName}]: ${err.message}`);
   }
@@ -143,5 +149,6 @@ module.exports = {
   decryptRefreshToken,
   parseCookieHeader,
   checkRateLimit,
-  recordFailedAttempt
+  recordFailedAttempt,
+  BLOBS_CONSISTENCY
 };

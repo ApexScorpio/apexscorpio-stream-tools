@@ -14,6 +14,8 @@ exports.handler = async function(event, context, customStores = null, customAxio
     'Content-Security-Policy': "default-src 'self'; style-src 'unsafe-inline';"
   };
 
+  const expiredCookieHeader = 'oauth_session=; Path=/oauth/youtube; HttpOnly; Secure; Max-Age=0';
+
   // 1. Validar Variáveis de Ambiente Obrigatórias (SEM FALLBACKS)
   const clientId = process.env.YOUTUBE_OAUTH_CLIENT_ID;
   const clientSecret = process.env.YOUTUBE_OAUTH_CLIENT_SECRET;
@@ -93,7 +95,7 @@ exports.handler = async function(event, context, customStores = null, customAxio
       statusCode: 400,
       headers: {
         ...genericHeaders,
-        'Set-Cookie': 'oauth_session=; Path=/oauth/youtube; HttpOnly; Secure; Max-Age=0'
+        'Set-Cookie': expiredCookieHeader
       },
       body: `<h2>Sessão Inválida ou Reutilizada</h2><p>Por motivos de segurança, esta sessão de autorização expirou ou já foi utilizada.</p>`
     };
@@ -106,7 +108,7 @@ exports.handler = async function(event, context, customStores = null, customAxio
       statusCode: 400,
       headers: {
         ...genericHeaders,
-        'Set-Cookie': 'oauth_session=; Path=/oauth/youtube; HttpOnly; Secure; Max-Age=0'
+        'Set-Cookie': expiredCookieHeader
       },
       body: `<h2>Falha de Validação CSRF</h2><p>O formato do parâmetro state recebido é inválido.</p>`
     };
@@ -120,7 +122,7 @@ exports.handler = async function(event, context, customStores = null, customAxio
       statusCode: 400,
       headers: {
         ...genericHeaders,
-        'Set-Cookie': 'oauth_session=; Path=/oauth/youtube; HttpOnly; Secure; Max-Age=0'
+        'Set-Cookie': expiredCookieHeader
       },
       body: `<h2>Falha de Validação CSRF</h2><p>A assinatura HMAC do parâmetro state é inválida.</p>`
     };
@@ -132,7 +134,7 @@ exports.handler = async function(event, context, customStores = null, customAxio
       statusCode: 400,
       headers: {
         ...genericHeaders,
-        'Set-Cookie': 'oauth_session=; Path=/oauth/youtube; HttpOnly; Secure; Max-Age=0'
+        'Set-Cookie': expiredCookieHeader
       },
       body: `<h2>Falha de Validação CSRF</h2><p>O parâmetro state recebido não corresponde à sessão original.</p>`
     };
@@ -149,7 +151,7 @@ exports.handler = async function(event, context, customStores = null, customAxio
     };
   }
 
-  // 6. Trocar Code por Tokens (Servidor a Servidor)
+  // Executar trocas e gravações terminais garantindo eliminação final da sessão
   try {
     const tokenResp = await http.post(
       'https://oauth2.googleapis.com/token',
@@ -170,19 +172,17 @@ exports.handler = async function(event, context, customStores = null, customAxio
     const refreshToken = tokenResp.data?.refresh_token;
     const accessToken = tokenResp.data?.access_token;
 
-    // Seção 3: Exigir AMBOS os tokens (access_token E refresh_token)
     if (!refreshToken || !accessToken) {
       return {
         statusCode: 400,
         headers: {
           ...genericHeaders,
-          'Set-Cookie': 'oauth_session=; Path=/oauth/youtube; HttpOnly; Secure; Max-Age=0'
+          'Set-Cookie': expiredCookieHeader
         },
         body: `<h2>Tokens Incompletos</h2><p>A resposta de autorização não incluiu o refresh token e o access token simultaneamente. Repita o processo com consentimento.</p>`
       };
     }
 
-    // Seção 3: Validar Canal Autorizado via API do YouTube
     const channelResp = await http.get(
       'https://www.googleapis.com/youtube/v3/channels?part=id,snippet&mine=true',
       {
@@ -197,32 +197,27 @@ exports.handler = async function(event, context, customStores = null, customAxio
         statusCode: 403,
         headers: {
           ...genericHeaders,
-          'Set-Cookie': 'oauth_session=; Path=/oauth/youtube; HttpOnly; Secure; Max-Age=0'
+          'Set-Cookie': expiredCookieHeader
         },
         body: `<h2>Canal Não Permitido</h2><p>A conta Google autorizada não pertence ao canal permitido para este serviço.</p>`
       };
     }
 
-    // Seção 4: Ativação Segura do Novo Token (Versionada + Verificada)
     const randomTokenKey = `token-v-${crypto.randomBytes(8).toString('hex')}`;
     const encryptedPayload = encryptRefreshToken(refreshToken, encryptionKey);
 
-    // 1. Guardar token cifrado na chave versionada aleatória
     await secretsStore.setJSON(randomTokenKey, encryptedPayload);
 
-    // 2. Leitura de Verificação da chave versionada
     const verifiedBlob = await secretsStore.getJSON(randomTokenKey);
     if (!verifiedBlob || !verifiedBlob.iv || !verifiedBlob.ciphertext || !verifiedBlob.authTag) {
       throw new Error('Falha na leitura de verificação do Blob cifrado');
     }
 
-    // 3. Decifrar com a função real de produção para validar integridade
     const decryptedVerificationToken = decryptRefreshToken(verifiedBlob, encryptionKey);
     if (!decryptedVerificationToken || !safeCompare(decryptedVerificationToken, refreshToken)) {
       throw new Error('Falha na verificação de decifragem do token gravado');
     }
 
-    // 4. Apenas após verificação total concluída com sucesso, executar a gravação ÚNICA de ativação em 'oauth-config'
     const expectedChannelIdHash = crypto.createHash('sha256').update(expectedChannelId).digest('hex');
     await secretsStore.setJSON('oauth-config', {
       version: '1.0',
@@ -233,18 +228,11 @@ exports.handler = async function(event, context, customStores = null, customAxio
       updatedAt: new Date().toISOString()
     });
 
-    // Apagar cookie de sessão temporário e eliminar o blob de sessão (limpeza pós-uso)
-    try {
-      await sessionsStore.delete(sessionIdHash);
-    } catch (_deleteErr) {
-      // Falha no delete não é crítica — a sessão já está marcada como usada
-    }
-
     return {
       statusCode: 200,
       headers: {
         ...genericHeaders,
-        'Set-Cookie': 'oauth_session=; Path=/oauth/youtube; HttpOnly; Secure; Max-Age=0'
+        'Set-Cookie': expiredCookieHeader
       },
       body: `
         <!DOCTYPE html>
@@ -268,9 +256,15 @@ exports.handler = async function(event, context, customStores = null, customAxio
       statusCode: 500,
       headers: {
         ...genericHeaders,
-        'Set-Cookie': 'oauth_session=; Path=/oauth/youtube; HttpOnly; Secure; Max-Age=0'
+        'Set-Cookie': expiredCookieHeader
       },
       body: `<h2>Erro no Processamento</h2><p>Não foi possível concluir a troca de token com a Google. Tente novamente mais tarde.</p>`
     };
+  } finally {
+    try {
+      await sessionsStore.delete(sessionIdHash);
+    } catch (_deleteErr) {
+      // Ignorar erro de deleção de sessão caso já tenha sido limpa
+    }
   }
 };

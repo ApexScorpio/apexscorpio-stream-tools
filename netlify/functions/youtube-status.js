@@ -48,18 +48,23 @@ function parseViewersText(text) {
 
 /**
  * Obter Access Token do OAuth 2.0:
- * Origem exclusiva: Netlify Blobs → 'oauth-config' → 'activeTokenKey' → AES-256-GCM
+ * Origem exclusiva: Netlify Blobs → 'oauth-config' → validação expectedChannelIdHash → AES-256-GCM
  * Não utiliza YOUTUBE_OAUTH_REFRESH_TOKEN como fallback (proibido por design de segurança).
+ * Valida expectedChannelIdHash antes de usar o token ativo.
  */
 async function getOAuthAccessToken(customSecretsStore = null, customAxios = null) {
   const http = customAxios || axios;
   const clientId = process.env.YOUTUBE_OAUTH_CLIENT_ID;
   const clientSecret = process.env.YOUTUBE_OAUTH_CLIENT_SECRET;
   const encryptionKey = process.env.YOUTUBE_OAUTH_TOKEN_ENCRYPTION_KEY;
+  const expectedChannelId = process.env.YOUTUBE_EXPECTED_CHANNEL_ID;
 
-  if (!clientId || !clientSecret || !encryptionKey) {
+  if (!clientId || !clientSecret || !encryptionKey || !expectedChannelId) {
     return null;
   }
+
+  // Calcular SHA-256 do expectedChannelId local (usado para validar o hash armazenado)
+  const localChannelIdHash = require('crypto').createHash('sha256').update(expectedChannelId).digest('hex');
 
   let refreshToken = null;
 
@@ -69,6 +74,17 @@ async function getOAuthAccessToken(customSecretsStore = null, customAxios = null
     const oauthConfig = await secretsStore.getJSON('oauth-config');
 
     if (oauthConfig && oauthConfig.setupComplete === true && oauthConfig.activeTokenKey) {
+      // Validar que o expectedChannelIdHash gravado corresponde ao canal configurado localmente
+      if (!oauthConfig.expectedChannelIdHash) {
+        // Hash ausente na configuração — fail-closed
+        return null;
+      }
+      const { safeCompare: sc } = require('./utils/oauth-helpers.js');
+      if (!sc(localChannelIdHash, oauthConfig.expectedChannelIdHash)) {
+        // Hash diverge — token de outro canal — fail-closed sem expor hashes ou IDs
+        return null;
+      }
+
       const encryptedBlob = await secretsStore.getJSON(oauthConfig.activeTokenKey);
       if (encryptedBlob) {
         refreshToken = decryptRefreshToken(encryptedBlob, encryptionKey);
