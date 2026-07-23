@@ -1,5 +1,5 @@
 const axios = require('axios');
-const { initializeBlobsLambdaRuntime, getBlobsStore, decryptRefreshToken } = require('./utils/oauth-helpers.js');
+const { getBlobsStore, decryptRefreshToken } = require('../utils/oauth-helpers.js');
 
 // Cache em memória durante 12 segundos
 let cachedResponse = null;
@@ -534,11 +534,6 @@ async function getLiveStatus(customSecretsStore = null, customAxios = null) {
 }
 
 exports.handler = async function(event, context) {
-  try {
-    initializeBlobsLambdaRuntime(event);
-  } catch (_err) {
-    // Ignorar falha de inicialização no handler de status para permitir fallback transparente de scraping
-  }
   const result = await getLiveStatus();
   return {
     statusCode: 200,

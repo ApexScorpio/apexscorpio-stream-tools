@@ -1,0 +1,16 @@
+Inventário de Chaves dos Netlify Blobs (Antes da Limpeza):
+Data/Hora: 2026-07-23 12:35:33 UTC
+
+Store: youtube-oauth-sessions
+Chaves encontradas: Nenhuma (blobs: [])
+
+Store: youtube-oauth-secrets
+Chaves encontradas: Nenhuma (blobs: [])
+
+Chaves Específicas Verificadas:
+- sessões de teste (11:21 - 11:23 UTC): Ausentes
+- ratelimit-setup-*: Ausentes
+- oauth-config: Ausente
+- token-v-*: Ausente
+- primary-refresh-token: Ausente
+- setup-status: Ausente

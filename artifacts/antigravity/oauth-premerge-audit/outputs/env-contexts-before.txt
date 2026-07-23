@@ -1,0 +1,24 @@
+Auditoria de Contextos das Variáveis do Netlify (Antes):
+Data/Hora: 2026-07-23 12:35:33 UTC
+Comando: netlify env:list --json
+
+Resultados por Contexto:
+- production: Nenhuma variável configurada (ausente)
+- deploy-preview: Nenhuma variável configurada (ausente)
+- branch-deploy: Nenhuma variável configurada (ausente)
+- dev: Nenhuma variável configurada (ausente)
+- branch fix/secure-netlify-youtube-oauth: Nenhuma variável configurada (ausente)
+
+Variáveis Pesquisadas:
+- YOUTUBE_OAUTH_CLIENT_ID: Ausente
+- YOUTUBE_OAUTH_CLIENT_SECRET: Ausente
+- YOUTUBE_OAUTH_REDIRECT_URI: Ausente
+- YOUTUBE_OAUTH_SETUP_PASSWORD: Ausente
+- YOUTUBE_OAUTH_STATE_SECRET: Ausente
+- YOUTUBE_OAUTH_TOKEN_ENCRYPTION_KEY: Ausente
+- YOUTUBE_EXPECTED_CHANNEL_ID: Ausente
+- YOUTUBE_OAUTH_REFRESH_TOKEN: Ausente
+- NETLIFY_AUTH_TOKEN: Ausente
+- NETLIFY_BLOBS_TOKEN: Ausente
+
+Audit Log: AUDIT LOG NÃO ACESSÍVEL (método getSiteAuditLogs não disponível via CLI)

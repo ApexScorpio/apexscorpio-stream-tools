@@ -1,6 +1,6 @@
 const axios = require('axios');
 const crypto = require('crypto');
-const { initializeBlobsLambdaRuntime, safeCompare, getBlobsStore, encryptRefreshToken, decryptRefreshToken, parseCookieHeader } = require('./utils/oauth-helpers.js');
+const { safeCompare, getBlobsStore, encryptRefreshToken, decryptRefreshToken, parseCookieHeader } = require('../utils/oauth-helpers.js');
 
 exports.handler = async function(event, context, customStores = null, customAxios = null) {
   const http = customAxios || axios;
@@ -37,7 +37,6 @@ exports.handler = async function(event, context, customStores = null, customAxio
   // 2. Conectar às Stores do Netlify Blobs (Fail-Closed)
   let secretsStore, sessionsStore;
   try {
-    initializeBlobsLambdaRuntime(event, customStores);
     secretsStore = getBlobsStore('youtube-oauth-secrets', customStores?.secretsStore);
     sessionsStore = getBlobsStore('youtube-oauth-sessions', customStores?.sessionsStore);
   } catch (err) {
