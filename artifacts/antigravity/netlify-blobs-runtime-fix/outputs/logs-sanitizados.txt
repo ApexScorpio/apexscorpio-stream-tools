@@ -1,0 +1,15 @@
+=== NETLIFY FUNCTIONS RUNTIME ERROR LOG (DIAGNOSTIC BRUTO SANITIZADO) ===
+Source: Netlify Functions Runtime Logs
+Function: youtube-oauth-start / blobs-health
+Deploy ID: 6a62457654d02f41b93f334a / 6a6245e2b614b04bdc42ca54
+Timestamp: 2026-07-23T16:47:50Z
+
+Identificação do Erro:
+- Nome: MissingBlobsEnvironmentError
+- Classe: Error (SDK @netlify/blobs)
+- Mensagem: "The environment has not been configured to use Netlify Blobs. To use it manually, supply the following properties when creating a store: siteID, token"
+- Estado dos Contextos Injetados:
+  * hasGlobalBlobsContext: false (globalThis.netlifyBlobsContext é undefined no runtime da Function)
+  * hasEnvBlobsContext: false (process.env.NETLIFY_BLOBS_CONTEXT é undefined no runtime da Function)
+- Diagnóstico Técnico:
+  O runtime de Netlify Serverless Functions em deploys via CLI (sem integração directa com o add-on Blobs via UI ou deploy CLI com variáveis manuais de contexto) não injeta automaticamente a variável de ambiente `NETLIFY_BLOBS_CONTEXT` que o SDK `@netlify/blobs` v10.7.9 exige para invocação implícita `getStore(storeName)`.

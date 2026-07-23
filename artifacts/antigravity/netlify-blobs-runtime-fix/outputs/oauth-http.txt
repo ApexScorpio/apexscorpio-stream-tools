@@ -1,0 +1,10 @@
+=== OAUTH ENDPOINT HTTP STATUS AUDIT ===
+Timestamp: 2026-07-23T16:44:33Z
+
+GET /oauth/youtube/start:
+- Status: HTTP 500
+- Body: <h2>Serviço Indisponível</h2><p>O serviço de armazenamento backend não está acessível no momento.</p>
+
+GET /youtube-status:
+- Status: HTTP 200
+- Body: Consenso multifonte ativo (`isLive: true`, `viewers: 1`, `confidence: "high"`)
