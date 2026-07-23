@@ -19,3 +19,9 @@
   status = 200
 [functions]
   node_bundler = "esbuild"
+
+
+[[redirects]]
+  from = "/youtube-chat"
+  to = "/.netlify/functions/youtube-chat"
+  status = 200

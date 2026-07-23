@@ -1,0 +1,27 @@
+{
+  "timestampUtc": "2026-07-23T23:15:20.764Z",
+  "branch": "fix/migrate-oauth-to-modern-netlify-functions",
+  "headBeforeCommit": "8e7099dfc64939b6445a796b1fd25a887a42ebff",
+  "endpoint": "/youtube-chat",
+  "oauthServerSide": true,
+  "publicApiKeyRemoved": false,
+  "syntaxPassed": true,
+  "existingMultisourceChecks": "18/18",
+  "existingOAuthTests": "60/60",
+  "newChatTests": "5/5",
+  "totalKnownChecks": "83/83",
+  "errorsFound": 0,
+  "codeReady": true,
+  "previewExecuted": false,
+  "productionDeployExecuted": false,
+  "oauthAuthorizationStarted": false,
+  "credentialsRotated": false,
+  "progressBefore": 57,
+  "progressAfter": 62,
+  "nextAction": [
+    "Confirmar o relatório diretamente no GitHub.",
+    "Criar preview e testar /youtube-chat.",
+    "Migrar youtube-live.js para o endpoint OAuth.",
+    "Remover a API key pública."
+  ]
+}

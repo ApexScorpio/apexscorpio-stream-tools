@@ -1,0 +1,14 @@
+## netlify/functions/handlers/youtube-chat-handler.js
+Exit code: 0
+
+
+
+
+## netlify/functions/youtube-chat.mjs
+Exit code: 0
+
+
+
+
+## netlify/functions/utils/oauth-helpers.js
+Exit code: 0
