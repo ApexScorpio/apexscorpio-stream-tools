@@ -1,6 +1,6 @@
 # Handoff — Migração OAuth YouTube para Modern Netlify Functions
 
-Última atualização UTC: 2026-07-23T19:40:05Z
+Última atualização UTC: 2026-07-23T19:53:20Z
 
 ## Como retomar numa nova conversa
 
@@ -36,7 +36,7 @@ Colocar o OAuth oficial do YouTube totalmente funcional na Netlify:
 - Netlify Project ID: 76ea2513-2651-4965-8241-a40070af3502
 - Produção: https://apexscorpio-youtube-scraper-6e2678f9.netlify.app
 - Head antes deste passo: d2610a6180e0c88e914b429a79fa2d890403f783
-- Relatório mais recente: artifacts/antigravity/manual-modern-functions-migration/test-27-mock-recovery
+- Relatório mais recente: artifacts/antigravity/manual-modern-functions-migration/remote-state-verification
 
 ## Estado atual
 
@@ -107,3 +107,4 @@ Colocar o OAuth oficial do YouTube totalmente funcional na Netlify:
 - 2026-07-23: preview v3 incluiu os handlers, mas faltavam axios e @netlify/blobs no artefacto.
 - 2026-07-23T19:28:13Z: preview v4 executado; testes=1; sintaxe=0; deploy=-1; gate=NÃO APROVADO; deployId=.
 - 2026-07-23T19:40:05Z: mock do teste 27 corrigido para store.get com type json; testes=1; deploy não executado; relatório=artifacts/antigravity/manual-modern-functions-migration/test-27-mock-recovery.
+- 2026-07-23T19:53:20Z: verificação do upload v5-final=NÃO APROVADA; SHA local/remoto iguais=True; summary remoto=False; probes remotos=False; correção AES=False; relatório=artifacts/antigravity/manual-modern-functions-migration/remote-state-verification.

@@ -1,0 +1,15 @@
+{
+    "timestampUtc":  "2026-07-23T19:53:20Z",
+    "branch":  "fix/migrate-oauth-to-modern-netlify-functions",
+    "localShaBeforeVerificationCommit":  "d54f6dcb6be9e52f05449f419d3fb828f12b429c",
+    "remoteShaBeforeVerificationCommit":  "d54f6dcb6be9e52f05449f419d3fb828f12b429c",
+    "localAndRemoteShaMatched":  true,
+    "v5SummaryLocal":  false,
+    "v5SummaryRemote":  false,
+    "v5ProbesLocal":  false,
+    "v5ProbesRemote":  false,
+    "deterministicAesFixPresent":  false,
+    "remoteVerificationPassed":  false,
+    "objective":  "Confirmar que o resultado preview-modern-runtime-v5-final foi realmente enviado para a branch remota",
+    "nextAction":  "Recuperar ou repetir apenas o passo v5-final, pois os artefactos esperados não estão confirmados remotamente"
+}
