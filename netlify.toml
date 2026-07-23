@@ -1,0 +1,9 @@
+[build]
+  command = "echo Netlify build complete"
+  publish = "public"
+  functions = "netlify/functions"
+
+[[redirects]]
+  from = "/youtube-status"
+  to = "/.netlify/functions/youtube-status"
+  status = 200

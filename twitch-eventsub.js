@@ -1,9 +1,8 @@
 /**
- * ApexScorpio Twitch EventSub bridge.
+ * ApexScorpio Twitch EventSub bridge v2.
  *
- * The dashboard owns the Twitch user token and relays notifications to the
- * public SLOBS sources through the existing broadcastEvent/MQTT bridge.
- * No token is ever sent to an overlay or to the MQTT brokers.
+ * The dashboard owns the Twitch OAuth token. Tokens stay in sessionStorage and
+ * are never published to the overlays or public MQTT topics.
  */
 (function (global) {
   'use strict';
@@ -14,10 +13,12 @@
   const CLIENT_ID_KEY = 'apex_twitch_client_id';
   const TOKEN_KEY = 'apex_twitch_access_token';
   const OAUTH_STATE_KEY = 'apex_twitch_oauth_state';
+  const HISTORY_SYNC_MS = 5 * 60 * 1000;
   const REQUIRED_SCOPES = [
     'user:read:chat',
     'moderator:read:followers',
-    'channel:read:subscriptions'
+    'channel:read:subscriptions',
+    'bits:read'
   ];
 
   let clientId = '';
@@ -26,24 +27,22 @@
   let broadcaster = null;
   let activeSocket = null;
   let reconnectTimer = null;
+  let historyTimer = null;
   let stoppedByUser = false;
   let subscriptionSummary = { active: 0, total: 0 };
   const seenMessageIds = new Set();
 
-  const $ = (id) => document.getElementById(id);
+  const $ = id => document.getElementById(id);
 
   function setStatus(text, state = 'idle') {
-    const el = $('twitch-auth-status');
-    if (!el) return;
+    const element = $('twitch-auth-status');
+    if (!element) return;
     const colors = {
-      idle: '#94A3B8',
-      loading: '#F59E0B',
-      success: '#10B981',
-      warning: '#F59E0B',
-      error: '#F87171'
+      idle: '#94A3B8', loading: '#F59E0B', success: '#10B981',
+      warning: '#F59E0B', error: '#F87171'
     };
-    el.style.color = colors[state] || colors.idle;
-    el.textContent = text;
+    element.style.color = colors[state] || colors.idle;
+    element.textContent = text;
   }
 
   function updateControls(connected) {
@@ -75,7 +74,6 @@
   function readOAuthResponse() {
     const hash = new URLSearchParams(global.location.hash.replace(/^#/, ''));
     if (!hash.has('access_token') && !hash.has('error')) return;
-
     const returnedState = hash.get('state') || '';
     const expectedState = sessionStorage.getItem(OAUTH_STATE_KEY) || '';
     sessionStorage.removeItem(OAUTH_STATE_KEY);
@@ -90,7 +88,6 @@
       setStatus('A autenticação Twitch não pôde ser validada.', 'error');
       return;
     }
-
     accessToken = hash.get('access_token') || '';
     if (accessToken) sessionStorage.setItem(TOKEN_KEY, accessToken);
     cleanOAuthHash();
@@ -103,7 +100,6 @@
     if (!response.ok) throw new Error('invalid_token');
     const data = await response.json();
     if (!data.client_id || !data.user_id) throw new Error('invalid_token');
-
     if (clientId && data.client_id !== clientId) throw new Error('client_mismatch');
     clientId = data.client_id;
     localStorage.setItem(CLIENT_ID_KEY, clientId);
@@ -119,7 +115,8 @@
       headers: {
         Authorization: `Bearer ${accessToken}`,
         'Client-Id': clientId
-      }
+      },
+      cache: 'no-store'
     });
     const data = await response.json().catch(() => ({}));
     if (!response.ok) throw new Error(data.message || `Twitch API ${response.status}`);
@@ -128,77 +125,53 @@
 
   async function resolveBroadcaster() {
     const data = await helixGet(`/users?login=${encodeURIComponent(CHANNEL_LOGIN)}`);
-    const user = data && data.data && data.data[0];
+    const user = data?.data?.[0];
     if (!user) throw new Error('channel_not_found');
     return { id: user.id, login: user.login, name: user.display_name || user.login };
   }
 
+  function grantedScopes() {
+    return new Set(authenticatedUser?.scopes || []);
+  }
+
   function subscriptionDefinitions(sessionId) {
-    const common = { method: 'websocket', session_id: sessionId };
+    const transport = { method: 'websocket', session_id: sessionId };
     return [
       {
-        label: 'chat',
-        type: 'channel.chat.message',
-        version: '1',
-        scope: 'user:read:chat',
-        condition: { broadcaster_user_id: broadcaster.id, user_id: authenticatedUser.id },
-        transport: common
+        label: 'chat', type: 'channel.chat.message', version: '1', scope: 'user:read:chat',
+        condition: { broadcaster_user_id: broadcaster.id, user_id: authenticatedUser.id }, transport
       },
       {
-        label: 'followers',
-        type: 'channel.follow',
-        version: '2',
-        scope: 'moderator:read:followers',
-        condition: { broadcaster_user_id: broadcaster.id, moderator_user_id: authenticatedUser.id },
-        transport: common
+        label: 'followers', type: 'channel.follow', version: '2', scope: 'moderator:read:followers',
+        condition: { broadcaster_user_id: broadcaster.id, moderator_user_id: authenticatedUser.id }, transport
       },
       {
-        label: 'subs',
-        type: 'channel.subscribe',
-        version: '1',
-        scope: 'channel:read:subscriptions',
-        condition: { broadcaster_user_id: broadcaster.id },
-        transport: common
+        label: 'subs', type: 'channel.subscribe', version: '1', scope: 'channel:read:subscriptions',
+        condition: { broadcaster_user_id: broadcaster.id }, transport
       },
       {
-        label: 'gift subs',
-        type: 'channel.subscription.gift',
-        version: '1',
-        scope: 'channel:read:subscriptions',
-        condition: { broadcaster_user_id: broadcaster.id },
-        transport: common
+        label: 'gift subs', type: 'channel.subscription.gift', version: '1', scope: 'channel:read:subscriptions',
+        condition: { broadcaster_user_id: broadcaster.id }, transport
       },
       {
-        label: 'resubs',
-        type: 'channel.subscription.message',
-        version: '1',
-        scope: 'channel:read:subscriptions',
-        condition: { broadcaster_user_id: broadcaster.id },
-        transport: common
+        label: 'resubs', type: 'channel.subscription.message', version: '1', scope: 'channel:read:subscriptions',
+        condition: { broadcaster_user_id: broadcaster.id }, transport
       },
       {
-        label: 'raids',
-        type: 'channel.raid',
-        version: '1',
-        scope: null,
-        condition: { to_broadcaster_user_id: broadcaster.id },
-        transport: common
+        label: 'raids', type: 'channel.raid', version: '1', scope: null,
+        condition: { to_broadcaster_user_id: broadcaster.id }, transport
+      },
+      {
+        label: 'bits', type: 'channel.cheer', version: '1', scope: 'bits:read',
+        condition: { broadcaster_user_id: broadcaster.id }, transport
       }
     ];
   }
 
   async function createSubscription(definition) {
-    const grantedScopes = new Set(authenticatedUser.scopes || []);
-    if (definition.scope && !grantedScopes.has(definition.scope)) {
+    if (definition.scope && !grantedScopes().has(definition.scope)) {
       return { ok: false, label: definition.label, reason: 'missing_scope' };
     }
-
-    const body = {
-      type: definition.type,
-      version: definition.version,
-      condition: definition.condition,
-      transport: definition.transport
-    };
     const response = await fetch('https://api.twitch.tv/helix/eventsub/subscriptions', {
       method: 'POST',
       headers: {
@@ -206,18 +179,24 @@
         'Client-Id': clientId,
         'Content-Type': 'application/json'
       },
-      body: JSON.stringify(body)
+      body: JSON.stringify({
+        type: definition.type,
+        version: definition.version,
+        condition: definition.condition,
+        transport: definition.transport
+      })
     });
     const data = await response.json().catch(() => ({}));
-    if (!response.ok) {
-      return { ok: false, label: definition.label, reason: data.message || `HTTP ${response.status}` };
-    }
+    if (!response.ok) return { ok: false, label: definition.label, reason: data.message || `HTTP ${response.status}` };
     return { ok: true, label: definition.label };
   }
 
   async function subscribeToEvents(sessionId) {
     const definitions = subscriptionDefinitions(sessionId);
-    const results = await Promise.all(definitions.map(definition => createSubscription(definition)));
+    const results = [];
+    // Twitch requires subscriptions soon after the welcome message. Requests are
+    // parallel so all are created inside that window.
+    results.push(...await Promise.all(definitions.map(createSubscription)));
     const active = results.filter(result => result.ok).length;
     subscriptionSummary = { active, total: definitions.length };
 
@@ -234,6 +213,39 @@
     });
   }
 
+  function broadcast(type, payload) {
+    if (typeof global.broadcastEvent === 'function') global.broadcastEvent(type, payload);
+  }
+
+  async function syncRecentFollowers() {
+    if (!broadcaster || !authenticatedUser || !grantedScopes().has('moderator:read:followers')) return;
+    try {
+      const data = await helixGet(`/channels/followers?broadcaster_id=${encodeURIComponent(broadcaster.id)}&first=100`);
+      const events = (data.data || []).map(follower => ({
+        id: `tw-follow-${follower.user_id}-${follower.followed_at}`,
+        type: 'follower',
+        username: follower.user_name || follower.user_login || 'Twitch Viewer',
+        platform: 'twitch',
+        timestamp: follower.followed_at,
+        source: 'twitch-followers-api',
+        isTest: false
+      }));
+      broadcast('event_history_sync', {
+        events,
+        source: 'twitch-followers-api',
+        generatedAt: new Date().toISOString()
+      });
+    } catch (error) {
+      console.warn('[Twitch EventSub] Não foi possível sincronizar seguidores recentes:', error.message);
+    }
+  }
+
+  function scheduleHistorySync() {
+    if (historyTimer) clearInterval(historyTimer);
+    syncRecentFollowers();
+    historyTimer = setInterval(syncRecentFollowers, HISTORY_SYNC_MS);
+  }
+
   function rememberMessage(messageId) {
     if (!messageId) return false;
     if (seenMessageIds.has(messageId)) return true;
@@ -245,12 +257,12 @@
   function relayChat(event, metadata) {
     const badges = Array.isArray(event.badges) ? event.badges : [];
     const badgeNames = new Set(badges.map(badge => badge.set_id));
-    const message = {
+    const payload = {
       id: event.message_id || metadata.message_id,
       platform: 'twitch',
       username: event.chatter_user_name || event.chatter_user_login || 'Twitch Viewer',
       userColor: event.color || '#9146FF',
-      message: (event.message && event.message.text) || '',
+      message: event.message?.text || '',
       badges: {
         broadcaster: badgeNames.has('broadcaster'),
         mod: badgeNames.has('moderator'),
@@ -259,54 +271,65 @@
       isTest: false,
       timestamp: metadata.message_timestamp || new Date().toISOString()
     };
-    if (message.message && typeof global.broadcastEvent === 'function') {
-      global.broadcastEvent('chat_message', message);
-    }
+    if (payload.message) broadcast('chat_message', payload);
   }
 
   function relayEvent(type, event, metadata) {
-    let username = event.user_name || event.user_login || 'Twitch Viewer';
-    let viewers = 0;
-
-    if (type === 'channel.raid') {
-      username = event.from_broadcaster_user_name || event.from_broadcaster_user_login || 'Twitch Raider';
-      viewers = Number(event.viewers || 0);
-    } else if (type === 'channel.subscription.gift') {
-      username = event.is_anonymous ? 'Anonymous Gifter' : (event.user_name || event.user_login || 'Twitch Gifter');
-    }
-
-    const mappedType = type === 'channel.follow' ? 'follower'
-      : type === 'channel.raid' ? 'raid'
-      : 'subscriber';
-
-    // Gift recipients also emit channel.subscribe; the gift notification is the
-    // useful aggregate event, so skip the duplicate recipient alert.
-    if (type === 'channel.subscribe' && event.is_gift) return;
-
-    const payload = {
+    const base = {
       id: metadata.message_id,
-      type: mappedType,
-      username,
       platform: 'twitch',
-      viewers,
-      giftCount: Number(event.total || 0),
       isTest: false,
       timestamp: metadata.message_timestamp || new Date().toISOString()
     };
-    if (typeof global.broadcastEvent === 'function') {
-      global.broadcastEvent('new_event', payload);
+    let payload = null;
+
+    if (type === 'channel.follow') {
+      payload = { ...base, type: 'follower', username: event.user_name || event.user_login || 'Twitch Viewer' };
+    } else if (type === 'channel.subscribe') {
+      if (event.is_gift) return;
+      payload = { ...base, type: 'subscriber', username: event.user_name || event.user_login || 'Twitch Viewer' };
+    } else if (type === 'channel.subscription.gift') {
+      payload = {
+        ...base,
+        type: 'gift_subscriber',
+        username: event.is_anonymous ? 'Anonymous Gifter' : (event.user_name || event.user_login || 'Twitch Gifter'),
+        giftCount: Number(event.total || 0)
+      };
+    } else if (type === 'channel.subscription.message') {
+      payload = {
+        ...base,
+        type: 'membership',
+        username: event.user_name || event.user_login || 'Twitch Subscriber',
+        months: Number(event.cumulative_months || event.duration_months || 0),
+        message: event.message?.text || ''
+      };
+    } else if (type === 'channel.raid') {
+      payload = {
+        ...base,
+        type: 'raid',
+        username: event.from_broadcaster_user_name || event.from_broadcaster_user_login || 'Twitch Raider',
+        viewers: Number(event.viewers || 0)
+      };
+    } else if (type === 'channel.cheer') {
+      payload = {
+        ...base,
+        type: 'cheer',
+        username: event.is_anonymous ? 'Anonymous Cheer' : (event.user_name || event.user_login || 'Twitch Viewer'),
+        amount: `${Number(event.bits || 0)} Bits`,
+        bits: Number(event.bits || 0),
+        message: event.message || ''
+      };
     }
+    if (payload) broadcast('new_event', payload);
   }
 
   function handleNotification(data) {
     const metadata = data.metadata || {};
     if (rememberMessage(metadata.message_id)) return;
-    const event = (data.payload && data.payload.event) || {};
-    const type = metadata.subscription_type || (data.payload && data.payload.subscription && data.payload.subscription.type) || '';
+    const event = data.payload?.event || {};
+    const type = metadata.subscription_type || data.payload?.subscription?.type || '';
     if (type === 'channel.chat.message') relayChat(event, metadata);
-    else if (type === 'channel.follow' || type === 'channel.subscribe' ||
-      type === 'channel.subscription.gift' || type === 'channel.subscription.message' ||
-      type === 'channel.raid') relayEvent(type, event, metadata);
+    else relayEvent(type, event, metadata);
   }
 
   function scheduleReconnect() {
@@ -324,15 +347,13 @@
     socket.addEventListener('open', () => {
       setStatus('Twitch ligada; a ativar chat e eventos…', 'loading');
     });
-
-    socket.addEventListener('message', async (message) => {
+    socket.addEventListener('message', async message => {
       let data;
       try { data = JSON.parse(message.data); } catch (_) { return; }
-      const messageType = data && data.metadata && data.metadata.message_type;
-
+      const messageType = data?.metadata?.message_type;
       if (messageType === 'session_welcome') {
-        const session = data.payload && data.payload.session;
-        if (!session || !session.id) return;
+        const session = data.payload?.session;
+        if (!session?.id) return;
         if (migrating) {
           activeSocket = socket;
           if (previousSocket && previousSocket.readyState < WebSocket.CLOSING) previousSocket.close(1000, 'migrated');
@@ -340,17 +361,18 @@
           updateControls(true);
         } else {
           await subscribeToEvents(session.id);
+          scheduleHistorySync();
         }
       } else if (messageType === 'notification') {
         handleNotification(data);
       } else if (messageType === 'session_reconnect') {
-        const reconnectUrl = data.payload && data.payload.session && data.payload.session.reconnect_url;
+        const reconnectUrl = data.payload?.session?.reconnect_url;
         if (reconnectUrl) connectEventSub(reconnectUrl, true, socket);
       } else if (messageType === 'revocation') {
-        setStatus('Uma permissão Twitch foi revogada. Volte a ligar.', 'warning');
+        const revokedType = data.payload?.subscription?.type || 'evento';
+        setStatus(`Permissão Twitch revogada: ${revokedType}. Volte a ligar.`, 'warning');
       }
     });
-
     socket.addEventListener('close', () => {
       if (socket === activeSocket && !migrating) scheduleReconnect();
     });
@@ -379,10 +401,9 @@
       authenticatedUser = null;
       broadcaster = null;
       updateControls(false);
-      const message = error.message === 'client_mismatch'
+      setStatus(error.message === 'client_mismatch'
         ? 'O Client ID não corresponde à autorização. Volte a ligar.'
-        : 'A sessão Twitch expirou. Volte a ligar.';
-      setStatus(message, 'warning');
+        : 'A sessão Twitch expirou. Volte a ligar.', 'warning');
     }
   }
 
@@ -394,7 +415,6 @@
       if (input) input.focus();
       return;
     }
-
     clientId = enteredClientId;
     localStorage.setItem(CLIENT_ID_KEY, clientId);
     const state = randomState();
@@ -413,7 +433,8 @@
   global.twitchOAuthLogout = function twitchOAuthLogout() {
     stoppedByUser = true;
     if (reconnectTimer) clearTimeout(reconnectTimer);
-    reconnectTimer = null;
+    if (historyTimer) clearInterval(historyTimer);
+    reconnectTimer = historyTimer = null;
     if (activeSocket) {
       try { activeSocket.close(1000, 'user disconnected'); } catch (_) {}
     }
