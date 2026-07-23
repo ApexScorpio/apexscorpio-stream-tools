@@ -1,9 +1,6 @@
 import { withLambda } from "@netlify/aws-lambda-compat";
-import { createRequire } from "node:module";
+import handlerModule from "./handlers/youtube-status-handler.js";
 
-const require = createRequire(import.meta.url);
-const { handler: lambdaHandler } = require("./handlers/youtube-status-handler.js");
+const { handler } = handlerModule;
 
-export default withLambda(async (event, context) => {
-  return lambdaHandler(event, context);
-});
+export default withLambda(handler);

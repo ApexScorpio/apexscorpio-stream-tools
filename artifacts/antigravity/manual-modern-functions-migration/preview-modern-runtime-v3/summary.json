@@ -1,0 +1,21 @@
+{
+    "timestampUtc":  "2026-07-23T19:10:47Z",
+    "branch":  "fix/migrate-oauth-to-modern-netlify-functions",
+    "headBeforeCommit":  "0189996970e06ac848839bdb46da02a06c1bb993",
+    "npmTestExitCode":  0,
+    "syntaxCheckExitCode":  0,
+    "deployExitCode":  0,
+    "deployId":  "6a62674acaef50147cb8c7e9",
+    "deployUrl":  "https://6a62674acaef50147cb8c7e9--apexscorpio-youtube-scraper-6e2678f9.netlify.app",
+    "blobsRuntimePreviouslyVerified":  true,
+    "modernRuntimeGatePassed":  false,
+    "operationError":  null,
+    "probeStatuses":  {
+                          "youtube-status-direct":  502,
+                          "youtube-status-redirect":  502,
+                          "oauth-start-direct":  502,
+                          "oauth-start-redirect":  502,
+                          "oauth-callback-direct":  502,
+                          "oauth-callback-redirect":  502
+                      }
+}
