@@ -181,3 +181,5 @@ Colocar o OAuth oficial do YouTube totalmente funcional na Netlify:
 - 2026-07-23T20:46:09Z: regras completas de resposta e execuÃ§Ã£o adicionadas; confirmado que o Ãºltimo erro resultou da repetiÃ§Ã£o do comando v6; v7 ainda nÃ£o executado; relatÃ³rio=artifacts/antigravity/manual-modern-functions-migration/handoff-response-rules-update.
 
 - 2026-07-23T21:21:47Z: resíduos das tentativas v7 removidos; código não alterado; causa confirmada como tratamento incorreto do stderr normal do git fetch pelo Windows PowerShell 5.1 com ErrorActionPreference Stop; relatório=artifacts/antigravity/manual-modern-functions-migration/v7-preflight-cleanup.
+
+- 2026-07-23T22:20:10.230Z: v7 de injeção estática; patch=true; validação estática=true; sintaxe=0; testes=0; codeReady=true; deploy preview=False; produção=False; OAuth=False; rotação=False; relatório=artifacts/antigravity/manual-modern-functions-migration/v7-static-injection-code-and-tests-final.

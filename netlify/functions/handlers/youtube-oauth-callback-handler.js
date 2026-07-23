@@ -1,9 +1,21 @@
-const axios = require('axios');
+let runtimeAxios = null;
+
+function setRuntimeAxios(axiosInstance) {
+  if (
+    !axiosInstance ||
+    typeof axiosInstance.get !== 'function' ||
+    typeof axiosInstance.post !== 'function'
+  ) {
+    throw new Error('axios runtime inválido');
+  }
+
+  runtimeAxios = axiosInstance;
+}
 const crypto = require('crypto');
 const { safeCompare, getBlobsStore, encryptRefreshToken, decryptRefreshToken, parseCookieHeader } = require('../utils/oauth-helpers.js');
 
 exports.handler = async function(event, context, customStores = null, customAxios = null) {
-  const http = customAxios || axios;
+  const http = customAxios || runtimeAxios;
 
   const genericHeaders = {
     'Content-Type': 'text/html; charset=utf-8',
@@ -268,3 +280,5 @@ exports.handler = async function(event, context, customStores = null, customAxio
     }
   }
 };
+
+exports.setRuntimeAxios = setRuntimeAxios;

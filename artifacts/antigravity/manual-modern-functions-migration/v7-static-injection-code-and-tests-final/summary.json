@@ -1,0 +1,20 @@
+{
+  "timestampUtc": "2026-07-23T22:20:10.230Z",
+  "branch": "fix/migrate-oauth-to-modern-netlify-functions",
+  "headBeforeCommit": "36ced1d518ed01a00315e5a383f113a8e536855a",
+  "patchApplied": true,
+  "staticValidationPassed": true,
+  "syntaxExitCode": 0,
+  "npmTestExitCode": 0,
+  "codeReady": true,
+  "deployPreviewExecuted": false,
+  "productionDeployExecuted": false,
+  "oauthAuthorizationStarted": false,
+  "credentialsRotated": false,
+  "operationError": "nenhum",
+  "nextAction": [
+    "Confirmar este relatório diretamente no GitHub.",
+    "Criar o deploy preview v7.",
+    "Testar as três Functions e os três redirects."
+  ]
+}

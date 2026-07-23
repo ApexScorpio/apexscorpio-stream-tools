@@ -1,5 +1,13 @@
 const crypto = require('crypto');
-const { getStore } = require('@netlify/blobs');
+let runtimeGetStore = null;
+
+function setRuntimeGetStore(getStoreFunction) {
+  if (typeof getStoreFunction !== 'function') {
+    throw new Error('getStore runtime inválido');
+  }
+
+  runtimeGetStore = getStoreFunction;
+}
 
 
 /**
@@ -20,7 +28,11 @@ function safeCompare(a, b) {
 function getBlobsStore(storeName, customStore = null) {
   if (customStore) return customStore;
   try {
-    return getStore(storeName);
+    if (typeof runtimeGetStore !== 'function') {
+      throw new Error('getStore runtime não injetado');
+    }
+
+    return runtimeGetStore(storeName);
   } catch (err) {
     throw new Error(`Netlify Blobs Indisponível [${storeName}]: ${err.message}`);
   }
@@ -138,6 +150,7 @@ async function recordFailedAttempt(ipAddress, ratelimitStore) {
 }
 
 module.exports = {
+  setRuntimeGetStore,
   safeCompare,
   getBlobsStore,
   encryptRefreshToken,

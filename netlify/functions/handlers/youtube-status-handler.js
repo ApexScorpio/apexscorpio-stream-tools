@@ -1,5 +1,19 @@
-const axios = require('axios');
-const { getBlobsStore, decryptRefreshToken } = require('../utils/oauth-helpers.js');
+const crypto = require('crypto');
+const { getBlobsStore, decryptRefreshToken, safeCompare } = require('../utils/oauth-helpers.js');
+
+let runtimeAxios = null;
+
+function setRuntimeAxios(axiosInstance) {
+  if (
+    !axiosInstance ||
+    typeof axiosInstance.get !== 'function' ||
+    typeof axiosInstance.post !== 'function'
+  ) {
+    throw new Error('axios runtime inválido');
+  }
+
+  runtimeAxios = axiosInstance;
+}
 
 // Cache em memória durante 12 segundos
 let cachedResponse = null;
@@ -53,7 +67,7 @@ function parseViewersText(text) {
  * Valida expectedChannelIdHash antes de usar o token ativo.
  */
 async function getOAuthAccessToken(customSecretsStore = null, customAxios = null) {
-  const http = customAxios || axios;
+  const http = customAxios || runtimeAxios;
   const clientId = process.env.YOUTUBE_OAUTH_CLIENT_ID;
   const clientSecret = process.env.YOUTUBE_OAUTH_CLIENT_SECRET;
   const encryptionKey = process.env.YOUTUBE_OAUTH_TOKEN_ENCRYPTION_KEY;
@@ -64,7 +78,7 @@ async function getOAuthAccessToken(customSecretsStore = null, customAxios = null
   }
 
   // Calcular SHA-256 do expectedChannelId local (usado para validar o hash armazenado)
-  const localChannelIdHash = require('crypto').createHash('sha256').update(expectedChannelId).digest('hex');
+  const localChannelIdHash = crypto.createHash('sha256').update(expectedChannelId).digest('hex');
 
   let refreshToken = null;
 
@@ -79,8 +93,7 @@ async function getOAuthAccessToken(customSecretsStore = null, customAxios = null
         // Hash ausente na configuração — fail-closed
         return null;
       }
-      const { safeCompare: sc } = require('../utils/oauth-helpers.js');
-      if (!sc(localChannelIdHash, oauthConfig.expectedChannelIdHash)) {
+      if (!safeCompare(localChannelIdHash, oauthConfig.expectedChannelIdHash)) {
         // Hash diverge — token de outro canal — fail-closed sem expor hashes ou IDs
         return null;
       }
@@ -123,7 +136,7 @@ async function getOAuthAccessToken(customSecretsStore = null, customAxios = null
  * FONTE A: OAuth liveBroadcasts.list
  */
 async function fetchSourceOAuthBroadcast(accessToken, customAxios = null) {
-  const http = customAxios || axios;
+  const http = customAxios || runtimeAxios;
   const observedAt = new Date().toISOString();
   if (!accessToken) {
     return { status: "unknown", observedAt, error: "OAuth credentials or access_token not available" };
@@ -166,7 +179,7 @@ async function fetchSourceOAuthBroadcast(accessToken, customAxios = null) {
  * FONTE B: OAuth / API videos.list (liveStreamingDetails)
  */
 async function fetchSourceOAuthVideo(videoId, accessToken, customAxios = null) {
-  const http = customAxios || axios;
+  const http = customAxios || runtimeAxios;
   const observedAt = new Date().toISOString();
   if (!videoId || !accessToken) {
     return { status: "unknown", observedAt, error: "videoId or accessToken missing" };
@@ -213,7 +226,7 @@ async function fetchSourceOAuthVideo(videoId, accessToken, customAxios = null) {
  * FONTE C: InnerTube /player
  */
 async function fetchSourcePlayer(videoId, customAxios = null) {
-  const http = customAxios || axios;
+  const http = customAxios || runtimeAxios;
   const observedAt = new Date().toISOString();
   if (!videoId) return { status: "unknown", observedAt, error: "videoId missing" };
 
@@ -261,7 +274,7 @@ async function fetchSourcePlayer(videoId, customAxios = null) {
  * FONTE D: InnerTube /next (espectadores em tempo real)
  */
 async function fetchSourceNext(videoId, customAxios = null) {
-  const http = customAxios || axios;
+  const http = customAxios || runtimeAxios;
   const observedAt = new Date().toISOString();
   if (!videoId) return { status: "unknown", observedAt, error: "videoId missing" };
 
@@ -335,7 +348,7 @@ async function fetchSourceNext(videoId, customAxios = null) {
  * FONTE E: Descoberta Dinâmica de Candidatos e HTML Scraping
  */
 async function fetchSourceHTML(customAxios = null) {
-  const http = customAxios || axios;
+  const http = customAxios || runtimeAxios;
   const observedAt = new Date().toISOString();
   const candidateIds = new Set();
   const discoveryUrls = [
@@ -413,7 +426,7 @@ async function fetchSourceHTML(customAxios = null) {
  * Função Principal de Agregação Multifonte e Consenso
  */
 async function getLiveStatus(customSecretsStore = null, customAxios = null) {
-  const http = customAxios || axios;
+  const http = customAxios || runtimeAxios;
   const now = Date.now();
   if (cachedResponse && (now - lastFetchTimestamp < CACHE_TTL_MS)) {
     return {
@@ -551,3 +564,4 @@ exports.handler = async function(event, context) {
 exports.parseViewersText = parseViewersText;
 exports.getLiveStatus = getLiveStatus;
 exports.resetCacheForTests = resetCacheForTests;
+exports.setRuntimeAxios = setRuntimeAxios;
