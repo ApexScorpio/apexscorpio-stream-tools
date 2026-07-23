@@ -1,0 +1,51 @@
+[
+    {
+        "name":  "modern-blobs-health",
+        "url":  "https://6a625e54fab1f8ee619c067b--apexscorpio-youtube-scraper-6e2678f9.netlify.app/.netlify/functions/blobs-modern-health",
+        "statusCode":  500,
+        "body":  "{\"ok\":false,\"runtime\":\"modern-netlify-functions\",\"create\":true,\"read\":false,\"delete\":false,\"errorName\":\"TypeError\",\"errorMessage\":\"store.getJSON is not a function\"}",
+        "error":  null
+    },
+    {
+        "name":  "youtube-status-direct",
+        "url":  "https://6a625e54fab1f8ee619c067b--apexscorpio-youtube-scraper-6e2678f9.netlify.app/.netlify/functions/youtube-status",
+        "statusCode":  502,
+        "body":  "error decoding lambda response: error decoding lambda response: unexpected end of JSON input",
+        "error":  null
+    },
+    {
+        "name":  "youtube-status-redirect",
+        "url":  "https://6a625e54fab1f8ee619c067b--apexscorpio-youtube-scraper-6e2678f9.netlify.app/youtube-status",
+        "statusCode":  502,
+        "body":  "error decoding lambda response: error decoding lambda response: unexpected end of JSON input",
+        "error":  null
+    },
+    {
+        "name":  "oauth-start-direct",
+        "url":  "https://6a625e54fab1f8ee619c067b--apexscorpio-youtube-scraper-6e2678f9.netlify.app/.netlify/functions/youtube-oauth-start",
+        "statusCode":  502,
+        "body":  "error decoding lambda response: error decoding lambda response: unexpected end of JSON input",
+        "error":  null
+    },
+    {
+        "name":  "oauth-start-redirect",
+        "url":  "https://6a625e54fab1f8ee619c067b--apexscorpio-youtube-scraper-6e2678f9.netlify.app/oauth/youtube/start",
+        "statusCode":  502,
+        "body":  "error decoding lambda response: error decoding lambda response: unexpected end of JSON input",
+        "error":  null
+    },
+    {
+        "name":  "oauth-callback-direct",
+        "url":  "https://6a625e54fab1f8ee619c067b--apexscorpio-youtube-scraper-6e2678f9.netlify.app/.netlify/functions/youtube-oauth-callback",
+        "statusCode":  502,
+        "body":  "error decoding lambda response: error decoding lambda response: unexpected end of JSON input",
+        "error":  null
+    },
+    {
+        "name":  "oauth-callback-redirect",
+        "url":  "https://6a625e54fab1f8ee619c067b--apexscorpio-youtube-scraper-6e2678f9.netlify.app/oauth/youtube/callback",
+        "statusCode":  502,
+        "body":  "error decoding lambda response: error decoding lambda response: unexpected end of JSON input",
+        "error":  null
+    }
+]
