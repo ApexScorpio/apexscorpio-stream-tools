@@ -79,7 +79,7 @@ async function getOAuthAccessToken(customSecretsStore = null, customAxios = null
         // Hash ausente na configuração — fail-closed
         return null;
       }
-      const { safeCompare: sc } = require('./utils/oauth-helpers.js');
+      const { safeCompare: sc } = require('../utils/oauth-helpers.js');
       if (!sc(localChannelIdHash, oauthConfig.expectedChannelIdHash)) {
         // Hash diverge — token de outro canal — fail-closed sem expor hashes ou IDs
         return null;
