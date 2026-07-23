@@ -1,0 +1,19 @@
+=== NETLIFY BLOBS HEALTH CHECK VERIFICATION ===
+Function: /.netlify/functions/blobs-health
+Deploy ID Preview: 6a6248f4a3d7a7075a6fa7cc
+Timestamp: 2026-07-23T17:02:22Z
+
+Resultado HTTP 200:
+{
+  "ok": true,
+  "connectLambda": true,
+  "create": true,
+  "read": true,
+  "delete": true,
+  "errorName": null,
+  "errorMessage": null
+}
+
+Store de Limpeza Pós-Teste:
+- Store: youtube-oauth-health
+- Estado: Vazio (0 chaves acumuladas)

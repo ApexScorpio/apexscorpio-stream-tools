@@ -1,0 +1,14 @@
+=== UNIT TESTS SUITE VERIFICATION ===
+Runner: Node Native Test Runner
+Timestamp: 2026-07-23T17:06:13Z
+
+▶ Testes de Arquitetura e Segurança OAuth
+  ✔ 1. GET /oauth/youtube/start apresenta formulário HTML
+  ...
+  ✔ 56. Network Guard: net.connect, net.createConnection e tls.connect são bloqueados
+  ✔ 57. initializeBlobsLambdaRuntime ignora connectLambda quando customStores são fornecidas
+  ✔ 58. Sem customStores, initializeBlobsLambdaRuntime exige event válido
+  ✔ 59. Falha de connectLambda mantém comportamento fail-closed sem vazar dados
+  ✔ 60. Start e Callback chamam initializeBlobsLambdaRuntime com o event fornecido
+
+Summary: 60/60 tests passed, 0 failures, network access fully guarded.

@@ -1,0 +1,15 @@
+=== PRODUCTION HTTP STATUS AUDIT ===
+Deploy Production ID: 6a624a474590771286b756ac
+Timestamp: 2026-07-23T17:08:02Z
+
+GET /oauth/youtube/start:
+- Status: HTTP 500
+- Motivo: MissingBlobsEnvironmentError em contexto de produção quando a funcionalidade Netlify Blobs não está fisicamente vinculada/provisionada a nível de site no Netlify Dashboard.
+
+POST /oauth/youtube/start (Password incorreta):
+- Status: HTTP 500
+- Resposta: Servidor Indisponível
+
+GET /youtube-status:
+- Status: HTTP 200
+- Body: Consenso multifonte operacional (`isLive: true`, `viewers: 1`, `confidence: "high"`)
