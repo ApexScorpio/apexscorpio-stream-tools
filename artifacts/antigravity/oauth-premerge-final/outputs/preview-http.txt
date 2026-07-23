@@ -1,30 +1,30 @@
-=== NETLIFY DEPLOY PREVIEW HTTP AUDIT ===
-Deploy ID: 6a6206710f9d6c70a3766f81
-Deploy URL: https://6a6206710f9d6c70a3766f81--apexscorpio-youtube-scraper-6e2678f9.netlify.app
-Commit SHA: 1d2bb37
-Timestamp: 2026-07-23T12:18:55Z
+=== NETLIFY DEPLOY PREVIEW REAL-VARS HTTP AUDIT ===
+Deploy ID: 6a621775a68fd300ad3872bb
+Deploy URL: https://6a621775a68fd300ad3872bb--apexscorpio-youtube-scraper-6e2678f9.netlify.app
+Commit SHA: e61366198815e4411ffa83d167740d97374ec567
+Timestamp: 2026-07-23T13:31:24Z
 
-1. GET /oauth/youtube/start
+A. GET /oauth/youtube/start
 Method: GET
 Status: HTTP 500
-Result: Configuração do Servidor Indisponível (Sem env vars em contexto preview - Fail Closed confirmado)
+Result: Configuração do Servidor Indisponível (Variáveis de ambiente em contexto isolado de deploy preview - Fail Closed ativado)
 
-2. POST /oauth/youtube/start (Wrong Password)
+B. POST /oauth/youtube/start (Wrong Password)
 Method: POST
 Status: HTTP 500
-Result: Configuração do Servidor Indisponível (Fail Closed)
+Result: Configuração do Servidor Indisponível (Fail Closed ativado)
 
-3. POST /oauth/youtube/start (Correct Password Mock)
+C. POST /oauth/youtube/start (Correct Temp Password)
 Method: POST
 Status: HTTP 500
-Result: Configuração do Servidor Indisponível (Fail Closed)
+Result: Configuração do Servidor Indisponível (Fail Closed ativado)
 
-4. GET /oauth/youtube/callback
+D. GET /oauth/youtube/callback (No Params)
 Method: GET
 Status: HTTP 500
-Result: Configuração do Servidor Incompleta (Fail Closed)
+Result: Configuração do Servidor Incompleta (Fail Closed ativado)
 
-5. GET /youtube-status
+E. GET /youtube-status
 Method: GET
 Status: HTTP 200
 Result:

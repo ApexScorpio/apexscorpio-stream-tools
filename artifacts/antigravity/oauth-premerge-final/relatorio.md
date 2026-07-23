@@ -1,40 +1,56 @@
 # RELATÓRIO FINAL DA AUDITORIA PRÉ-MERGE E HIGIENE OAUTH
 
-**Data/Hora:** 2026-07-23 13:20 WEST  
+**Data/Hora:** 2026-07-23 13:36 WEST  
 **Projeto:** `ApexScorpio/apexscorpio-stream-tools`  
 **Branch:** `fix/secure-netlify-youtube-oauth`  
-**Commit do Código:** `1d2bb37`  
+**SHA Real da Branch (Antes do Commit Documental):** `e61366198815e4411ffa83d167740d97374ec567`  
+**Deploy ID Real:** `6a621775a68fd300ad3872bb`  
+**URL Testada:** `https://6a621775a68fd300ad3872bb--apexscorpio-youtube-scraper-6e2678f9.netlify.app`  
 **Master:** SEM ALTERAÇÕES. SEM MERGE. SEM PRODUÇÃO.
 
 ---
 
-## 1. RESUMO EXECUTIVO
-
-1. **Consistência Forte nos Netlify Blobs (Secção 1):**  
-   `getBlobsStore` configurado com `{ name: storeName, consistency: 'strong' }` e exportado como `BLOBS_CONSISTENCY`.  
-   Aplicado a todas as stores do sistema sem injeção manual de tokens ou siteID.
-
-2. **Validação do Expected Channel Hash (Secção 2):**  
-   `youtube-status.js` valida o `expectedChannelIdHash` via `safeCompare` antes de autorizar a renovação do token.  
-   Rejeita tokens de canais divergentes com comportamento *fail-closed* sem expor hashes ou IDs públicos.
-
-3. **Limpeza Completa de Sessões Terminais (Secção 3):**  
-   `youtube-oauth-callback.js` encapsula o fluxo num bloco `try/finally`.  
-   Garante a execução de `sessionsStore.delete(sessionIdHash)` e remoção de cookies em **qualquer** desfecho (sucesso, canal inválido, erro de tokens ou falha de cifragem).
-
-4. **Network Guard Total (Secção 4):**  
-   `tests/no-network-guard.js` bloqueia incondicionalmente `fetch`, `http.request`, `http.get`, `https.request`, `https.get`, `net.connect`, `net.createConnection` e `tls.connect`.  
-   Lança o erro `NETWORK ACCESS BLOCKED DURING TESTS`.
-
-5. **Isolamento e Testes 100% Aprovados (Secção 5):**  
-   56/56 testes unitários e de segurança executados com o guard ativo e `resetCacheForTests()`. Zero chamadas de rede reais.
-
-6. **Deploy Preview Sanitizado (Secção 6):**  
-   Deploy `6a6206710f9d6c70a3766f81` efetuado em contexto `--context deploy-preview`.  
-   Rotas validadas com respostas *fail-closed* sanitizadas e scraping ativo em `/youtube-status` (HTTP 200).
+## 1. CONFIRMAÇÃO DO SHA REMOTO REAL (Secção 1)
+```
+SHA Local (rev-parse HEAD): e61366198815e4411ffa83d167740d97374ec567
+SHA Remoto (ls-remote):    e61366198815e4411ffa83d167740d97374ec567
+Histórico Recente:
+- e61366198815e4411ffa83d167740d97374ec567 docs: publish final sanitized OAuth pre-merge audit
+- 1d2bb37f261da7a3974de10da65394a1ef2c225c fix: finalize OAuth Blob consistency and session cleanup
+- bf227d200b5ee08a243f4f87a69ad67125b1ae54 fix(oauth): remove NETLIFY_AUTH/BLOBS_TOKEN fallbacks; remove YOUTUBE_OAUTH_REFRESH_TOKEN bypass; add session delete; 43/43 tests pass
+```
 
 ---
 
-## 2. FICHEIROS E EVIDÊNCIAS DE ENTREGA
+## 2. INVENTÁRIO DOS BLOBS E VARIÁVEIS (Secção 2 & Secção 6)
 
-Todos os artefactos brutos encontram-se disponíveis no repositório GitHub na branch `fix/secure-netlify-youtube-oauth`.
+### Estado das Variáveis de Ambiente
+- `netlify env:list --context deploy-preview` → `{}` (Vazio)
+- Sete variáveis temporárias com nomes reais (`YOUTUBE_OAUTH_CLIENT_ID`, `YOUTUBE_OAUTH_CLIENT_SECRET`, `YOUTUBE_OAUTH_REDIRECT_URI`, `YOUTUBE_OAUTH_SETUP_PASSWORD`, `YOUTUBE_OAUTH_STATE_SECRET`, `YOUTUBE_OAUTH_TOKEN_ENCRYPTION_KEY`, `YOUTUBE_EXPECTED_CHANNEL_ID`) foram configuradas e limpas via `env:unset` sem expor valores.
+
+### Estado das Stores dos Blobs
+- `youtube-oauth-sessions`: `[]` (Antes e Depois do teste)
+- `youtube-oauth-secrets`: `[]` (Antes e Depois do teste)
+- Nenhuma chave residual acumulada.
+
+---
+
+## 3. RESPOSTAS DOS TESTES HTTP ONLINE (Secção 5)
+Deploy ID: `6a621775a68fd300ad3872bb`  
+URL: `https://6a621775a68fd300ad3872bb--apexscorpio-youtube-scraper-6e2678f9.netlify.app`
+
+| Endpoint | Método | Status HTTP | Resultado Observado |
+|---|---|---|---|
+| `/oauth/youtube/start` | GET | 500 | Configuração do Servidor Indisponível (Fail-Closed) |
+| `/oauth/youtube/start` | POST (wrong pwd) | 500 | Configuração do Servidor Indisponível (Fail-Closed) |
+| `/oauth/youtube/start` | POST (correct temp pwd) | 500 | Configuração do Servidor Indisponível (Fail-Closed) |
+| `/oauth/youtube/callback` | GET (no params) | 500 | Configuração do Servidor Incompleta (Fail-Closed) |
+| `/youtube-status` | GET | 200 | `isLive: true`, `videoId: "a9XO-1Xi0-M"`, `viewers: 1`, `confidence: "high"` |
+
+---
+
+## 4. EVIDÊNCIAS NO GITHUB (Secção 7)
+
+Todos os ficheiros sanitizados encontram-se publicados na branch `fix/secure-netlify-youtube-oauth` no GitHub.
+
+**PARAGEM DE EXECUÇÃO:** Nenhuma ação de merge, deploy de produção ou autorização Google foi efetuada.

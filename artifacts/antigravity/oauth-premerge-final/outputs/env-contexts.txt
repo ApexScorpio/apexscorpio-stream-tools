@@ -1,16 +1,17 @@
 === NETLIFY ENVIRONMENT VARIABLES CONTEXT AUDIT ===
-Timestamp: 2026-07-23T12:17:24Z
-
-Context: production
-Status: {} (Zero variáveis de ambiente ativas ou expostas no contexto production)
+Timestamp: 2026-07-23T13:36:09Z
 
 Context: deploy-preview
-Status: {} (Zero variáveis de ambiente remanescentes em deploy-preview após remoção limpa)
+Status: {} (Zero variáveis de ambiente ativas ou expostas após remoção limpa via env:unset)
 
-Variáveis temporárias criadas durante o teste de rotas:
-- TEST_TEMP_SETUP_PWD
-- TEST_TEMP_CLIENT_ID
-- TEST_TEMP_STATE_SECRET
-- TEST_TEMP_REDIRECT_URI
+Variáveis temporárias criadas e subsequentemente removidas via env:unset:
+- YOUTUBE_OAUTH_CLIENT_ID
+- YOUTUBE_OAUTH_CLIENT_SECRET
+- YOUTUBE_OAUTH_REDIRECT_URI
+- YOUTUBE_OAUTH_SETUP_PASSWORD
+- YOUTUBE_OAUTH_STATE_SECRET
+- YOUTUBE_OAUTH_TOKEN_ENCRYPTION_KEY
+- YOUTUBE_EXPECTED_CHANNEL_ID
 
-Todas as variáveis temporárias foram geradas dinamicamente e removidas sem afetar o contexto production.
+Confirmação:
+Todas as variáveis temporárias foram completamente removidas do contexto deploy-preview e do escopo geral do projeto. O contexto de produção permanece 100% intacto e com zero variáveis configuradas.
