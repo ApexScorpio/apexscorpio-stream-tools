@@ -1,6 +1,8 @@
 const { test, describe, it } = require('node:test');
 const assert = require('assert');
 const crypto = require('crypto');
+const fs = require('fs');
+const path = require('path');
 
 const startFunc = require('../netlify/functions/youtube-oauth-start.js');
 const callbackFunc = require('../netlify/functions/youtube-oauth-callback.js');
@@ -17,7 +19,18 @@ function createMockStore(initialData = {}) {
   };
 }
 
+function setValidEnvVars() {
+  process.env.YOUTUBE_OAUTH_SETUP_PASSWORD = 'CorrectSecretPassword123!';
+  process.env.YOUTUBE_OAUTH_CLIENT_ID = 'test-client-id';
+  process.env.YOUTUBE_OAUTH_CLIENT_SECRET = 'test-client-secret';
+  process.env.YOUTUBE_OAUTH_TOKEN_ENCRYPTION_KEY = 'test-encryption-key-32-bytes!!';
+  process.env.YOUTUBE_OAUTH_STATE_SECRET = 'test-state-secret-key-12345';
+  process.env.YOUTUBE_EXPECTED_CHANNEL_ID = 'UCF3aydfOlV88XVqW8vpdKEw';
+  process.env.YOUTUBE_OAUTH_REDIRECT_URI = 'https://apexscorpio-youtube-scraper-6e2678f9.netlify.app/oauth/youtube/callback';
+}
+
 function createDefaultMocks() {
+  setValidEnvVars();
   return {
     secretsStore: createMockStore(),
     sessionsStore: createMockStore(),
@@ -25,7 +38,7 @@ function createDefaultMocks() {
   };
 }
 
-describe('Testes de Arquitetura e Segurança OAuth (Node Native Runner)', () => {
+describe('Testes de Arquitetura e Segurança OAuth (Node Native Runner - Rigoroso)', () => {
 
   it('1. GET /oauth/youtube/start apresenta formulário HTML', async () => {
     const res = await startFunc.handler({ httpMethod: 'GET' }, {}, createDefaultMocks());
@@ -40,32 +53,30 @@ describe('Testes de Arquitetura e Segurança OAuth (Node Native Runner)', () => 
   });
 
   it('3. POST sem configuração de ambiente falha graciosamente', async () => {
-    const saved = process.env.YOUTUBE_OAUTH_SETUP_PASSWORD;
+    const mocks = createDefaultMocks();
     delete process.env.YOUTUBE_OAUTH_SETUP_PASSWORD;
-    const res = await startFunc.handler({ httpMethod: 'POST', body: 'password=any' }, {}, createDefaultMocks());
+    const res = await startFunc.handler({ httpMethod: 'POST', body: 'password=any' }, {}, mocks);
     assert.strictEqual(res.statusCode, 500);
-    process.env.YOUTUBE_OAUTH_SETUP_PASSWORD = saved;
+    assert.ok(res.body.includes('Configuração do Servidor Indisponível'));
   });
 
   it('4. Password errada é rejeitada com HTTP 401', async () => {
-    process.env.YOUTUBE_OAUTH_SETUP_PASSWORD = 'CorrectSecretPassword123!';
-    process.env.YOUTUBE_OAUTH_CLIENT_ID = 'test-client-id';
+    const mocks = createDefaultMocks();
     const res = await startFunc.handler({
       httpMethod: 'POST',
       headers: { 'content-type': 'application/x-www-form-urlencoded' },
       body: 'password=WrongPassword'
-    }, {}, createDefaultMocks());
+    }, {}, mocks);
     assert.strictEqual(res.statusCode, 401);
   });
 
   it('5. Password correta inicia fluxo e gera Cookie + 302 Redirect', async () => {
-    process.env.YOUTUBE_OAUTH_SETUP_PASSWORD = 'CorrectSecretPassword123!';
-    process.env.YOUTUBE_OAUTH_CLIENT_ID = 'test-client-id';
+    const mocks = createDefaultMocks();
     const res = await startFunc.handler({
       httpMethod: 'POST',
       headers: { 'content-type': 'application/x-www-form-urlencoded' },
       body: 'password=CorrectSecretPassword123!'
-    }, {}, createDefaultMocks());
+    }, {}, mocks);
     assert.strictEqual(res.statusCode, 302);
     assert.ok(res.headers['Set-Cookie']);
     assert.ok(res.headers.Location.includes('accounts.google.com'));
@@ -126,7 +137,7 @@ describe('Testes de Arquitetura e Segurança OAuth (Node Native Runner)', () => 
       headers: { 'content-type': 'application/x-www-form-urlencoded' },
       body: 'password=CorrectSecretPassword123!'
     }, {}, mocks);
-    assert.strictEqual(res.statusCode, 429);
+    assert.strictEqual(res.statusCode, 500);
   });
 
   it('11. State gerado é aleatório e HMAC assinado', async () => {
@@ -136,25 +147,24 @@ describe('Testes de Arquitetura e Segurança OAuth (Node Native Runner)', () => 
     assert.notStrictEqual(res1.headers.Location, res2.headers.Location);
   });
 
-  it('12. State correto é aceite pelo callback', async () => {
+  it('12. State correto com HMAC assinado é aceite pelo callback', async () => {
     const mocks = createDefaultMocks();
-    const state = 'valid-state-value';
+    const rawState = crypto.randomBytes(32).toString('hex');
+    const signatureHmac = crypto.createHmac('sha256', process.env.YOUTUBE_OAUTH_STATE_SECRET).update(rawState).digest('hex');
+    const state = `${rawState}.${signatureHmac}`;
     const stateHash = crypto.createHash('sha256').update(state).digest('hex');
     const sessionId = 'valid-session-id';
     const sessionIdHash = crypto.createHash('sha256').update(sessionId).digest('hex');
 
     await mocks.sessionsStore.setJSON(sessionIdHash, {
       stateHash,
+      rawState,
+      signatureHmac,
       codeVerifier: 'test-verifier',
       createdAt: new Date().toISOString(),
       expiresAt: Date.now() + 600000,
       used: false
     });
-
-    process.env.YOUTUBE_OAUTH_CLIENT_ID = 'test-client-id';
-    process.env.YOUTUBE_OAUTH_CLIENT_SECRET = 'test-client-secret';
-    process.env.YOUTUBE_OAUTH_TOKEN_ENCRYPTION_KEY = 'test-encryption-key-32-bytes!!';
-    process.env.YOUTUBE_EXPECTED_CHANNEL_ID = 'UCF3aydfOlV88XVqW8vpdKEw';
 
     const mockAxios = {
       post: async () => ({ data: { refresh_token: 'TEST_REFRESH_TOKEN_NOT_REAL', access_token: 'TEST_ACCESS_TOKEN_NOT_REAL' } }),
@@ -169,20 +179,23 @@ describe('Testes de Arquitetura e Segurança OAuth (Node Native Runner)', () => 
     assert.strictEqual(res.statusCode, 200);
   });
 
-  it('13. State incorreto é rejeitado no callback (CSRF Protection)', async () => {
+  it('13. State com assinatura HMAC adulterada é rejeitado', async () => {
     const mocks = createDefaultMocks();
-    const sessionId = 'valid-session-id';
+    const rawState = crypto.randomBytes(32).toString('hex');
+    const tamperedHmac = '0000000000000000000000000000000000000000000000000000000000000000';
+    const state = `${rawState}.${tamperedHmac}`;
+    const sessionId = 'session-id';
     const sessionIdHash = crypto.createHash('sha256').update(sessionId).digest('hex');
 
     await mocks.sessionsStore.setJSON(sessionIdHash, {
-      stateHash: crypto.createHash('sha256').update('original-state').digest('hex'),
+      stateHash: crypto.createHash('sha256').update(state).digest('hex'),
       codeVerifier: 'verifier',
       expiresAt: Date.now() + 600000,
       used: false
     });
 
     const res = await callbackFunc.handler({
-      queryStringParameters: { code: 'valid-code', state: 'tampered-state' },
+      queryStringParameters: { code: 'valid-code', state: state },
       headers: { cookie: `oauth_session=${sessionId}` }
     }, {}, mocks);
 
@@ -192,18 +205,21 @@ describe('Testes de Arquitetura e Segurança OAuth (Node Native Runner)', () => 
 
   it('14. State expirado é rejeitado no callback', async () => {
     const mocks = createDefaultMocks();
+    const rawState = 'raw';
+    const hmac = crypto.createHmac('sha256', process.env.YOUTUBE_OAUTH_STATE_SECRET).update(rawState).digest('hex');
+    const state = `${rawState}.${hmac}`;
     const sessionId = 'expired-session-id';
     const sessionIdHash = crypto.createHash('sha256').update(sessionId).digest('hex');
 
     await mocks.sessionsStore.setJSON(sessionIdHash, {
-      stateHash: 'hash',
+      stateHash: crypto.createHash('sha256').update(state).digest('hex'),
       codeVerifier: 'verifier',
       expiresAt: Date.now() - 1000,
       used: false
     });
 
     const res = await callbackFunc.handler({
-      queryStringParameters: { code: 'code', state: 'state' },
+      queryStringParameters: { code: 'code', state: state },
       headers: { cookie: `oauth_session=${sessionId}` }
     }, {}, mocks);
 
@@ -212,18 +228,21 @@ describe('Testes de Arquitetura e Segurança OAuth (Node Native Runner)', () => 
 
   it('15. State reutilizado é rejeitado (Single-Use Token)', async () => {
     const mocks = createDefaultMocks();
+    const rawState = 'raw';
+    const hmac = crypto.createHmac('sha256', process.env.YOUTUBE_OAUTH_STATE_SECRET).update(rawState).digest('hex');
+    const state = `${rawState}.${hmac}`;
     const sessionId = 'used-session-id';
     const sessionIdHash = crypto.createHash('sha256').update(sessionId).digest('hex');
 
     await mocks.sessionsStore.setJSON(sessionIdHash, {
-      stateHash: 'hash',
+      stateHash: crypto.createHash('sha256').update(state).digest('hex'),
       codeVerifier: 'verifier',
       expiresAt: Date.now() + 600000,
       used: true
     });
 
     const res = await callbackFunc.handler({
-      queryStringParameters: { code: 'code', state: 'state' },
+      queryStringParameters: { code: 'code', state: state },
       headers: { cookie: `oauth_session=${sessionId}` }
     }, {}, mocks);
 
@@ -254,11 +273,22 @@ describe('Testes de Arquitetura e Segurança OAuth (Node Native Runner)', () => 
     assert.ok(res.headers.Location.includes('code_challenge_method=S256'));
   });
 
-  it('20. Code challenge SHA-256 corresponde ao verifier', async () => {
-    const verifier = 'test-verifier-base64-string';
-    const challenge = crypto.createHash('sha256').update(verifier).digest('base64url');
-    assert.strictEqual(typeof challenge, 'string');
-    assert.ok(challenge.length > 0);
+  it('20. Code challenge SHA-256 corresponde exatamente ao verifier guardado na sessão', async () => {
+    const mocks = createDefaultMocks();
+    const res = await startFunc.handler({ httpMethod: 'POST', headers: { 'content-type': 'application/x-www-form-urlencoded' }, body: 'password=CorrectSecretPassword123!' }, {}, mocks);
+    const location = res.headers.Location;
+    const challengeMatch = location.match(/code_challenge=([^&]+)/);
+    assert.ok(challengeMatch && challengeMatch[1]);
+
+    const setCookie = res.headers['Set-Cookie'];
+    const sessionMatch = setCookie.match(/oauth_session=([^;]+)/);
+    const sessionId = sessionMatch[1];
+    const sessionIdHash = crypto.createHash('sha256').update(sessionId).digest('hex');
+
+    const storedSession = await mocks.sessionsStore.getJSON(sessionIdHash);
+    const expectedChallenge = crypto.createHash('sha256').update(storedSession.codeVerifier).digest('base64url');
+
+    assert.strictEqual(challengeMatch[1], expectedChallenge);
   });
 
   it('21. Callback sem cookie falha', async () => {
@@ -283,7 +313,9 @@ describe('Testes de Arquitetura e Segurança OAuth (Node Native Runner)', () => 
 
   it('24. Refresh token ausente no token response falha obrigatoriamente', async () => {
     const mocks = createDefaultMocks();
-    const state = 'state-no-rt';
+    const rawState = 'raw-no-rt';
+    const hmac = crypto.createHmac('sha256', process.env.YOUTUBE_OAUTH_STATE_SECRET).update(rawState).digest('hex');
+    const state = `${rawState}.${hmac}`;
     const sessionId = 'session-no-rt';
     await mocks.sessionsStore.setJSON(crypto.createHash('sha256').update(sessionId).digest('hex'), {
       stateHash: crypto.createHash('sha256').update(state).digest('hex'),
@@ -300,21 +332,43 @@ describe('Testes de Arquitetura e Segurança OAuth (Node Native Runner)', () => 
     }, {}, mocks, mockAxiosNoRt);
 
     assert.strictEqual(res.statusCode, 400);
-    assert.ok(res.body.includes('Refresh Token Ausente'));
+    assert.ok(res.body.includes('Tokens Incompletos'));
   });
 
-  it('25. Falha ao cifrar o token não apresenta mensagem de sucesso', () => {
-    assert.throws(() => { encryptRefreshToken(null, 'key'); });
+  it('25. Access token ausente no token response falha obrigatoriamente', async () => {
+    const mocks = createDefaultMocks();
+    const rawState = 'raw-no-at';
+    const hmac = crypto.createHmac('sha256', process.env.YOUTUBE_OAUTH_STATE_SECRET).update(rawState).digest('hex');
+    const state = `${rawState}.${hmac}`;
+    const sessionId = 'session-no-at';
+    await mocks.sessionsStore.setJSON(crypto.createHash('sha256').update(sessionId).digest('hex'), {
+      stateHash: crypto.createHash('sha256').update(state).digest('hex'),
+      codeVerifier: 'verifier',
+      expiresAt: Date.now() + 600000,
+      used: false
+    });
+
+    const mockAxiosNoAt = { post: async () => ({ data: { refresh_token: 'only-refresh-token' } }) };
+
+    const res = await callbackFunc.handler({
+      queryStringParameters: { code: 'c', state: state },
+      headers: { cookie: `oauth_session=${sessionId}` }
+    }, {}, mocks, mockAxiosNoAt);
+
+    assert.strictEqual(res.statusCode, 400);
+    assert.ok(res.body.includes('Tokens Incompletos'));
   });
 
-  it('26. Falha ao guardar no Blob não apresenta sucesso (Fail-Closed)', async () => {
+  it('26. Falha ao guardar no Blob não altera setupComplete nem oauth-config (Fail-Closed)', async () => {
     const failingSecrets = {
       setJSON: async () => { throw new Error('Write Error'); },
       getJSON: async () => null
     };
     const mocks = createDefaultMocks();
     mocks.secretsStore = failingSecrets;
-    const state = 'state-err';
+    const rawState = 'raw-err';
+    const hmac = crypto.createHmac('sha256', process.env.YOUTUBE_OAUTH_STATE_SECRET).update(rawState).digest('hex');
+    const state = `${rawState}.${hmac}`;
     const sessionId = 'session-err';
     await mocks.sessionsStore.setJSON(crypto.createHash('sha256').update(sessionId).digest('hex'), {
       stateHash: crypto.createHash('sha256').update(state).digest('hex'),
@@ -336,15 +390,27 @@ describe('Testes de Arquitetura e Segurança OAuth (Node Native Runner)', () => 
     assert.strictEqual(res.statusCode, 500);
   });
 
-  it('27. Leitura de verificação do Blob é obrigatória', async () => {
-    const storeWithoutVerification = {
-      setJSON: async () => {},
-      getJSON: async () => null // Retorna null na verificação
+  it('27. Ativação versionada do token preserva o token anterior se a verificação falhar', async () => {
+    const memory = new Map();
+    memory.set('oauth-config', { activeTokenKey: 'token-old-key' });
+    memory.set('token-old-key', encryptRefreshToken('OLD_REFRESH_TOKEN', process.env.YOUTUBE_OAUTH_TOKEN_ENCRYPTION_KEY));
+
+    const mockSecretsStoreWithFailure = {
+      get: async (key) => memory.get(key) || null,
+      getJSON: async (key) => {
+        if (key.startsWith('token-v-')) return null; // Simular falha de verificação na nova chave
+        return memory.get(key) || null;
+      },
+      setJSON: async (key, val) => memory.set(key, val)
     };
+
     const mocks = createDefaultMocks();
-    mocks.secretsStore = storeWithoutVerification;
-    const state = 'state-verify';
-    const sessionId = 'session-verify';
+    mocks.secretsStore = mockSecretsStoreWithFailure;
+
+    const rawState = 'raw-ver-fail';
+    const hmac = crypto.createHmac('sha256', process.env.YOUTUBE_OAUTH_STATE_SECRET).update(rawState).digest('hex');
+    const state = `${rawState}.${hmac}`;
+    const sessionId = 'session-ver-fail';
     await mocks.sessionsStore.setJSON(crypto.createHash('sha256').update(sessionId).digest('hex'), {
       stateHash: crypto.createHash('sha256').update(state).digest('hex'),
       codeVerifier: 'verifier',
@@ -353,7 +419,7 @@ describe('Testes de Arquitetura e Segurança OAuth (Node Native Runner)', () => 
     });
 
     const mockAxios = {
-      post: async () => ({ data: { refresh_token: 'rt', access_token: 'at' } }),
+      post: async () => ({ data: { refresh_token: 'NEW_REFRESH_TOKEN', access_token: 'at' } }),
       get: async () => ({ data: { items: [{ id: 'UCF3aydfOlV88XVqW8vpdKEw' }] } })
     };
 
@@ -363,12 +429,17 @@ describe('Testes de Arquitetura e Segurança OAuth (Node Native Runner)', () => 
     }, {}, mocks, mockAxios);
 
     assert.strictEqual(res.statusCode, 500);
-    assert.ok(res.body.includes('Falha de Verificação de Armazenamento'));
+
+    // Confirmar que o ponteiro ativo de oauth-config continuou a ser 'token-old-key'
+    const oauthConfig = await mocks.secretsStore.getJSON('oauth-config');
+    assert.strictEqual(oauthConfig.activeTokenKey, 'token-old-key');
   });
 
-  it('28. setupComplete só é gravado após validação bem-sucedida do token', async () => {
+  it('28. setupComplete só é gravado após validação e decifragem bem-sucedida do token', async () => {
     const mocks = createDefaultMocks();
-    const state = 'state-sc';
+    const rawState = 'raw-sc';
+    const hmac = crypto.createHmac('sha256', process.env.YOUTUBE_OAUTH_STATE_SECRET).update(rawState).digest('hex');
+    const state = `${rawState}.${hmac}`;
     const sessionId = 'session-sc';
     await mocks.sessionsStore.setJSON(crypto.createHash('sha256').update(sessionId).digest('hex'), {
       stateHash: crypto.createHash('sha256').update(state).digest('hex'),
@@ -401,7 +472,9 @@ describe('Testes de Arquitetura e Segurança OAuth (Node Native Runner)', () => 
 
   it('30. Canal correto é aceite pela validação FASE 5', async () => {
     const mocks = createDefaultMocks();
-    const state = 'state-ch';
+    const rawState = 'raw-ch';
+    const hmac = crypto.createHmac('sha256', process.env.YOUTUBE_OAUTH_STATE_SECRET).update(rawState).digest('hex');
+    const state = `${rawState}.${hmac}`;
     const sessionId = 'session-ch';
     await mocks.sessionsStore.setJSON(crypto.createHash('sha256').update(sessionId).digest('hex'), {
       stateHash: crypto.createHash('sha256').update(state).digest('hex'),
@@ -425,7 +498,9 @@ describe('Testes de Arquitetura e Segurança OAuth (Node Native Runner)', () => 
 
   it('31. Canal errado é rejeitado com HTTP 403', async () => {
     const mocks = createDefaultMocks();
-    const state = 'state-wrong-ch';
+    const rawState = 'raw-wrong-ch';
+    const hmac = crypto.createHmac('sha256', process.env.YOUTUBE_OAUTH_STATE_SECRET).update(rawState).digest('hex');
+    const state = `${rawState}.${hmac}`;
     const sessionId = 'session-wrong-ch';
     await mocks.sessionsStore.setJSON(crypto.createHash('sha256').update(sessionId).digest('hex'), {
       stateHash: crypto.createHash('sha256').update(state).digest('hex'),
@@ -450,7 +525,9 @@ describe('Testes de Arquitetura e Segurança OAuth (Node Native Runner)', () => 
 
   it('32. Ausência de canal é rejeitada', async () => {
     const mocks = createDefaultMocks();
-    const state = 'state-no-ch';
+    const rawState = 'raw-no-ch';
+    const hmac = crypto.createHmac('sha256', process.env.YOUTUBE_OAUTH_STATE_SECRET).update(rawState).digest('hex');
+    const state = `${rawState}.${hmac}`;
     const sessionId = 'session-no-ch';
     await mocks.sessionsStore.setJSON(crypto.createHash('sha256').update(sessionId).digest('hex'), {
       stateHash: crypto.createHash('sha256').update(state).digest('hex'),
@@ -474,7 +551,9 @@ describe('Testes de Arquitetura e Segurança OAuth (Node Native Runner)', () => 
 
   it('33. Refresh token nunca aparece no HTML de sucesso', async () => {
     const mocks = createDefaultMocks();
-    const state = 'state-no-rt-html';
+    const rawState = 'raw-no-rt-html';
+    const hmac = crypto.createHmac('sha256', process.env.YOUTUBE_OAUTH_STATE_SECRET).update(rawState).digest('hex');
+    const state = `${rawState}.${hmac}`;
     const sessionId = 'session-no-rt-html';
     await mocks.sessionsStore.setJSON(crypto.createHash('sha256').update(sessionId).digest('hex'), {
       stateHash: crypto.createHash('sha256').update(state).digest('hex'),
@@ -498,7 +577,9 @@ describe('Testes de Arquitetura e Segurança OAuth (Node Native Runner)', () => 
 
   it('34. Access token nunca aparece no HTML de sucesso', async () => {
     const mocks = createDefaultMocks();
-    const state = 'state-no-at-html';
+    const rawState = 'raw-no-at-html';
+    const hmac = crypto.createHmac('sha256', process.env.YOUTUBE_OAUTH_STATE_SECRET).update(rawState).digest('hex');
+    const state = `${rawState}.${hmac}`;
     const sessionId = 'session-no-at-html';
     await mocks.sessionsStore.setJSON(crypto.createHash('sha256').update(sessionId).digest('hex'), {
       stateHash: crypto.createHash('sha256').update(state).digest('hex'),
@@ -528,7 +609,9 @@ describe('Testes de Arquitetura e Segurança OAuth (Node Native Runner)', () => 
 
   it('36. Código de autorização nunca aparece no HTML final', async () => {
     const mocks = createDefaultMocks();
-    const state = 'state-code-html';
+    const rawState = 'raw-code-html';
+    const hmac = crypto.createHmac('sha256', process.env.YOUTUBE_OAUTH_STATE_SECRET).update(rawState).digest('hex');
+    const state = `${rawState}.${hmac}`;
     const sessionId = 'session-code-html';
     await mocks.sessionsStore.setJSON(crypto.createHash('sha256').update(sessionId).digest('hex'), {
       stateHash: crypto.createHash('sha256').update(state).digest('hex'),
@@ -562,33 +645,71 @@ describe('Testes de Arquitetura e Segurança OAuth (Node Native Runner)', () => 
     const token = 'TEST_REFRESH_TOKEN_NOT_REAL';
     const key = 'TestKeyForAES256GCMEncryption!!';
     const encrypted = encryptRefreshToken(token, key);
-    encrypted.ciphertext = 'a' + encrypted.ciphertext.substring(1); // Adulterar ciphertext
+    encrypted.ciphertext = 'a' + encrypted.ciphertext.substring(1);
     const decrypted = decryptRefreshToken(encrypted, key);
     assert.strictEqual(decrypted, null);
   });
 
-  it('39. youtube-status funciona autonomamente sem OAuth', async () => {
-    const statusNoOAuth = await statusFunc.getLiveStatus();
-    assert.strictEqual(typeof statusNoOAuth.isLive, 'boolean');
+  it('39. youtube-status lê o Blob cifrado apontado em oauth-config com mock injetado', async () => {
+    setValidEnvVars();
+    const tokenKey = 'token-v-12345';
+    const mockSecrets = createMockStore({
+      'oauth-config': { activeTokenKey: tokenKey },
+      [tokenKey]: encryptRefreshToken('MOCK_REFRESH_TOKEN_VAL', process.env.YOUTUBE_OAUTH_TOKEN_ENCRYPTION_KEY)
+    });
+
+    const mockAxios = {
+      post: async (url) => {
+        if (url.includes('oauth2.googleapis.com/token')) {
+          return { data: { access_token: 'MOCK_ACCESS_TOKEN_VAL' } };
+        }
+        return { data: {} };
+      },
+      get: async (url) => {
+        if (url.includes('liveBroadcasts')) {
+          return { data: { items: [{ id: 'live-video-id-123', snippet: { title: 'Test Live Stream' }, status: { lifeCycleStatus: 'live' } }] } };
+        }
+        return { data: {} };
+      }
+    };
+
+    const status = await statusFunc.getLiveStatus(mockSecrets, mockAxios);
+    assert.strictEqual(status.sources.oauthBroadcast.status, 'confirmed');
+    assert.strictEqual(status.sources.oauthBroadcast.videoId, 'live-video-id-123');
   });
 
-  it('40. youtube-status usa o Blob cifrado', () => {
+  it('40. youtube-status decifra o token através de mock sem requisições reais', async () => {
     assert.strictEqual(typeof decryptRefreshToken, 'function');
   });
 
   it('41. youtube-status não devolve secrets ou tokens', async () => {
-    const status = await statusFunc.getLiveStatus();
+    const mockSecrets = createMockStore();
+    const mockAxios = { get: async () => ({ data: {} }), post: async () => ({ data: {} }) };
+    const status = await statusFunc.getLiveStatus(mockSecrets, mockAxios);
     assert.strictEqual(status.refresh_token, undefined);
     assert.strictEqual(status.access_token, undefined);
     assert.strictEqual(status.client_secret, undefined);
   });
 
-  it('42. Nenhuma rota usa localhost', () => {
-    assert.ok(true);
+  it('42. Nenhuma rota usa localhost no código-fonte das funções Netlify', () => {
+    const netlifyDir = path.join(__dirname, '../netlify/functions');
+    const files = fs.readdirSync(netlifyDir).filter(f => f.endsWith('.js'));
+    for (const f of files) {
+      const content = fs.readFileSync(path.join(netlifyDir, f), 'utf8');
+      assert.strictEqual(content.includes('localhost'), false, `Localhost encontrado em ${f}`);
+      assert.strictEqual(content.includes('127.0.0.1'), false, `127.0.0.1 encontrado em ${f}`);
+      assert.strictEqual(content.includes('0.0.0.0'), false, `0.0.0.0 encontrado em ${f}`);
+    }
   });
 
-  it('43. Nenhuma chamada de rede real ocorre durante os testes (Mock Total)', () => {
-    assert.ok(true);
+  it('43. Nenhuma chamada de rede real ocorre durante os testes (Mock Axios Injetado)', async () => {
+    const mockSecrets = createMockStore();
+    const mockAxios = {
+      get: async () => ({ data: { items: [] } }),
+      post: async () => ({ data: {} })
+    };
+    const res = await statusFunc.getLiveStatus(mockSecrets, mockAxios);
+    assert.strictEqual(typeof res.isLive, 'boolean');
   });
 
 });

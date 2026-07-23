@@ -2,8 +2,30 @@ const crypto = require('crypto');
 const { safeCompare, getBlobsStore, checkRateLimit, recordFailedAttempt } = require('./utils/oauth-helpers.js');
 
 exports.handler = async function(event, context, customStores = null) {
-  let secretsStore, sessionsStore, ratelimitStore;
+  const genericHeaders = {
+    'Content-Type': 'text/html; charset=utf-8',
+    'Cache-Control': 'no-store, no-cache, must-revalidate',
+    'X-Content-Type-Options': 'nosniff'
+  };
 
+  // 1. Validar Variáveis de Ambiente Obrigatórias (SEM FALLBACKS)
+  const setupPassword = process.env.YOUTUBE_OAUTH_SETUP_PASSWORD;
+  const clientId = process.env.YOUTUBE_OAUTH_CLIENT_ID;
+  const stateSecret = process.env.YOUTUBE_OAUTH_STATE_SECRET;
+  const redirectUri = process.env.YOUTUBE_OAUTH_REDIRECT_URI;
+
+  const expectedRedirectUri = 'https://apexscorpio-youtube-scraper-6e2678f9.netlify.app/oauth/youtube/callback';
+
+  if (!setupPassword || !clientId || !stateSecret || !redirectUri || redirectUri !== expectedRedirectUri) {
+    return {
+      statusCode: 500,
+      headers: genericHeaders,
+      body: `<h2>Configuração do Servidor Indisponível</h2><p>O serviço de autorização não se encontra totalmente configurado.</p>`
+    };
+  }
+
+  // 2. Conectar às Stores do Netlify Blobs (Fail-Closed)
+  let secretsStore, sessionsStore, ratelimitStore;
   try {
     secretsStore = getBlobsStore('youtube-oauth-secrets', customStores?.secretsStore);
     sessionsStore = getBlobsStore('youtube-oauth-sessions', customStores?.sessionsStore);
@@ -11,22 +33,18 @@ exports.handler = async function(event, context, customStores = null) {
   } catch (err) {
     return {
       statusCode: 500,
-      headers: { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-store' },
-      body: `<h2>Erro de Armazenamento Backend</h2><p>O serviço Netlify Blobs não está disponível.</p>`
+      headers: genericHeaders,
+      body: `<h2>Serviço Indisponível</h2><p>O serviço de armazenamento backend não está acessível no momento.</p>`
     };
   }
 
-  // 1. Verificar se a configuração já foi concluída
+  // 3. Verificar se a configuração já foi concluída
   try {
     const setupStatus = await secretsStore.getJSON('setup-status');
     if (setupStatus && setupStatus.setupComplete === true) {
       return {
         statusCode: 200,
-        headers: {
-          'Content-Type': 'text/html; charset=utf-8',
-          'Cache-Control': 'no-store',
-          'X-Content-Type-Options': 'nosniff'
-        },
+        headers: genericHeaders,
         body: `
           <!DOCTYPE html>
           <html lang="pt">
@@ -44,17 +62,19 @@ exports.handler = async function(event, context, customStores = null) {
         `
       };
     }
-  } catch (err) {}
+  } catch (err) {
+    return {
+      statusCode: 500,
+      headers: genericHeaders,
+      body: `<h2>Serviço Indisponível</h2><p>Falha ao verificar o estado da configuração no armazenamento backend.</p>`
+    };
+  }
 
-  // 2. Método GET -> Apresentar Formulário de Autenticação Administrativa
+  // 4. Método GET -> Apresentar Formulário de Autenticação Administrativa
   if (event.httpMethod === 'GET') {
     return {
       statusCode: 200,
-      headers: {
-        'Content-Type': 'text/html; charset=utf-8',
-        'Cache-Control': 'no-store',
-        'X-Content-Type-Options': 'nosniff'
-      },
+      headers: genericHeaders,
       body: `
         <!DOCTYPE html>
         <html lang="pt">
@@ -86,30 +106,27 @@ exports.handler = async function(event, context, customStores = null) {
     };
   }
 
-  // 3. Método POST -> Autenticar, Rate Limiting e Iniciar OAuth com PKCE + State
+  // 5. Método POST -> Rate Limiting, Autenticação e Início de Fluxo OAuth
   if (event.httpMethod === 'POST') {
     const clientIp = event.headers?.['x-nf-client-connection-ip'] || event.headers?.['client-ip'] || event.headers?.['x-forwarded-for'] || 'unknown-client';
 
-    // Rate Limiting Check
-    const rateCheck = await checkRateLimit(clientIp, ratelimitStore);
-    if (!rateCheck.allowed) {
+    // Rate Limiting Check (Fail-Closed)
+    let rateCheck;
+    try {
+      rateCheck = await checkRateLimit(clientIp, ratelimitStore);
+    } catch (err) {
       return {
-        statusCode: 429,
-        headers: { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-store' },
-        body: `<h2>Muitas Tentativas Falhadas</h2><p>O limite de tentativas de autenticação foi atingido. Tente novamente mais tarde.</p>`
+        statusCode: 500,
+        headers: genericHeaders,
+        body: `<h2>Serviço Indisponível</h2><p>Não foi possível verificar os limites de tentativa no servidor.</p>`
       };
     }
 
-    const setupPassword = process.env.YOUTUBE_OAUTH_SETUP_PASSWORD;
-    const clientId = process.env.YOUTUBE_OAUTH_CLIENT_ID;
-    const redirectUri = process.env.YOUTUBE_OAUTH_REDIRECT_URI || 'https://apexscorpio-youtube-scraper-6e2678f9.netlify.app/oauth/youtube/callback';
-    const stateSecret = process.env.YOUTUBE_OAUTH_STATE_SECRET || 'default-state-secret-key';
-
-    if (!setupPassword || !clientId) {
+    if (!rateCheck.allowed) {
       return {
-        statusCode: 500,
-        headers: { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-store' },
-        body: `<h2>Configuração Pendente</h2><p>As variáveis de ambiente YOUTUBE_OAUTH_SETUP_PASSWORD ou YOUTUBE_OAUTH_CLIENT_ID não estão configuradas no Netlify.</p>`
+        statusCode: 429,
+        headers: genericHeaders,
+        body: `<h2>Muitas Tentativas Falhadas</h2><p>O limite de tentativas de autenticação foi atingido. Tente novamente mais tarde.</p>`
       };
     }
 
@@ -130,20 +147,29 @@ exports.handler = async function(event, context, customStores = null) {
       }
     }
 
-    // Comparar password usando crypto.timingSafeEqual com hashes SHA-256
+    // Comparar password usando safeCompare
     if (!safeCompare(providedPassword, setupPassword)) {
-      await recordFailedAttempt(clientIp, ratelimitStore);
+      try {
+        await recordFailedAttempt(clientIp, ratelimitStore);
+      } catch (err) {
+        return {
+          statusCode: 500,
+          headers: genericHeaders,
+          body: `<h2>Serviço Indisponível</h2><p>Falha ao registar a tentativa no servidor backend.</p>`
+        };
+      }
+
       return {
         statusCode: 401,
-        headers: { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-store' },
+        headers: genericHeaders,
         body: `<h2>Autenticação Falhou</h2><p>Credenciais administrativas incorretas. Tente novamente.</p>`
       };
     }
 
-    // 4. Gerar Sessão Temporária, State Assinado e PKCE (S256)
+    // 6. Gerar Sessão, State Assinado com HMAC-SHA-256 e PKCE (S256)
     const rawState = crypto.randomBytes(32).toString('hex');
-    const stateHmac = crypto.createHmac('sha256', stateSecret).update(rawState).digest('hex');
-    const state = `${rawState}.${stateHmac}`;
+    const signatureHmac = crypto.createHmac('sha256', stateSecret).update(rawState).digest('hex');
+    const state = `${rawState}.${signatureHmac}`;
     const stateHash = crypto.createHash('sha256').update(state).digest('hex');
 
     const codeVerifier = crypto.randomBytes(32).toString('base64url');
@@ -153,16 +179,26 @@ exports.handler = async function(event, context, customStores = null) {
     const sessionIdHash = crypto.createHash('sha256').update(sessionId).digest('hex');
 
     const now = Date.now();
-    const expiresAt = now + 10 * 60 * 1000; // Expira em 10 minutos
+    const expiresAt = now + 10 * 60 * 1000; // 10 minutos
 
-    // Guardar sessão no Netlify Blobs (Store: youtube-oauth-sessions)
-    await sessionsStore.setJSON(sessionIdHash, {
-      stateHash,
-      codeVerifier,
-      createdAt: new Date().toISOString(),
-      expiresAt,
-      used: false
-    });
+    // Guardar sessão no Netlify Blobs (Fail-Closed)
+    try {
+      await sessionsStore.setJSON(sessionIdHash, {
+        stateHash,
+        rawState,
+        signatureHmac,
+        codeVerifier,
+        createdAt: new Date().toISOString(),
+        expiresAt,
+        used: false
+      });
+    } catch (err) {
+      return {
+        statusCode: 500,
+        headers: genericHeaders,
+        body: `<h2>Serviço Indisponível</h2><p>Falha ao criar a sessão de autorização no servidor.</p>`
+      };
+    }
 
     const scope = encodeURIComponent('https://www.googleapis.com/auth/youtube.readonly');
     const authUrl = `https://accounts.google.com/o/oauth2/v2/auth?client_id=${encodeURIComponent(clientId)}&redirect_uri=${encodeURIComponent(redirectUri)}&response_type=code&scope=${scope}&access_type=offline&prompt=consent&include_granted_scopes=true&state=${state}&code_challenge=${codeChallenge}&code_challenge_method=S256`;
@@ -180,5 +216,5 @@ exports.handler = async function(event, context, customStores = null) {
     };
   }
 
-  return { statusCode: 405, body: 'Método Não Permitido' };
+  return { statusCode: 405, headers: genericHeaders, body: 'Método Não Permitido' };
 };

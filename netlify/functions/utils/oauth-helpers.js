@@ -2,7 +2,7 @@ const crypto = require('crypto');
 const { getStore } = require('@netlify/blobs');
 
 /**
- * Comparação segura no tempo (Timing-Safe) usando hashes de comprimento fixo (SHA-256)
+ * Comparação segura no tempo (Timing-Safe) usando hashes SHA-256 de comprimento fixo
  */
 function safeCompare(a, b) {
   if (typeof a !== 'string' || typeof b !== 'string') return false;
@@ -12,14 +12,13 @@ function safeCompare(a, b) {
 }
 
 /**
- * Obter Store do Netlify Blobs com suporte a Mock Store injetado para testes
+ * Obter Store do Netlify Blobs (Fail-Closed)
  */
 function getBlobsStore(storeName, customStore = null) {
   if (customStore) return customStore;
   try {
     return getStore(storeName);
   } catch (err) {
-    // Se não estiver no ambiente do Netlify Blobs e nenhum mock for fornecido, lança erro (fail-closed)
     throw new Error(`Netlify Blobs Indisponível [${storeName}]: ${err.message}`);
   }
 }
@@ -30,6 +29,9 @@ function getBlobsStore(storeName, customStore = null) {
 function encryptRefreshToken(token, secretKeyStr) {
   if (!token || typeof token !== 'string') {
     throw new Error('Token inválido para cifragem');
+  }
+  if (!secretKeyStr || typeof secretKeyStr !== 'string') {
+    throw new Error('Chave de cifragem ausente');
   }
   const key = crypto.createHash('sha256').update(secretKeyStr).digest(); // 32 bytes
   const iv = crypto.randomBytes(12); // 12 bytes IV
@@ -54,6 +56,9 @@ function encryptRefreshToken(token, secretKeyStr) {
  */
 function decryptRefreshToken(encryptedPayload, secretKeyStr) {
   if (!encryptedPayload || !encryptedPayload.iv || !encryptedPayload.authTag || !encryptedPayload.ciphertext) {
+    return null;
+  }
+  if (!secretKeyStr || typeof secretKeyStr !== 'string') {
     return null;
   }
   try {
@@ -86,7 +91,7 @@ function parseCookieHeader(cookieHeader, name) {
 }
 
 /**
- * Rate Limiter Backend via Netlify Blobs (Fail-Closed)
+ * Check Rate Limit via Netlify Blobs (Fail-Closed)
  */
 async function checkRateLimit(ipAddress, ratelimitStore) {
   const windowMs = 15 * 60 * 1000; // 15 minutos
@@ -96,40 +101,37 @@ async function checkRateLimit(ipAddress, ratelimitStore) {
   const ipHash = crypto.createHash('sha256').update(ipAddress || 'unknown-ip').digest('hex');
   const key = `ratelimit-setup-${ipHash}`;
 
-  try {
-    const record = await ratelimitStore.getJSON(key);
-    if (!record) {
-      return { allowed: true, record: { count: 0, resetAt: now + windowMs } };
-    }
-
-    if (now > record.resetAt) {
-      return { allowed: true, record: { count: 0, resetAt: now + windowMs } };
-    }
-
-    if (record.count >= maxAttempts) {
-      return { allowed: false, record };
-    }
-
-    return { allowed: true, record };
-  } catch (err) {
-    // Fail closed se a store de rate limit falhar
-    return { allowed: false, error: err.message };
+  const record = await ratelimitStore.getJSON(key);
+  if (!record) {
+    return { allowed: true, record: { count: 0, resetAt: now + windowMs } };
   }
+
+  if (now > record.resetAt) {
+    return { allowed: true, record: { count: 0, resetAt: now + windowMs } };
+  }
+
+  if (record.count >= maxAttempts) {
+    return { allowed: false, record };
+  }
+
+  return { allowed: true, record };
 }
 
+/**
+ * Record Failed Attempt via Netlify Blobs (Fail-Closed - Não esconde erros)
+ */
 async function recordFailedAttempt(ipAddress, ratelimitStore) {
   const windowMs = 15 * 60 * 1000;
   const now = Date.now();
   const ipHash = crypto.createHash('sha256').update(ipAddress || 'unknown-ip').digest('hex');
   const key = `ratelimit-setup-${ipHash}`;
 
-  try {
-    const record = await ratelimitStore.getJSON(key);
-    const count = (record && now <= record.resetAt) ? record.count + 1 : 1;
-    const resetAt = (record && now <= record.resetAt) ? record.resetAt : now + windowMs;
+  const record = await ratelimitStore.getJSON(key);
+  const count = (record && now <= record.resetAt) ? record.count + 1 : 1;
+  const resetAt = (record && now <= record.resetAt) ? record.resetAt : now + windowMs;
 
-    await ratelimitStore.setJSON(key, { count, resetAt });
-  } catch (err) {}
+  // Await e propaga erro se a gravação no Blob falhar (Fail Closed)
+  await ratelimitStore.setJSON(key, { count, resetAt });
 }
 
 module.exports = {
