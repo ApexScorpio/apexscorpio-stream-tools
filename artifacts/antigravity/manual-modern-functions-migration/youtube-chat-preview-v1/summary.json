@@ -1,0 +1,36 @@
+{
+  "timestampUtc": "2026-07-23T23:22:47.384Z",
+  "branch": "fix/migrate-oauth-to-modern-netlify-functions",
+  "headBeforeCommit": "fcb5fd7ff5359288de1dd5152d30fbcc02ef4ef9",
+  "deployExitCode": 0,
+  "deployId": "6a62a22fb60f536c911d1f79",
+  "deployUrl": "https://6a62a22fb60f536c911d1f79--apexscorpio-youtube-scraper-6e2678f9.netlify.app",
+  "totalRoutes": 8,
+  "approvedRoutes": 8,
+  "failedRoutes": 0,
+  "noHttp502": true,
+  "youtubeChatPreviewPassed": true,
+  "probeStatuses": {
+    "youtube-status-direct": 200,
+    "youtube-status-redirect": 200,
+    "oauth-start-direct": 200,
+    "oauth-start-redirect": 200,
+    "oauth-callback-direct": 400,
+    "oauth-callback-redirect": 400,
+    "youtube-chat-direct": 503,
+    "youtube-chat-redirect": 503
+  },
+  "operationError": "nenhum",
+  "progressBefore": 62,
+  "progressAfter": 68,
+  "productionDeployExecuted": false,
+  "oauthAuthorizationStarted": false,
+  "publicApiKeyRemoved": false,
+  "credentialsRotated": false,
+  "nextAction": [
+    "Confirmar o relatório no GitHub.",
+    "Migrar youtube-live.js para /youtube-chat.",
+    "Manter iframe e scraping como redundância.",
+    "Remover a API key pública do frontend."
+  ]
+}
