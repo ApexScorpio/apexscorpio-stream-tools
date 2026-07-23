@@ -1,69 +1,10 @@
 const axios = require('axios');
 const crypto = require('crypto');
-const { getStore } = require('@netlify/blobs');
+const { safeCompare, getBlobsStore, encryptRefreshToken, parseCookieHeader } = require('./utils/oauth-helpers.js');
 
-/**
- * Helper para obter Store Netlify Blobs com Fallback em memória para ambiente de testes
- */
-function getBlobsStore(name) {
-  try {
-    return getStore(name);
-  } catch (err) {
-    return {
-      get: async () => null,
-      getJSON: async () => null,
-      setJSON: async () => {}
-    };
-  }
-}
+exports.handler = async function(event, context, customStores = null, customAxios = null) {
+  const http = customAxios || axios;
 
-/**
- * Função utilitária para comparação segura no tempo (Timing-Safe)
- */
-function safeCompare(a, b) {
-  if (typeof a !== 'string' || typeof b !== 'string') return false;
-  const bufA = Buffer.from(a);
-  const bufB = Buffer.from(b);
-  if (bufA.length !== bufB.length) return false;
-  return crypto.timingSafeEqual(bufA, bufB);
-}
-
-/**
- * Cifrar Refresh Token usando AES-256-GCM
- */
-function encryptRefreshToken(token, secretKeyStr) {
-  const key = crypto.createHash('sha256').update(secretKeyStr).digest(); // Chave de 32 bytes
-  const iv = crypto.randomBytes(12); // IV de 12 bytes para AES-GCM
-  const cipher = crypto.createCipheriv('aes-256-gcm', key, iv);
-
-  let encrypted = cipher.update(token, 'utf8', 'hex');
-  encrypted += cipher.final('hex');
-  const authTag = cipher.getAuthTag().toString('hex');
-
-  return {
-    version: '1.0',
-    iv: iv.toString('hex'),
-    authTag: authTag,
-    ciphertext: encrypted,
-    createdAt: new Date().toISOString(),
-    scope: 'https://www.googleapis.com/auth/youtube.readonly'
-  };
-}
-
-/**
- * Extrair Cookie da Request Header
- */
-function parseCookieHeader(cookieHeader, name) {
-  if (!cookieHeader) return null;
-  const cookies = cookieHeader.split(';');
-  for (const c of cookies) {
-    const [k, v] = c.trim().split('=');
-    if (k === name) return v;
-  }
-  return null;
-}
-
-exports.handler = async function(event, context) {
   const headers = {
     'Content-Type': 'text/html; charset=utf-8',
     'Cache-Control': 'no-store, no-cache, must-revalidate',
@@ -72,6 +13,18 @@ exports.handler = async function(event, context) {
     'Referrer-Policy': 'no-referrer',
     'Content-Security-Policy': "default-src 'self'; style-src 'unsafe-inline';"
   };
+
+  let secretsStore, sessionsStore;
+  try {
+    secretsStore = getBlobsStore('youtube-oauth-secrets', customStores?.secretsStore);
+    sessionsStore = getBlobsStore('youtube-oauth-sessions', customStores?.sessionsStore);
+  } catch (err) {
+    return {
+      statusCode: 500,
+      headers,
+      body: `<h2>Erro de Armazenamento Backend</h2><p>O serviço Netlify Blobs não está disponível.</p>`
+    };
+  }
 
   const code = event.queryStringParameters?.code;
   const state = event.queryStringParameters?.state;
@@ -107,6 +60,7 @@ exports.handler = async function(event, context) {
   const clientSecret = process.env.YOUTUBE_OAUTH_CLIENT_SECRET;
   const redirectUri = process.env.YOUTUBE_OAUTH_REDIRECT_URI || 'https://apexscorpio-youtube-scraper-6e2678f9.netlify.app/oauth/youtube/callback';
   const encryptionKey = process.env.YOUTUBE_OAUTH_TOKEN_ENCRYPTION_KEY;
+  const expectedChannelId = process.env.YOUTUBE_EXPECTED_CHANNEL_ID || 'UCF3aydfOlV88XVqW8vpdKEw';
 
   if (!clientId || !clientSecret || !encryptionKey) {
     return {
@@ -118,7 +72,6 @@ exports.handler = async function(event, context) {
 
   // 2. Validar Sessão Temporária no Netlify Blobs
   const sessionIdHash = crypto.createHash('sha256').update(sessionId).digest('hex');
-  const sessionsStore = getBlobsStore('youtube-oauth-sessions');
   const session = await sessionsStore.getJSON(sessionIdHash);
 
   if (!session || session.used === true || Date.now() > session.expiresAt) {
@@ -150,7 +103,7 @@ exports.handler = async function(event, context) {
 
   // 4. Trocar Code e Code Verifier por Tokens via Servidor (HTTPS POST)
   try {
-    const tokenResp = await axios.post(
+    const tokenResp = await http.post(
       'https://oauth2.googleapis.com/token',
       new URLSearchParams({
         code: code,
@@ -167,18 +120,65 @@ exports.handler = async function(event, context) {
     );
 
     const refreshToken = tokenResp.data?.refresh_token;
+    const accessToken = tokenResp.data?.access_token;
 
-    if (refreshToken) {
-      // 5. Cifrar Refresh Token e Guardar no Netlify Blobs (Store: youtube-oauth-secrets)
-      const encryptedPayload = encryptRefreshToken(refreshToken, encryptionKey);
-      const secretsStore = getBlobsStore('youtube-oauth-secrets');
-
-      await secretsStore.setJSON('primary-refresh-token', encryptedPayload);
-      await secretsStore.setJSON('setup-status', {
-        setupComplete: true,
-        updatedAt: new Date().toISOString()
-      });
+    // FASE 4: Ausência de refresh_token é uma FALHA
+    if (!refreshToken) {
+      return {
+        statusCode: 400,
+        headers: {
+          ...headers,
+          'Set-Cookie': 'oauth_session=; Path=/oauth/youtube; HttpOnly; Secure; Max-Age=0'
+        },
+        body: `<h2>Refresh Token Ausente</h2><p>A Google não devolveu um refresh token. Aceda novamente a /oauth/youtube/start para forçar o consentimento.</p>`
+      };
     }
+
+    // FASE 5: Validar se o canal autorizador pertence a YOUTUBE_EXPECTED_CHANNEL_ID
+    if (accessToken) {
+      const channelResp = await http.get(
+        'https://www.googleapis.com/youtube/v3/channels?part=id,snippet&mine=true',
+        {
+          headers: { Authorization: `Bearer ${accessToken}` },
+          timeout: 5000
+        }
+      );
+      const authorizedChannelId = channelResp.data?.items?.[0]?.id || null;
+
+      if (!authorizedChannelId || !safeCompare(authorizedChannelId, expectedChannelId)) {
+        return {
+          statusCode: 403,
+          headers: {
+            ...headers,
+            'Set-Cookie': 'oauth_session=; Path=/oauth/youtube; HttpOnly; Secure; Max-Age=0'
+          },
+          body: `<h2>Canal Não Permitido</h2><p>A conta Google autorizada não pertence ao canal permitido para este serviço.</p>`
+        };
+      }
+    }
+
+    // 5. Cifrar Refresh Token e Guardar no Netlify Blobs
+    const encryptedPayload = encryptRefreshToken(refreshToken, encryptionKey);
+    await secretsStore.setJSON('primary-refresh-token', encryptedPayload);
+
+    // 6. Leitura de Verificação Obrigatória do Blob
+    const verifiedBlob = await secretsStore.getJSON('primary-refresh-token');
+    if (!verifiedBlob || !verifiedBlob.iv || !verifiedBlob.ciphertext || !verifiedBlob.authTag) {
+      return {
+        statusCode: 500,
+        headers: {
+          ...headers,
+          'Set-Cookie': 'oauth_session=; Path=/oauth/youtube; HttpOnly; Secure; Max-Age=0'
+        },
+        body: `<h2>Falha de Verificação de Armazenamento</h2><p>Não foi possível confirmar a gravação cifrada do token no servidor.</p>`
+      };
+    }
+
+    // Somente após verificação confirmada, grava o marcador setupComplete
+    await secretsStore.setJSON('setup-status', {
+      setupComplete: true,
+      updatedAt: new Date().toISOString()
+    });
 
     // Apagar cookie de sessão temporário
     return {

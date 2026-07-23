@@ -5,7 +5,7 @@
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
-    "test": "node tests/youtube-status.test.js && node tests/youtube-oauth-security.test.js"
+    "test": "node tests/youtube-status.test.js && node --test tests/youtube-oauth-security.test.js"
   },
   "dependencies": {
     "@netlify/blobs": "^10.7.9",

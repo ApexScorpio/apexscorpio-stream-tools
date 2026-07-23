@@ -1,35 +1,21 @@
 const crypto = require('crypto');
-const { getStore } = require('@netlify/blobs');
+const { safeCompare, getBlobsStore, checkRateLimit, recordFailedAttempt } = require('./utils/oauth-helpers.js');
 
-/**
- * Helper para obter Store Netlify Blobs com Fallback em memória para ambiente de testes
- */
-function getBlobsStore(name) {
+exports.handler = async function(event, context, customStores = null) {
+  let secretsStore, sessionsStore, ratelimitStore;
+
   try {
-    return getStore(name);
+    secretsStore = getBlobsStore('youtube-oauth-secrets', customStores?.secretsStore);
+    sessionsStore = getBlobsStore('youtube-oauth-sessions', customStores?.sessionsStore);
+    ratelimitStore = getBlobsStore('youtube-oauth-sessions', customStores?.ratelimitStore || customStores?.sessionsStore);
   } catch (err) {
     return {
-      get: async () => null,
-      getJSON: async () => null,
-      setJSON: async () => {}
+      statusCode: 500,
+      headers: { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-store' },
+      body: `<h2>Erro de Armazenamento Backend</h2><p>O serviço Netlify Blobs não está disponível.</p>`
     };
   }
-}
 
-/**
- * Função utilitária para comparação segura no tempo (Timing-Safe)
- */
-function safeCompare(a, b) {
-  if (typeof a !== 'string' || typeof b !== 'string') return false;
-  const bufA = Buffer.from(a);
-  const bufB = Buffer.from(b);
-  if (bufA.length !== bufB.length) return false;
-  return crypto.timingSafeEqual(bufA, bufB);
-}
-
-exports.handler = async function(event, context) {
-  const secretsStore = getBlobsStore('youtube-oauth-secrets');
-  
   // 1. Verificar se a configuração já foi concluída
   try {
     const setupStatus = await secretsStore.getJSON('setup-status');
@@ -60,7 +46,7 @@ exports.handler = async function(event, context) {
     }
   } catch (err) {}
 
-  // 2. Tratar método GET -> Apresentar Formulário de Autenticação Administrativa
+  // 2. Método GET -> Apresentar Formulário de Autenticação Administrativa
   if (event.httpMethod === 'GET') {
     return {
       statusCode: 200,
@@ -100,11 +86,24 @@ exports.handler = async function(event, context) {
     };
   }
 
-  // 3. Tratar método POST -> Autenticar e Iniciar Fluxo OAuth com PKCE + State
+  // 3. Método POST -> Autenticar, Rate Limiting e Iniciar OAuth com PKCE + State
   if (event.httpMethod === 'POST') {
+    const clientIp = event.headers?.['x-nf-client-connection-ip'] || event.headers?.['client-ip'] || event.headers?.['x-forwarded-for'] || 'unknown-client';
+
+    // Rate Limiting Check
+    const rateCheck = await checkRateLimit(clientIp, ratelimitStore);
+    if (!rateCheck.allowed) {
+      return {
+        statusCode: 429,
+        headers: { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-store' },
+        body: `<h2>Muitas Tentativas Falhadas</h2><p>O limite de tentativas de autenticação foi atingido. Tente novamente mais tarde.</p>`
+      };
+    }
+
     const setupPassword = process.env.YOUTUBE_OAUTH_SETUP_PASSWORD;
     const clientId = process.env.YOUTUBE_OAUTH_CLIENT_ID;
     const redirectUri = process.env.YOUTUBE_OAUTH_REDIRECT_URI || 'https://apexscorpio-youtube-scraper-6e2678f9.netlify.app/oauth/youtube/callback';
+    const stateSecret = process.env.YOUTUBE_OAUTH_STATE_SECRET || 'default-state-secret-key';
 
     if (!setupPassword || !clientId) {
       return {
@@ -131,8 +130,9 @@ exports.handler = async function(event, context) {
       }
     }
 
-    // Comparar password usando crypto.timingSafeEqual
+    // Comparar password usando crypto.timingSafeEqual com hashes SHA-256
     if (!safeCompare(providedPassword, setupPassword)) {
+      await recordFailedAttempt(clientIp, ratelimitStore);
       return {
         statusCode: 401,
         headers: { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-store' },
@@ -140,8 +140,10 @@ exports.handler = async function(event, context) {
       };
     }
 
-    // 4. Gerar Sessão Temporária, State e PKCE (S256)
-    const state = crypto.randomBytes(32).toString('hex');
+    // 4. Gerar Sessão Temporária, State Assinado e PKCE (S256)
+    const rawState = crypto.randomBytes(32).toString('hex');
+    const stateHmac = crypto.createHmac('sha256', stateSecret).update(rawState).digest('hex');
+    const state = `${rawState}.${stateHmac}`;
     const stateHash = crypto.createHash('sha256').update(state).digest('hex');
 
     const codeVerifier = crypto.randomBytes(32).toString('base64url');
@@ -154,7 +156,6 @@ exports.handler = async function(event, context) {
     const expiresAt = now + 10 * 60 * 1000; // Expira em 10 minutos
 
     // Guardar sessão no Netlify Blobs (Store: youtube-oauth-sessions)
-    const sessionsStore = getBlobsStore('youtube-oauth-sessions');
     await sessionsStore.setJSON(sessionIdHash, {
       stateHash,
       codeVerifier,
