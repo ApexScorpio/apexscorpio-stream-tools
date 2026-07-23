@@ -12,14 +12,26 @@ const HTTP_HEADERS = {
   'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8'
 };
 
+/**
+ * Função de parsing de espectadores em tempo real
+ * Aceita unicamente textos que descrevam espectadores simultâneos em direto:
+ * - "1 a ver agora" -> 1
+ * - "12 a ver agora" -> 12
+ * - "1 234 a ver agora" -> 1234
+ * - "1 watching now" -> 1
+ * - "1,234 watching now" -> 1234
+ * - "1.234 a ver agora" -> 1234
+ * Rejeita categoricamente total de visualizações ou contagens estáticas.
+ */
 function parseViewersText(text) {
   if (!text || typeof text !== 'string') return null;
 
   const normalized = text.replace(/[\u00a0\u1680\u2000-\u200a\u202f\u205f\u3000]/g, ' ').trim();
 
+  // Verificar se contém estritamente palavras-chave de espectadores em direto
   const isLiveViewerText = /(?:a ver|watching|espectadores|viewers|espectadores ao vivo)/i.test(normalized);
   if (!isLiveViewerText) {
-    return null; // NUNCA confundir total de visualizações com espectadores simultâneos
+    return null; // Rejeita total de visualizações, views e vídeos normais
   }
 
   const match = normalized.match(/([\d\s\,\.]+)\s*(?:a ver|watching|espectadores|viewers)/i);
@@ -29,12 +41,6 @@ function parseViewersText(text) {
       const num = parseInt(rawNumStr, 10);
       return isNaN(num) ? null : num;
     }
-  }
-
-  const digitsOnly = normalized.replace(/[^\d]/g, '');
-  if (digitsOnly) {
-    const parsed = parseInt(digitsOnly, 10);
-    return isNaN(parsed) ? null : parsed;
   }
 
   return null;
@@ -92,14 +98,14 @@ async function fetchInnerTubeNext(videoId) {
   }
 }
 
-async function fetchOEmbedDetails(videoId) {
+async function fetchOEmbedMetadata(videoId) {
   try {
     const res = await axios.get(
       `https://www.youtube.com/oembed?format=json&url=${encodeURIComponent('https://www.youtube.com/watch?v=' + videoId)}`,
       { timeout: 4000 }
     );
     if (res.status === 200 && res.data) {
-      return res.data;
+      return res.data; // Usado ESTRITAMENTE para metadados (título, autor, thumbnail)
     }
   } catch (err) {}
   return null;
@@ -117,9 +123,11 @@ async function getLiveStatus() {
     };
   }
 
-  const candidateIds = new Set(["0bDpBd_HZsk"]);
+  const candidateIds = new Set();
+  const strategyErrors = [];
   let resolvedUrl = "https://www.youtube.com/c/apexscorpio/live";
 
+  // FASE 3: Descoberta 100% Dinâmica do Video ID (SEM NENHUM ID FIXO EM CÓDIGO)
   try {
     const liveResp = await axios.get(resolvedUrl, {
       headers: HTTP_HEADERS,
@@ -145,7 +153,9 @@ async function getLiveStatus() {
       const match = resolvedUrl.match(/watch\?v=([a-zA-Z0-9_-]{11})/);
       if (match) candidateIds.add(match[1]);
     }
-  } catch (err) {}
+  } catch (err) {
+    strategyErrors.push(`Live URL resolution error: ${err.message}`);
+  }
 
   let selectedVideoId = null;
   let selectedTitle = "";
@@ -155,10 +165,11 @@ async function getLiveStatus() {
   let selectedViewerSource = null;
   let selectedRawViewerText = null;
 
+  // FASE 4: Confirmação Estrita do Estado LIVE (sem falsos positivos de oEmbed ou isLiveContent isolado)
   for (const vId of candidateIds) {
     try {
       const playerResp = await fetchInnerTubePlayer(vId);
-      const oembedData = await fetchOEmbedDetails(vId);
+      const oembedData = await fetchOEmbedMetadata(vId);
 
       const vDetails = playerResp?.videoDetails || {};
       const microformat = playerResp?.microformat?.playerMicroformatRenderer?.liveBroadcastDetails || {};
@@ -166,27 +177,24 @@ async function getLiveStatus() {
       let isCandidateLive = false;
       let liveSignal = null;
 
+      // Sinais fortes permitidos para confirmar uma live atualmente ativa:
       if (microformat.isLiveNow === true) {
         isCandidateLive = true;
         liveSignal = "microformat.liveBroadcastDetails.isLiveNow";
-      } else if (vDetails.isLive === true) {
+      } else if (vDetails.isLive === true && playerResp?.playabilityStatus?.status === 'OK') {
         isCandidateLive = true;
         liveSignal = "videoDetails.isLive";
-      } else if (vDetails.isLiveContent === true) {
-        isCandidateLive = true;
-        liveSignal = "videoDetails.isLiveContent";
-      } else if (oembedData && oembedData.title) {
-        // Fallback oEmbed se InnerTube player response for bloqueado no IP Netlify
-        isCandidateLive = true;
-        liveSignal = "oembed.validTitleResponse";
       }
+
+      // IMPORTANTE: oEmbed e isLiveContent NUNCA podem definir isLive = true por si só!
 
       if (isCandidateLive) {
         selectedVideoId = vId;
-        selectedTitle = vDetails.title || oembedData?.title || "GTA V Online | ApexScorpio";
+        selectedTitle = vDetails.title || oembedData?.title || "";
         selectedIsLive = true;
         selectedLiveSignal = liveSignal;
 
+        // FASE 5: Obtenção de leitores simultâneos reais via InnerTube Next
         const nextResp = await fetchInnerTubeNext(vId);
         if (nextResp) {
           try {
@@ -196,52 +204,55 @@ async function getLiveStatus() {
               if (primary && primary.viewCount?.videoViewCountRenderer) {
                 const vvcr = primary.viewCount.videoViewCountRenderer;
                 if (vvcr.viewCount?.runs) {
-                  selectedRawViewerText = vvcr.viewCount.runs.map(r => r.text || '').join('');
-                  selectedViewerSource = "nextResponse.videoPrimaryInfoRenderer.runs";
+                  const runsText = vvcr.viewCount.runs.map(r => r.text || '').join('');
+                  if (/(?:a ver|watching|espectadores|viewers)/i.test(runsText)) {
+                    selectedRawViewerText = runsText;
+                    selectedViewerSource = "nextResponse.videoPrimaryInfoRenderer.runs";
+                  }
                 } else if (vvcr.viewCount?.simpleText) {
-                  selectedRawViewerText = vvcr.viewCount.simpleText;
-                  selectedViewerSource = "nextResponse.videoPrimaryInfoRenderer.simpleText";
-                } else if (vvcr.originalViewCount) {
-                  selectedRawViewerText = `${vvcr.originalViewCount} a ver agora`;
-                  selectedViewerSource = "nextResponse.videoPrimaryInfoRenderer.originalViewCount";
+                  const simpleTxt = vvcr.viewCount.simpleText;
+                  if (/(?:a ver|watching|espectadores|viewers)/i.test(simpleTxt)) {
+                    selectedRawViewerText = simpleTxt;
+                    selectedViewerSource = "nextResponse.videoPrimaryInfoRenderer.simpleText";
+                  }
                 }
               }
             }
-          } catch(e) {}
+          } catch(e) {
+            strategyErrors.push(`InnerTube Next parsing error: ${e.message}`);
+          }
         }
-        break;
+        break; // Candidato live validado com sucesso!
       }
-    } catch(e) {}
-  }
-
-  if (selectedIsLive) {
-    if (selectedRawViewerText) {
-      selectedViewers = parseViewersText(selectedRawViewerText);
-    }
-    if (selectedViewers === null || isNaN(selectedViewers)) {
-      selectedViewers = 1; // 1 viewer mínimo garantido durante transmissão ativa
+    } catch(e) {
+      strategyErrors.push(`Candidate ${vId} check error: ${e.message}`);
     }
   }
 
+  // Processar texto real de espectadores
+  if (selectedIsLive && selectedRawViewerText) {
+    selectedViewers = parseViewersText(selectedRawViewerText);
+  }
+
+  // FASE 5 REGRA FINAL: Se a contagem estiver indisponível ou for nula, devolve null (NUNCA INVENTA 1 OU 0)
   const responseObj = {
     isLive: selectedIsLive,
     videoId: selectedIsLive ? selectedVideoId : null,
     viewers: selectedIsLive ? selectedViewers : null,
-    title: selectedTitle || (selectedIsLive ? "GTA V Online | ApexScorpio" : ""),
+    title: selectedTitle,
     source: "youtube-innertube-scrape",
     updatedAt: new Date().toISOString(),
     error: null,
     diagnostic: {
-      version: "4.0",
-      discoveryMethod: "candidate-verification",
+      version: "4.1",
+      discoveryMethod: candidateIds.size > 0 ? "dynamic-live-url-resolution" : "no-candidates-found",
       liveSignal: selectedLiveSignal || "none",
       viewerSource: selectedViewerSource || "none",
       resolvedUrl: resolvedUrl,
-      watchPlayerVideoId: selectedVideoId,
-      watchPlayerLive: selectedIsLive,
-      watchViewerText: selectedRawViewerText || null,
       checkedIds: Array.from(candidateIds),
-      cached: false
+      viewerText: selectedRawViewerText || null,
+      cached: false,
+      strategyErrors: strategyErrors
     }
   };
 
