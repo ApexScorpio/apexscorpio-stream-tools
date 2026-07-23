@@ -1,3 +1,6 @@
 node_modules/
 *.log
 apexscorpio-stream-tools.zip
+
+# Local Netlify folder
+.netlify

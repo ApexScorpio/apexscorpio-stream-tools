@@ -1,4 +1,4 @@
-/* MQTT one-shot v2.9: sem reconexão automática */
+/* ApexScorpio Viewers Counter Overlay v3.0 */
 (function () {
   'use strict';
 
@@ -32,7 +32,7 @@
   };
   let realState = {
     twitch: { isLive: false, viewers: 0 },
-    youtube: { isLive: false, viewers: 0 },
+    youtube: { isLive: false, viewers: null },
     facebook: { isLive: false, viewers: 0 },
     totalViewers: 0
   };
@@ -73,6 +73,10 @@
   }
 
   function animateCount(element, value) {
+    if (value === null || value === undefined || value === '—') {
+      element.innerText = '—';
+      return;
+    }
     const formatted = Math.max(0, Number(value || 0)).toLocaleString('pt-PT');
     if (element.innerText === formatted) return;
     element.innerText = formatted;
@@ -83,9 +87,14 @@
 
   function renderStatus(state) {
     for (const platform of ['twitch', 'youtube', 'facebook']) {
-      const current = state[platform] || { isLive: false, viewers: 0 };
-      animateCount(counts[platform], current.viewers);
-      dots[platform].classList.toggle('online', Boolean(current.isLive));
+      const current = state[platform] || { isLive: false, viewers: null };
+      if (!current.isLive) {
+        dots[platform].classList.remove('online');
+        animateCount(counts[platform], 0);
+      } else {
+        dots[platform].classList.add('online');
+        animateCount(counts[platform], current.viewers !== null ? current.viewers : '—');
+      }
     }
     animateCount(counts.total, state.totalViewers || 0);
   }
@@ -116,11 +125,29 @@
     }
   }
 
+  async function checkNetlifyYoutubeStatus() {
+    if (isTestActive) return;
+    try {
+      const res = await fetch('https://apexscorpio-youtube-scraper-6e2678f9.netlify.app/youtube-status?cb=' + Date.now());
+      if (res.ok) {
+        const data = await res.json();
+        realState.youtube = {
+          isLive: Boolean(data.isLive),
+          viewers: data.isLive ? (data.viewers !== null ? Number(data.viewers) : null) : 0,
+          videoId: data.videoId
+        };
+        recalculateTotal();
+        if (!isTestActive) renderStatus(realState);
+      }
+    } catch (_) {}
+  }
+
   function resetToRealState() {
     isTestActive = false;
     if (testTimer) clearTimeout(testTimer);
     testTimer = null;
     checkPublicTwitchLive();
+    checkNetlifyYoutubeStatus();
     if (window.YoutubeLive) window.YoutubeLive.refresh();
   }
 
@@ -150,6 +177,19 @@
       }
     }
   }
+
+  window.ApexYoutubeScrapeDebug = async function() {
+    console.log('--- ApexScorpio YouTube Scrape Debug ---');
+    try {
+      const res = await fetch('https://apexscorpio-youtube-scraper-6e2678f9.netlify.app/youtube-status?cb=' + Date.now());
+      const json = await res.json();
+      console.log(JSON.stringify(json, null, 2));
+      return json;
+    } catch (err) {
+      console.error('Debug fetch failed:', err);
+      return err;
+    }
+  };
 
   const bc = typeof BroadcastChannel !== 'undefined'
     ? new BroadcastChannel('apex_scorpio_stream_tools')
@@ -203,16 +243,21 @@
   applyConfig();
   renderStatus(realState);
   checkPublicTwitchLive();
+  checkNetlifyYoutubeStatus();
   setInterval(checkPublicTwitchLive, 5000);
+  setInterval(checkNetlifyYoutubeStatus, 15000);
 
   if (window.YoutubeLive) {
     window.YoutubeLive.subscribeState(ytState => {
-      realState.youtube = {
-        isLive: Boolean(ytState.isLive),
-        viewers: Number(ytState.viewers || 0)
-      };
-      recalculateTotal();
-      if (!isTestActive) renderStatus(realState);
+      if (ytState && ytState.isLive) {
+        realState.youtube = {
+          isLive: true,
+          viewers: ytState.viewers !== null ? Number(ytState.viewers) : realState.youtube.viewers,
+          videoId: ytState.videoId || realState.youtube.videoId
+        };
+        recalculateTotal();
+        if (!isTestActive) renderStatus(realState);
+      }
     });
   }
 })();
