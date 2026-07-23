@@ -650,7 +650,7 @@ describe('Testes de Arquitetura e Segurança OAuth (Node Native Runner - Sem Ass
     const token = 'TEST_REFRESH_TOKEN_NOT_REAL';
     const key = 'TestKeyForAES256GCMEncryption!!';
     const encrypted = encryptRefreshToken(token, key);
-    encrypted.ciphertext = 'a' + encrypted.ciphertext.substring(1);
+    encrypted.ciphertext = (encrypted.ciphertext[0] === 'a' ? 'b' : 'a') + encrypted.ciphertext.substring(1);
     const decrypted = decryptRefreshToken(encrypted, key);
     assert.strictEqual(decrypted, null);
   });

@@ -1,0 +1,44 @@
+[
+    {
+        "name":  "youtube-status-direct",
+        "url":  "https://6a6273f1508e4303f204d30f--apexscorpio-youtube-scraper-6e2678f9.netlify.app/.netlify/functions/youtube-status",
+        "statusCode":  502,
+        "body":  "{\"errorType\":\"Error\",\"errorMessage\":\"Cannot find module \u0027axios\u0027\\nRequire stack:\\n- /var/task/netlify/functions/youtube-status.mjs\",\"trace\":[\"Error: Cannot find module \u0027axios\u0027\",\"Require stack:\",\"- /var/task/netlify/functions/youtube-status.mjs\",\"    at Module._resolveFilename (node:internal/modules/cjs/loader:1517:15)\",\"    at wrapResolveFilename (node:internal/modules/cjs/loader:1071:27)\",\"    at defaultResolveImplForCJSLoading (node:internal/modules/cjs/loader:1095:10)\",\"    at resolveForCJSWithHooks (node:internal/modules/cjs/loader:1122:12)\",\"    at Module._load (node:internal/modules/cjs/loader:1294:5)\",\"    at wrapModuleLoad (node:internal/modules/cjs/loader:255:19)\",\"    at Module.require (node:internal/modules/cjs/loader:1617:12)\",\"    at require (node:internal/modules/helpers:153:16)\",\"    at netlify/functions/handlers/youtube-status-handler.js (file:///var/task/netlify/functions/youtube-status.mjs:154:17)\",\"    at __require2 (file:///var/task/netlify/functions/youtube-status.mjs:22:50)\"]}",
+        "error":  null
+    },
+    {
+        "name":  "youtube-status-redirect",
+        "url":  "https://6a6273f1508e4303f204d30f--apexscorpio-youtube-scraper-6e2678f9.netlify.app/youtube-status",
+        "statusCode":  502,
+        "body":  "{\"errorType\":\"Error\",\"errorMessage\":\"Cannot find module \u0027axios\u0027\\nRequire stack:\\n- /var/task/netlify/functions/youtube-status.mjs\",\"trace\":[\"Error: Cannot find module \u0027axios\u0027\",\"Require stack:\",\"- /var/task/netlify/functions/youtube-status.mjs\",\"    at Module._resolveFilename (node:internal/modules/cjs/loader:1517:15)\",\"    at wrapResolveFilename (node:internal/modules/cjs/loader:1071:27)\",\"    at defaultResolveImplForCJSLoading (node:internal/modules/cjs/loader:1095:10)\",\"    at resolveForCJSWithHooks (node:internal/modules/cjs/loader:1122:12)\",\"    at Module._load (node:internal/modules/cjs/loader:1294:5)\",\"    at wrapModuleLoad (node:internal/modules/cjs/loader:255:19)\",\"    at Module.require (node:internal/modules/cjs/loader:1617:12)\",\"    at require (node:internal/modules/helpers:153:16)\",\"    at netlify/functions/handlers/youtube-status-handler.js (file:///var/task/netlify/functions/youtube-status.mjs:154:17)\",\"    at __require2 (file:///var/task/netlify/functions/youtube-status.mjs:22:50)\"]}",
+        "error":  null
+    },
+    {
+        "name":  "oauth-start-direct",
+        "url":  "https://6a6273f1508e4303f204d30f--apexscorpio-youtube-scraper-6e2678f9.netlify.app/.netlify/functions/youtube-oauth-start",
+        "statusCode":  502,
+        "body":  "{\"errorType\":\"Error\",\"errorMessage\":\"Cannot find module \u0027@netlify/blobs\u0027\\nRequire stack:\\n- /var/task/netlify/functions/youtube-oauth-start.mjs\",\"trace\":[\"Error: Cannot find module \u0027@netlify/blobs\u0027\",\"Require stack:\",\"- /var/task/netlify/functions/youtube-oauth-start.mjs\",\"    at Module._resolveFilename (node:internal/modules/cjs/loader:1517:15)\",\"    at wrapResolveFilename (node:internal/modules/cjs/loader:1071:27)\",\"    at defaultResolveImplForCJSLoading (node:internal/modules/cjs/loader:1095:10)\",\"    at resolveForCJSWithHooks (node:internal/modules/cjs/loader:1122:12)\",\"    at Module._load (node:internal/modules/cjs/loader:1294:5)\",\"    at wrapModuleLoad (node:internal/modules/cjs/loader:255:19)\",\"    at Module.require (node:internal/modules/cjs/loader:1617:12)\",\"    at require (node:internal/modules/helpers:153:16)\",\"    at netlify/functions/utils/oauth-helpers.js (file:///var/task/netlify/functions/youtube-oauth-start.mjs:45:24)\",\"    at __require2 (file:///var/task/netlify/functions/youtube-oauth-start.mjs:22:50)\"]}",
+        "error":  null
+    },
+    {
+        "name":  "oauth-start-redirect",
+        "url":  "https://6a6273f1508e4303f204d30f--apexscorpio-youtube-scraper-6e2678f9.netlify.app/oauth/youtube/start",
+        "statusCode":  502,
+        "body":  "{\"errorType\":\"Error\",\"errorMessage\":\"Cannot find module \u0027@netlify/blobs\u0027\\nRequire stack:\\n- /var/task/netlify/functions/youtube-oauth-start.mjs\",\"trace\":[\"Error: Cannot find module \u0027@netlify/blobs\u0027\",\"Require stack:\",\"- /var/task/netlify/functions/youtube-oauth-start.mjs\",\"    at Module._resolveFilename (node:internal/modules/cjs/loader:1517:15)\",\"    at wrapResolveFilename (node:internal/modules/cjs/loader:1071:27)\",\"    at defaultResolveImplForCJSLoading (node:internal/modules/cjs/loader:1095:10)\",\"    at resolveForCJSWithHooks (node:internal/modules/cjs/loader:1122:12)\",\"    at Module._load (node:internal/modules/cjs/loader:1294:5)\",\"    at wrapModuleLoad (node:internal/modules/cjs/loader:255:19)\",\"    at Module.require (node:internal/modules/cjs/loader:1617:12)\",\"    at require (node:internal/modules/helpers:153:16)\",\"    at netlify/functions/utils/oauth-helpers.js (file:///var/task/netlify/functions/youtube-oauth-start.mjs:45:24)\",\"    at __require2 (file:///var/task/netlify/functions/youtube-oauth-start.mjs:22:50)\"]}",
+        "error":  null
+    },
+    {
+        "name":  "oauth-callback-direct",
+        "url":  "https://6a6273f1508e4303f204d30f--apexscorpio-youtube-scraper-6e2678f9.netlify.app/.netlify/functions/youtube-oauth-callback",
+        "statusCode":  502,
+        "body":  "{\"errorType\":\"Error\",\"errorMessage\":\"Cannot find module \u0027axios\u0027\\nRequire stack:\\n- /var/task/netlify/functions/youtube-oauth-callback.mjs\",\"trace\":[\"Error: Cannot find module \u0027axios\u0027\",\"Require stack:\",\"- /var/task/netlify/functions/youtube-oauth-callback.mjs\",\"    at Module._resolveFilename (node:internal/modules/cjs/loader:1517:15)\",\"    at wrapResolveFilename (node:internal/modules/cjs/loader:1071:27)\",\"    at defaultResolveImplForCJSLoading (node:internal/modules/cjs/loader:1095:10)\",\"    at resolveForCJSWithHooks (node:internal/modules/cjs/loader:1122:12)\",\"    at Module._load (node:internal/modules/cjs/loader:1294:5)\",\"    at wrapModuleLoad (node:internal/modules/cjs/loader:255:19)\",\"    at Module.require (node:internal/modules/cjs/loader:1617:12)\",\"    at require (node:internal/modules/helpers:153:16)\",\"    at netlify/functions/handlers/youtube-oauth-callback-handler.js (file:///var/task/netlify/functions/youtube-oauth-callback.mjs:154:17)\",\"    at __require2 (file:///var/task/netlify/functions/youtube-oauth-callback.mjs:22:50)\"]}",
+        "error":  null
+    },
+    {
+        "name":  "oauth-callback-redirect",
+        "url":  "https://6a6273f1508e4303f204d30f--apexscorpio-youtube-scraper-6e2678f9.netlify.app/oauth/youtube/callback",
+        "statusCode":  502,
+        "body":  "{\"errorType\":\"Error\",\"errorMessage\":\"Cannot find module \u0027axios\u0027\\nRequire stack:\\n- /var/task/netlify/functions/youtube-oauth-callback.mjs\",\"trace\":[\"Error: Cannot find module \u0027axios\u0027\",\"Require stack:\",\"- /var/task/netlify/functions/youtube-oauth-callback.mjs\",\"    at Module._resolveFilename (node:internal/modules/cjs/loader:1517:15)\",\"    at wrapResolveFilename (node:internal/modules/cjs/loader:1071:27)\",\"    at defaultResolveImplForCJSLoading (node:internal/modules/cjs/loader:1095:10)\",\"    at resolveForCJSWithHooks (node:internal/modules/cjs/loader:1122:12)\",\"    at Module._load (node:internal/modules/cjs/loader:1294:5)\",\"    at wrapModuleLoad (node:internal/modules/cjs/loader:255:19)\",\"    at Module.require (node:internal/modules/cjs/loader:1617:12)\",\"    at require (node:internal/modules/helpers:153:16)\",\"    at netlify/functions/handlers/youtube-oauth-callback-handler.js (file:///var/task/netlify/functions/youtube-oauth-callback.mjs:154:17)\",\"    at __require2 (file:///var/task/netlify/functions/youtube-oauth-callback.mjs:22:50)\"]}",
+        "error":  null
+    }
+]
