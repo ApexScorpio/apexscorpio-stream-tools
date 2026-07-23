@@ -71,7 +71,7 @@ async function getOAuthAccessToken(customSecretsStore = null, customAxios = null
   // Procurar no Netlify Blobs a chave ativa indicada em oauth-config (SEM FALLBACKS)
   try {
     const secretsStore = getBlobsStore('youtube-oauth-secrets', customSecretsStore);
-    const oauthConfig = await secretsStore.getJSON('oauth-config');
+    const oauthConfig = await secretsStore.get('oauth-config', { type: 'json' });
 
     if (oauthConfig && oauthConfig.setupComplete === true && oauthConfig.activeTokenKey) {
       // Validar que o expectedChannelIdHash gravado corresponde ao canal configurado localmente
@@ -85,7 +85,7 @@ async function getOAuthAccessToken(customSecretsStore = null, customAxios = null
         return null;
       }
 
-      const encryptedBlob = await secretsStore.getJSON(oauthConfig.activeTokenKey);
+      const encryptedBlob = await secretsStore.get(oauthConfig.activeTokenKey, { type: 'json' });
       if (encryptedBlob) {
         refreshToken = decryptRefreshToken(encryptedBlob, encryptionKey);
       }

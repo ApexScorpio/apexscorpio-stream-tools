@@ -40,7 +40,7 @@ exports.handler = async function(event, context, customStores = null) {
 
   // 3. Verificar se a configuração já foi concluída (Consultar exclusivamente oauth-config)
   try {
-    const oauthConfig = await secretsStore.getJSON('oauth-config');
+    const oauthConfig = await secretsStore.get('oauth-config', { type: 'json' });
     if (oauthConfig && oauthConfig.setupComplete === true) {
       return {
         statusCode: 200,

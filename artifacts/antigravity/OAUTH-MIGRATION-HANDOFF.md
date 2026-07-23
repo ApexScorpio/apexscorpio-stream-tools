@@ -1,6 +1,6 @@
 # Handoff — Migração OAuth YouTube para Modern Netlify Functions
 
-Última atualização UTC: 2026-07-23T19:10:47Z
+Última atualização UTC: 2026-07-23T19:28:13Z
 
 ## Como retomar numa nova conversa
 
@@ -10,13 +10,13 @@ fix/migrate-oauth-to-modern-netlify-functions
 
 Depois ler:
 
-artifacts/antigravity/manual-modern-functions-migration/preview-modern-runtime-v3/summary.json
+artifacts/antigravity/manual-modern-functions-migration/preview-modern-runtime-v4/summary.json
 
-artifacts/antigravity/manual-modern-functions-migration/preview-modern-runtime-v3/probes.json
+artifacts/antigravity/manual-modern-functions-migration/preview-modern-runtime-v4/probes.json
 
 ## Objetivo final
 
-Colocar o OAuth oficial do YouTube totalmente funcional na Netlify, com:
+Colocar o OAuth oficial do YouTube totalmente funcional na Netlify:
 
 - Modern Netlify Functions.
 - Netlify Blobs sem tokens ou site IDs manuais.
@@ -35,28 +35,26 @@ Colocar o OAuth oficial do YouTube totalmente funcional na Netlify, com:
 - Base master: 962fe9f295788786981a8b784dc3d1883f557ed9
 - Netlify Project ID: 76ea2513-2651-4965-8241-a40070af3502
 - Produção: https://apexscorpio-youtube-scraper-6e2678f9.netlify.app
-- Head antes deste passo: 0189996970e06ac848839bdb46da02a06c1bb993
-- Relatório mais recente: artifacts/antigravity/manual-modern-functions-migration/preview-modern-runtime-v3
+- Head antes deste passo: d2610a6180e0c88e914b429a79fa2d890403f783
+- Relatório mais recente: artifacts/antigravity/manual-modern-functions-migration/preview-modern-runtime-v4
 
 ## Estado atual
 
-- Testes: exit code 0
+- Testes: exit code 1
 - Sintaxe: exit code 0
-- Deploy preview: exit code 0
-- Deploy ID: 6a62674acaef50147cb8c7e9
-- Deploy URL: https://6a62674acaef50147cb8c7e9--apexscorpio-youtube-scraper-6e2678f9.netlify.app
-- Netlify Blobs no runtime moderno: confirmado no preview v2
-- Gate das três Functions modernas: NÃO APROVADO
-- Erro atual:
+- Deploy preview: exit code -1
+- Deploy ID:
+- Deploy URL:
+- Netlify Blobs no runtime moderno: confirmado
+- Bundler: esbuild
+- Dependências externas: @netlify/blobs e axios
+- Leituras getJSON restantes: 0
+- Gate das Functions modernas: NÃO APROVADO
+- Erro operacional: Testes ou sintaxe falharam; deploy bloqueado.
 
 ### Probes
 
-- youtube-status-direct: HTTP 502
-- youtube-status-redirect: HTTP 502
-- oauth-start-direct: HTTP 502
-- oauth-start-redirect: HTTP 502
-- oauth-callback-direct: HTTP 502
-- oauth-callback-redirect: HTTP 502
+- Nenhum probe executado.
 
 ## Trabalho concluído
 
@@ -68,16 +66,18 @@ Colocar o OAuth oficial do YouTube totalmente funcional na Netlify, com:
 - Ativação versionada token-v-*.
 - Segunda autorização bloqueada.
 - Network guard nos testes.
-- Migração dos handlers para pasta interna.
 - connectLambda removido.
 - 60/60 testes aprovados anteriormente.
 - Netlify Blobs CRUD confirmado no runtime moderno.
-- Imports estáticos aplicados para inclusão dos handlers no bundle.
+- Handlers locais incluídos no bundle através de imports estáticos.
+- Empacotamento esbuild ativado.
+- axios e @netlify/blobs configurados como módulos externos.
+- Leituras Blobs migradas de getJSON para get com type json.
 
 ## O que falta fazer
 
-1. Ler preview-modern-runtime-v3/summary.json e probes.json.
-2. Corrigir o erro indicado no último preview.
+1. Ler preview-modern-runtime-v4/summary.json e probes.json.
+2. Corrigir o erro exato indicado pelo último preview.
 3. Repetir o deploy preview.
 4. Não fazer merge nem deploy de produção antes do gate ficar aprovado.
 5. Depois: merge, produção, autorização OAuth e validação dos Blobs.
@@ -104,4 +104,5 @@ Colocar o OAuth oficial do YouTube totalmente funcional na Netlify, com:
 - 2026-07-23: preview v1 falhou devido a getJSON e wrappers.
 - 2026-07-23: preview v2 confirmou Blobs CRUD.
 - 2026-07-23: preview v2 revelou handlers ausentes do bundle por createRequire.
-- 2026-07-23T19:10:47Z: preview v3 executado; testes=0; sintaxe=0; deploy=0; gate=NÃO APROVADO; deployId=6a62674acaef50147cb8c7e9.
+- 2026-07-23: preview v3 incluiu os handlers, mas faltavam axios e @netlify/blobs no artefacto.
+- 2026-07-23T19:28:13Z: preview v4 executado; testes=1; sintaxe=0; deploy=-1; gate=NÃO APROVADO; deployId=.

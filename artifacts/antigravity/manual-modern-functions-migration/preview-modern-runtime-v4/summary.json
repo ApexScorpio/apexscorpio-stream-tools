@@ -1,0 +1,22 @@
+{
+    "timestampUtc":  "2026-07-23T19:28:13Z",
+    "branch":  "fix/migrate-oauth-to-modern-netlify-functions",
+    "headBeforeCommit":  "d2610a6180e0c88e914b429a79fa2d890403f783",
+    "npmTestExitCode":  1,
+    "syntaxCheckExitCode":  0,
+    "deployExitCode":  -1,
+    "deployId":  null,
+    "deployUrl":  null,
+    "nodeBundler":  "esbuild",
+    "externalNodeModules":  [
+                                "@netlify/blobs",
+                                "axios"
+                            ],
+    "legacyGetJSONRemaining":  0,
+    "blobsRuntimePreviouslyVerified":  true,
+    "modernRuntimeGatePassed":  false,
+    "operationError":  "Testes ou sintaxe falharam; deploy bloqueado.",
+    "probeStatuses":  {
+
+                      }
+}

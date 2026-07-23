@@ -104,7 +104,7 @@ async function checkRateLimit(ipAddress, ratelimitStore) {
   const ipHash = crypto.createHash('sha256').update(ipAddress || 'unknown-ip').digest('hex');
   const key = `ratelimit-setup-${ipHash}`;
 
-  const record = await ratelimitStore.getJSON(key);
+  const record = await ratelimitStore.get(key, { type: 'json' });
   if (!record) {
     return { allowed: true, record: { count: 0, resetAt: now + windowMs } };
   }
@@ -129,7 +129,7 @@ async function recordFailedAttempt(ipAddress, ratelimitStore) {
   const ipHash = crypto.createHash('sha256').update(ipAddress || 'unknown-ip').digest('hex');
   const key = `ratelimit-setup-${ipHash}`;
 
-  const record = await ratelimitStore.getJSON(key);
+  const record = await ratelimitStore.get(key, { type: 'json' });
   const count = (record && now <= record.resetAt) ? record.count + 1 : 1;
   const resetAt = (record && now <= record.resetAt) ? record.resetAt : now + windowMs;
 

@@ -81,7 +81,7 @@ exports.handler = async function(event, context, customStores = null, customAxio
   const sessionIdHash = crypto.createHash('sha256').update(sessionId).digest('hex');
   let session;
   try {
-    session = await sessionsStore.getJSON(sessionIdHash);
+    session = await sessionsStore.get(sessionIdHash, { type: 'json' });
   } catch (err) {
     return {
       statusCode: 500,
@@ -208,7 +208,7 @@ exports.handler = async function(event, context, customStores = null, customAxio
 
     await secretsStore.setJSON(randomTokenKey, encryptedPayload);
 
-    const verifiedBlob = await secretsStore.getJSON(randomTokenKey);
+    const verifiedBlob = await secretsStore.get(randomTokenKey, { type: 'json' });
     if (!verifiedBlob || !verifiedBlob.iv || !verifiedBlob.ciphertext || !verifiedBlob.authTag) {
       throw new Error('Falha na leitura de verificação do Blob cifrado');
     }

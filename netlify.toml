@@ -17,3 +17,6 @@
   from = "/oauth/youtube/callback"
   to = "/.netlify/functions/youtube-oauth-callback"
   status = 200
+[functions]
+  node_bundler = "esbuild"
+  external_node_modules = ["@netlify/blobs", "axios"]
