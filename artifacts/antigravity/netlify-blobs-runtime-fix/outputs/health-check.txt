@@ -1,0 +1,21 @@
+=== NETLIFY BLOBS HEALTH CHECK DIAGNOSTIC ===
+Function: /.netlify/functions/blobs-health
+Deploy ID: 6a6245e2b614b04bdc42ca54
+URL: https://6a6245e2b614b04bdc42ca54--apexscorpio-youtube-scraper-6e2678f9.netlify.app/.netlify/functions/blobs-health
+Timestamp: 2026-07-23T16:49:26Z
+
+Output HTTP 500:
+{
+  "ok": false,
+  "create": false,
+  "read": false,
+  "delete": false,
+  "errorName": "MissingBlobsEnvironmentError",
+  "errorMessage": "The environment has not been configured to use Netlify Blobs. To use it manually, supply the following properties when creating a store: siteID, token",
+  "hasGlobalBlobsContext": false,
+  "hasEnvBlobsContext": false
+}
+
+Store de Limpeza Pós-Teste:
+- Store: youtube-oauth-health
+- Estado: Vazio (0 chaves acumuladas)

@@ -1,5 +1,17 @@
 const crypto = require('crypto');
-const { getStore } = require('@netlify/blobs');
+const { getStore, connectLambda } = require('@netlify/blobs');
+
+/**
+ * Inicializar o contexto do Netlify Blobs para Lambda Compatibility Mode
+ * Preserva os testes ignorando connectLambda quando customStores são fornecidas.
+ */
+function initializeBlobsLambdaRuntime(event, customStores = null) {
+  if (customStores) return;
+  if (!event) {
+    throw new Error('Event inválido para inicialização do Lambda Blobs runtime');
+  }
+  connectLambda(event);
+}
 
 /**
  * Comparação segura no tempo (Timing-Safe) usando hashes SHA-256 de comprimento fixo
@@ -137,6 +149,7 @@ async function recordFailedAttempt(ipAddress, ratelimitStore) {
 }
 
 module.exports = {
+  initializeBlobsLambdaRuntime,
   safeCompare,
   getBlobsStore,
   encryptRefreshToken,
