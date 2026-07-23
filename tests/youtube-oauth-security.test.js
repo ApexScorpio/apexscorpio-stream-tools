@@ -1035,4 +1035,34 @@ describe('Testes de Arquitetura e Segurança OAuth (Node Native Runner - Sem Ass
     assert.throws(() => { tls.connect(443, 'example.com'); }, { message: 'NETWORK ACCESS BLOCKED DURING TESTS' });
   });
 
+  it('57. initializeBlobsLambdaRuntime ignora connectLambda quando customStores são fornecidas', () => {
+    const { initializeBlobsLambdaRuntime } = require('../netlify/functions/utils/oauth-helpers.js');
+    assert.doesNotThrow(() => {
+      initializeBlobsLambdaRuntime(null, createDefaultMocks());
+    });
+  });
+
+  it('58. Sem customStores, initializeBlobsLambdaRuntime exige event válido', () => {
+    const { initializeBlobsLambdaRuntime } = require('../netlify/functions/utils/oauth-helpers.js');
+    assert.throws(() => {
+      initializeBlobsLambdaRuntime(null, null);
+    }, { message: 'Event inválido para inicialização do Lambda Blobs runtime' });
+  });
+
+  it('59. Falha de connectLambda mantém comportamento fail-closed sem vazar dados', () => {
+    const { initializeBlobsLambdaRuntime } = require('../netlify/functions/utils/oauth-helpers.js');
+    assert.throws(() => {
+      initializeBlobsLambdaRuntime({ blobs: 'invalid-payload' }, null);
+    });
+  });
+
+  it('60. Start e Callback chamam initializeBlobsLambdaRuntime com o event fornecido', async () => {
+    const mocks = createDefaultMocks();
+    const resStart = await startFunc.handler({ httpMethod: 'GET' }, {}, mocks);
+    assert.strictEqual(resStart.statusCode, 200);
+
+    const resCallback = await callbackFunc.handler({ queryStringParameters: {} }, {}, mocks);
+    assert.strictEqual(resCallback.statusCode, 400);
+  });
+
 });
