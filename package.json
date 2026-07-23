@@ -5,9 +5,10 @@
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
-    "test": "node tests/youtube-status.test.js"
+    "test": "node tests/youtube-status.test.js && node tests/youtube-oauth-security.test.js"
   },
   "dependencies": {
+    "@netlify/blobs": "^10.7.9",
     "axios": "^1.6.8",
     "cheerio": "^1.0.0-rc.12",
     "cors": "^2.8.5",

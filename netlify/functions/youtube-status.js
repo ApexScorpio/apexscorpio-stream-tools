@@ -1,4 +1,6 @@
 const axios = require('axios');
+const crypto = require('crypto');
+const { getStore } = require('@netlify/blobs');
 
 // Cache em memória durante 12 segundos
 let cachedResponse = null;
@@ -13,19 +15,54 @@ const HTTP_HEADERS = {
 };
 
 /**
+ * Helper para obter Store Netlify Blobs com Fallback em memória para ambiente de testes
+ */
+function getBlobsStore(name) {
+  try {
+    return getStore(name);
+  } catch (err) {
+    return {
+      get: async () => null,
+      getJSON: async () => null,
+      setJSON: async () => {}
+    };
+  }
+}
+
+/**
+ * Decifrar Refresh Token usando AES-256-GCM
+ */
+function decryptRefreshToken(encryptedPayload, secretKeyStr) {
+  if (!encryptedPayload || !encryptedPayload.iv || !encryptedPayload.authTag || !encryptedPayload.ciphertext) {
+    return null;
+  }
+  try {
+    const key = crypto.createHash('sha256').update(secretKeyStr).digest();
+    const iv = Buffer.from(encryptedPayload.iv, 'hex');
+    const authTag = Buffer.from(encryptedPayload.authTag, 'hex');
+
+    const decipher = crypto.createDecipheriv('aes-256-gcm', key, iv);
+    decipher.setAuthTag(authTag);
+
+    let decrypted = decipher.update(encryptedPayload.ciphertext, 'hex', 'utf8');
+    decrypted += decipher.final('utf8');
+    return decrypted;
+  } catch (err) {
+    return null;
+  }
+}
+
+/**
  * Função de parsing de espectadores em tempo real.
- * Aceita ESTRITAMENTE palavras-chave de espectadores em direto.
- * Rejeita total de visualizações, reproduções ou views acumuladas.
  */
 function parseViewersText(text) {
   if (!text || typeof text !== 'string') return null;
 
   const normalized = text.replace(/[\u00a0\u1680\u2000-\u200a\u202f\u205f\u3000]/g, ' ').trim();
 
-  // Verificar presença estrita de identificadores de espectadores simultâneos
   const isLiveViewerText = /(?:a ver|watching|espectadores|viewers|espectadores ao vivo)/i.test(normalized);
   if (!isLiveViewerText) {
-    return null; // Rejeita total de visualizações
+    return null;
   }
 
   const match = normalized.match(/([\d\s\,\.]+)\s*(?:a ver|watching|espectadores|viewers)/i);
@@ -41,14 +78,34 @@ function parseViewersText(text) {
 }
 
 /**
- * Renovar Access Token do OAuth 2.0 usando Refresh Token
+ * Obter Access Token do OAuth 2.0:
+ * Ordem:
+ * 1. process.env.YOUTUBE_OAUTH_REFRESH_TOKEN (se configurado como Secret Netlify)
+ * 2. Blob cifrado "primary-refresh-token" no Netlify Blobs store "youtube-oauth-secrets"
  */
 async function getOAuthAccessToken() {
   const clientId = process.env.YOUTUBE_OAUTH_CLIENT_ID;
   const clientSecret = process.env.YOUTUBE_OAUTH_CLIENT_SECRET;
-  const refreshToken = process.env.YOUTUBE_OAUTH_REFRESH_TOKEN;
+  const encryptionKey = process.env.YOUTUBE_OAUTH_TOKEN_ENCRYPTION_KEY;
 
-  if (!clientId || !clientSecret || !refreshToken) {
+  if (!clientId || !clientSecret) {
+    return null;
+  }
+
+  let refreshToken = process.env.YOUTUBE_OAUTH_REFRESH_TOKEN || null;
+
+  // Se não estiver em env var, procurar no Netlify Blobs cifrado
+  if (!refreshToken && encryptionKey) {
+    try {
+      const secretsStore = getBlobsStore('youtube-oauth-secrets');
+      const encryptedBlob = await secretsStore.getJSON('primary-refresh-token');
+      if (encryptedBlob) {
+        refreshToken = decryptRefreshToken(encryptedBlob, encryptionKey);
+      }
+    } catch (err) {}
+  }
+
+  if (!refreshToken) {
     return null;
   }
 
@@ -339,7 +396,7 @@ async function fetchSourceHTML() {
         liveViewers = nextResp.viewers;
         liveViewerText = nextResp.viewerText;
       }
-      break; // Encontrou a live ativa com sucesso no primeiro candidato válido!
+      break;
     }
   }
 
@@ -372,7 +429,7 @@ async function getLiveStatus() {
     };
   }
 
-  // 1. Obter Access Token se credenciais OAuth estiverem configuradas
+  // 1. Obter Access Token se OAuth estiver ativo (Secret env var ou Netlify Blob cifrado)
   const accessToken = await getOAuthAccessToken();
 
   // 2. Consultar Fontes em Paralelo
@@ -468,7 +525,7 @@ async function getLiveStatus() {
       html: sourceHTML
     },
     diagnostic: {
-      version: "5.5",
+      version: "6.0",
       liveSignalsCount: liveSignalsCount,
       validViewerSourcesCount: validViewerSourcesCount,
       cached: false
