@@ -1,0 +1,11 @@
+=== GIT DIFF STAT SUMMARY ===
+Commit: 1d2bb37
+Branch: fix/secure-netlify-youtube-oauth
+
+ netlify/functions/utils/oauth-helpers.js    |  13 +-
+ netlify/functions/youtube-oauth-callback.js |  40 ++--
+ netlify/functions/youtube-status.js         |  20 +-
+ tests/no-network-guard.js                   |  70 ++-----
+ tests/youtube-oauth-security.test.js        | 273 +++++++++++++++++++++++++++-
+ tests/youtube-status.test.js                |   3 +-
+ 6 files changed, 330 insertions(+), 89 deletions(-)

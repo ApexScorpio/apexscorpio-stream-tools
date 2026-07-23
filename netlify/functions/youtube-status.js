@@ -1,9 +1,18 @@
 const axios = require('axios');
+const { getBlobsStore, decryptRefreshToken } = require('./utils/oauth-helpers.js');
 
 // Cache em memória durante 12 segundos
 let cachedResponse = null;
 let lastFetchTimestamp = 0;
 const CACHE_TTL_MS = 12000;
+
+/**
+ * Função utilitária para resetar a cache em memória durante os testes
+ */
+function resetCacheForTests() {
+  cachedResponse = null;
+  lastFetchTimestamp = 0;
+}
 
 const HTTP_HEADERS = {
   'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
@@ -14,18 +23,15 @@ const HTTP_HEADERS = {
 
 /**
  * Função de parsing de espectadores em tempo real.
- * Aceita ESTRITAMENTE palavras-chave de espectadores em direto.
- * Rejeita total de visualizações, reproduções ou views acumuladas.
  */
 function parseViewersText(text) {
   if (!text || typeof text !== 'string') return null;
 
   const normalized = text.replace(/[\u00a0\u1680\u2000-\u200a\u202f\u205f\u3000]/g, ' ').trim();
 
-  // Verificar presença estrita de identificadores de espectadores simultâneos
   const isLiveViewerText = /(?:a ver|watching|espectadores|viewers|espectadores ao vivo)/i.test(normalized);
   if (!isLiveViewerText) {
-    return null; // Rejeita total de visualizações
+    return null;
   }
 
   const match = normalized.match(/([\d\s\,\.]+)\s*(?:a ver|watching|espectadores|viewers)/i);
@@ -41,19 +47,60 @@ function parseViewersText(text) {
 }
 
 /**
- * Renovar Access Token do OAuth 2.0 usando Refresh Token
+ * Obter Access Token do OAuth 2.0:
+ * Origem exclusiva: Netlify Blobs → 'oauth-config' → validação expectedChannelIdHash → AES-256-GCM
+ * Não utiliza YOUTUBE_OAUTH_REFRESH_TOKEN como fallback (proibido por design de segurança).
+ * Valida expectedChannelIdHash antes de usar o token ativo.
  */
-async function getOAuthAccessToken() {
+async function getOAuthAccessToken(customSecretsStore = null, customAxios = null) {
+  const http = customAxios || axios;
   const clientId = process.env.YOUTUBE_OAUTH_CLIENT_ID;
   const clientSecret = process.env.YOUTUBE_OAUTH_CLIENT_SECRET;
-  const refreshToken = process.env.YOUTUBE_OAUTH_REFRESH_TOKEN;
+  const encryptionKey = process.env.YOUTUBE_OAUTH_TOKEN_ENCRYPTION_KEY;
+  const expectedChannelId = process.env.YOUTUBE_EXPECTED_CHANNEL_ID;
 
-  if (!clientId || !clientSecret || !refreshToken) {
+  if (!clientId || !clientSecret || !encryptionKey || !expectedChannelId) {
+    return null;
+  }
+
+  // Calcular SHA-256 do expectedChannelId local (usado para validar o hash armazenado)
+  const localChannelIdHash = require('crypto').createHash('sha256').update(expectedChannelId).digest('hex');
+
+  let refreshToken = null;
+
+  // Procurar no Netlify Blobs a chave ativa indicada em oauth-config (SEM FALLBACKS)
+  try {
+    const secretsStore = getBlobsStore('youtube-oauth-secrets', customSecretsStore);
+    const oauthConfig = await secretsStore.getJSON('oauth-config');
+
+    if (oauthConfig && oauthConfig.setupComplete === true && oauthConfig.activeTokenKey) {
+      // Validar que o expectedChannelIdHash gravado corresponde ao canal configurado localmente
+      if (!oauthConfig.expectedChannelIdHash) {
+        // Hash ausente na configuração — fail-closed
+        return null;
+      }
+      const { safeCompare: sc } = require('./utils/oauth-helpers.js');
+      if (!sc(localChannelIdHash, oauthConfig.expectedChannelIdHash)) {
+        // Hash diverge — token de outro canal — fail-closed sem expor hashes ou IDs
+        return null;
+      }
+
+      const encryptedBlob = await secretsStore.getJSON(oauthConfig.activeTokenKey);
+      if (encryptedBlob) {
+        refreshToken = decryptRefreshToken(encryptedBlob, encryptionKey);
+      }
+    }
+  } catch (err) {
+    // Blobs indisponível ou falha na decifragem — fail-closed
+    return null;
+  }
+
+  if (!refreshToken) {
     return null;
   }
 
   try {
-    const res = await axios.post(
+    const res = await http.post(
       'https://oauth2.googleapis.com/token',
       new URLSearchParams({
         client_id: clientId,
@@ -75,14 +122,15 @@ async function getOAuthAccessToken() {
 /**
  * FONTE A: OAuth liveBroadcasts.list
  */
-async function fetchSourceOAuthBroadcast(accessToken) {
+async function fetchSourceOAuthBroadcast(accessToken, customAxios = null) {
+  const http = customAxios || axios;
   const observedAt = new Date().toISOString();
   if (!accessToken) {
     return { status: "unknown", observedAt, error: "OAuth credentials or access_token not available" };
   }
 
   try {
-    const res = await axios.get(
+    const res = await http.get(
       'https://www.googleapis.com/youtube/v3/liveBroadcasts?part=id,snippet,status&mine=true&broadcastStatus=active&broadcastType=all',
       {
         headers: { Authorization: `Bearer ${accessToken}` },
@@ -117,14 +165,15 @@ async function fetchSourceOAuthBroadcast(accessToken) {
 /**
  * FONTE B: OAuth / API videos.list (liveStreamingDetails)
  */
-async function fetchSourceOAuthVideo(videoId, accessToken) {
+async function fetchSourceOAuthVideo(videoId, accessToken, customAxios = null) {
+  const http = customAxios || axios;
   const observedAt = new Date().toISOString();
   if (!videoId || !accessToken) {
     return { status: "unknown", observedAt, error: "videoId or accessToken missing" };
   }
 
   try {
-    const res = await axios.get(
+    const res = await http.get(
       `https://www.googleapis.com/youtube/v3/videos?part=snippet,liveStreamingDetails,status&id=${encodeURIComponent(videoId)}`,
       {
         headers: { Authorization: `Bearer ${accessToken}` },
@@ -163,12 +212,13 @@ async function fetchSourceOAuthVideo(videoId, accessToken) {
 /**
  * FONTE C: InnerTube /player
  */
-async function fetchSourcePlayer(videoId) {
+async function fetchSourcePlayer(videoId, customAxios = null) {
+  const http = customAxios || axios;
   const observedAt = new Date().toISOString();
   if (!videoId) return { status: "unknown", observedAt, error: "videoId missing" };
 
   try {
-    const res = await axios.post(
+    const res = await http.post(
       'https://www.youtube.com/youtubei/v1/player',
       {
         context: {
@@ -210,12 +260,13 @@ async function fetchSourcePlayer(videoId) {
 /**
  * FONTE D: InnerTube /next (espectadores em tempo real)
  */
-async function fetchSourceNext(videoId) {
+async function fetchSourceNext(videoId, customAxios = null) {
+  const http = customAxios || axios;
   const observedAt = new Date().toISOString();
   if (!videoId) return { status: "unknown", observedAt, error: "videoId missing" };
 
   try {
-    const res = await axios.post(
+    const res = await http.post(
       'https://www.youtube.com/youtubei/v1/next',
       {
         context: {
@@ -283,7 +334,8 @@ async function fetchSourceNext(videoId) {
 /**
  * FONTE E: Descoberta Dinâmica de Candidatos e HTML Scraping
  */
-async function fetchSourceHTML() {
+async function fetchSourceHTML(customAxios = null) {
+  const http = customAxios || axios;
   const observedAt = new Date().toISOString();
   const candidateIds = new Set();
   const discoveryUrls = [
@@ -298,7 +350,7 @@ async function fetchSourceHTML() {
 
   for (const u of discoveryUrls) {
     try {
-      const res = await axios.get(u, {
+      const res = await http.get(u, {
         headers: HTTP_HEADERS,
         maxRedirects: 5,
         timeout: 4000,
@@ -326,8 +378,8 @@ async function fetchSourceHTML() {
 
   for (const vId of topCandidates) {
     const [playerResp, nextResp] = await Promise.all([
-      fetchSourcePlayer(vId),
-      fetchSourceNext(vId)
+      fetchSourcePlayer(vId, http),
+      fetchSourceNext(vId, http)
     ]);
 
     const isCandidateLive = (playerResp && playerResp.isLive) || (nextResp && nextResp.isLive);
@@ -339,7 +391,7 @@ async function fetchSourceHTML() {
         liveViewers = nextResp.viewers;
         liveViewerText = nextResp.viewerText;
       }
-      break; // Encontrou a live ativa com sucesso no primeiro candidato válido!
+      break;
     }
   }
 
@@ -360,7 +412,8 @@ async function fetchSourceHTML() {
 /**
  * Função Principal de Agregação Multifonte e Consenso
  */
-async function getLiveStatus() {
+async function getLiveStatus(customSecretsStore = null, customAxios = null) {
+  const http = customAxios || axios;
   const now = Date.now();
   if (cachedResponse && (now - lastFetchTimestamp < CACHE_TTL_MS)) {
     return {
@@ -372,20 +425,20 @@ async function getLiveStatus() {
     };
   }
 
-  // 1. Obter Access Token se credenciais OAuth estiverem configuradas
-  const accessToken = await getOAuthAccessToken();
+  // 1. Obter Access Token se OAuth estiver ativo
+  const accessToken = await getOAuthAccessToken(customSecretsStore, http);
 
   // 2. Consultar Fontes em Paralelo
-  const sourceHTML = await fetchSourceHTML();
-  const sourceOAuthBroadcast = await fetchSourceOAuthBroadcast(accessToken);
+  const sourceHTML = await fetchSourceHTML(http);
+  const sourceOAuthBroadcast = await fetchSourceOAuthBroadcast(accessToken, http);
 
   // Determinar candidato principal de videoId
   let targetVideoId = sourceOAuthBroadcast.videoId || sourceHTML.videoId || null;
 
   const [sourceOAuthVideo, sourcePlayer, sourceNext] = await Promise.all([
-    fetchSourceOAuthVideo(targetVideoId, accessToken),
-    fetchSourcePlayer(targetVideoId),
-    fetchSourceNext(targetVideoId)
+    fetchSourceOAuthVideo(targetVideoId, accessToken, http),
+    fetchSourcePlayer(targetVideoId, http),
+    fetchSourceNext(targetVideoId, http)
   ]);
 
   // 3. PRIORIDADE E CONSENSO PARA `videoId`
@@ -468,7 +521,7 @@ async function getLiveStatus() {
       html: sourceHTML
     },
     diagnostic: {
-      version: "5.5",
+      version: "6.0",
       liveSignalsCount: liveSignalsCount,
       validViewerSourcesCount: validViewerSourcesCount,
       cached: false
@@ -497,3 +550,4 @@ exports.handler = async function(event, context) {
 
 exports.parseViewersText = parseViewersText;
 exports.getLiveStatus = getLiveStatus;
+exports.resetCacheForTests = resetCacheForTests;

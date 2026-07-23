@@ -1,0 +1,5 @@
+AUDIT LOG NÃO ACESSÍVEL — ESTADO HISTÓRICO DE PRODUCTION NÃO COMPROVADO
+
+Motivo: A API de Audit Logs da conta Netlify (listAccountAuditEvents / listAccountAuditLogs) requer privilégios administrativos de nível de equipa/Enterprise ou token de acesso pessoal com permissão de leitura sobre a conta, os quais não estão configurados no ambiente CLI local da máquina.
+
+Consequentemente, não é possível listar nem auditar o histórico exacto dos eventos de env:set/env:unset realizados durante a sessão para comprovar com registos de auditoria se afectaram o contexto de produção.

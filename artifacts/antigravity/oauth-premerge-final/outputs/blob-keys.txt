@@ -1,0 +1,13 @@
+=== NETLIFY BLOBS STORE KEYS AUDIT (BEFORE & AFTER VERIFICATION) ===
+Timestamp: 2026-07-23T13:32:16Z
+
+INVENTÁRIO INICIAL:
+Store: youtube-oauth-sessions | Consistency: strong | Keys: [] (Vazio)
+Store: youtube-oauth-secrets  | Consistency: strong | Keys: [] (Vazio)
+
+INVENTÁRIO FINAL (APÓS TESTES ONLINE DE ROTAS):
+Store: youtube-oauth-sessions | Consistency: strong | Keys: [] (Vazio)
+Store: youtube-oauth-secrets  | Consistency: strong | Keys: [] (Vazio)
+
+Confirmação:
+As stores regressaram exatamente ao estado inicial limpo (0 chaves acumuladas). Nenhuma sessão temporária ou rate-limit residual permaneceu nas stores.

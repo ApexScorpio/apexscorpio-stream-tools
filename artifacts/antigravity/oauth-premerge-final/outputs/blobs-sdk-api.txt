@@ -1,0 +1,42 @@
+=== @NETLIFY/BLOBS SDK API INSPECTION ===
+Version: 10.7.9
+File: node_modules/@netlify/blobs/dist/main.d.ts
+
+Excertos relevantes da API TypeScript:
+
+```ts
+interface GetStoreOptions extends Partial<ClientOptions> {
+    deployID?: string;
+    name?: string;
+}
+
+declare const getStore: {
+    (name: string): Store;
+    (name: string, options: Omit<GetStoreOptions, 'name'>): Store;
+    (options: GetStoreOptions): Store;
+};
+```
+
+Análise da API:
+1. `GetStoreOptions` estende `Partial<ClientOptions>`, onde `ClientOptions` aceita `consistency?: ConsistencyMode` (onde `ConsistencyMode = 'eventual' | 'strong'`).
+2. No entanto, `ClientOptions` exige obrigatoriamente `siteID` e `token` explícitos quando configurado manualmente:
+```ts
+interface ClientOptions {
+    apiURL?: string;
+    consistency?: ConsistencyMode;
+    edgeURL?: string;
+    fetch?: Fetcher;
+    siteID: string;
+    token: string;
+    uncachedEdgeURL?: string;
+}
+```
+3. Ao invocar `getStore(storeName)` via suporte automático de ambiente Netlify Functions (sem passar `siteID` e `token` manuais), a API pública recomendada pelo README.md e pelo SDK é:
+```ts
+const store = getStore('my-store');
+```
+4. Portanto, passar `{ name: storeName, consistency: 'strong' }` sem `siteID` e `token` não é o padrão de invocação de runtime automático documentado pelo SDK para Functions.
+
+Conclusão:
+- O código deve invocar `getStore(storeName)` de forma limpa.
+- O runtime automático em Netlify Functions opera com consistência eventual padrão no Edge/Region.

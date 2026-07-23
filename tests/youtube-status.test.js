@@ -34,7 +34,8 @@ runTest('Ficheiro de produção não contém credenciais ou tokens gravados', ()
 runTest('Ficheiro de produção utiliza variáveis de ambiente para OAuth', () => {
   assert.strictEqual(prodCode.includes('process.env.YOUTUBE_OAUTH_CLIENT_ID'), true);
   assert.strictEqual(prodCode.includes('process.env.YOUTUBE_OAUTH_CLIENT_SECRET'), true);
-  assert.strictEqual(prodCode.includes('process.env.YOUTUBE_OAUTH_REFRESH_TOKEN'), true);
+  assert.strictEqual(prodCode.includes('process.env.YOUTUBE_OAUTH_TOKEN_ENCRYPTION_KEY'), true);
+  assert.strictEqual(prodCode.includes('process.env.YOUTUBE_EXPECTED_CHANNEL_ID'), true);
 });
 
 // -------------------------------------------------------------
