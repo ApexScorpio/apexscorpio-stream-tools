@@ -1,0 +1,38 @@
+## netlify/functions/utils/oauth-helpers.js
+Exit code: 0
+
+
+
+
+## netlify/functions/handlers/youtube-status-handler.js
+Exit code: 0
+
+
+
+
+## netlify/functions/handlers/youtube-oauth-start-handler.js
+Exit code: 0
+
+
+
+
+## netlify/functions/handlers/youtube-oauth-callback-handler.js
+Exit code: 0
+
+
+
+
+## netlify/functions/youtube-status.mjs
+Exit code: 0
+
+
+
+
+## netlify/functions/youtube-oauth-start.mjs
+Exit code: 0
+
+
+
+
+## netlify/functions/youtube-oauth-callback.mjs
+Exit code: 0

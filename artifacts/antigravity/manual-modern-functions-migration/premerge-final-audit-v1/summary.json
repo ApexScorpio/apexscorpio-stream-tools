@@ -1,0 +1,27 @@
+{
+  "timestampUtc": "2026-07-23T22:59:05.336Z",
+  "branch": "fix/migrate-oauth-to-modern-netlify-functions",
+  "headBeforeCommit": "0a979805d55689d9051b3cbaf6176a965a2b3953",
+  "aheadOfMaster": 16,
+  "behindMaster": 0,
+  "totalChecks": 12,
+  "passedChecks": 11,
+  "failedChecks": 1,
+  "auditPassed": false,
+  "progressBefore": 65,
+  "progressAfter": 65,
+  "productionDeployExecuted": false,
+  "oauthAuthorizationStarted": false,
+  "credentialsRotated": false,
+  "errors": [
+    {
+      "check": "Sem tokens conhecidos nos ficheiros rastreados",
+      "details": "youtube-live.js"
+    }
+  ],
+  "nextAction": [
+    "Corrigir apenas as verificações falhadas.",
+    "Repetir esta auditoria.",
+    "Não fazer merge nem deploy de produção."
+  ]
+}

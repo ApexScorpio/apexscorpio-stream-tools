@@ -1,0 +1,62 @@
+[
+  {
+    "name": "Branch baseada na master atual",
+    "passed": true,
+    "details": "behind=0; ahead=16"
+  },
+  {
+    "name": "Diff sem erros de whitespace",
+    "passed": true,
+    "details": ""
+  },
+  {
+    "name": "Âmbito do código limitado aos ficheiros esperados",
+    "passed": true,
+    "details": ""
+  },
+  {
+    "name": "Estrutura moderna das Functions",
+    "passed": true,
+    "details": "Em falta: nenhum\nObsoletos presentes: nenhum"
+  },
+  {
+    "name": "Sem padrões incompatíveis no código de produção",
+    "passed": true,
+    "details": ""
+  },
+  {
+    "name": "Entrypoints modernos configurados corretamente",
+    "passed": true,
+    "details": ""
+  },
+  {
+    "name": "Dependências Netlify e axios corretas",
+    "passed": true,
+    "details": ""
+  },
+  {
+    "name": "Configuração Netlify correta",
+    "passed": true,
+    "details": ""
+  },
+  {
+    "name": "Sem tokens conhecidos nos ficheiros rastreados",
+    "passed": false,
+    "details": "youtube-live.js"
+  },
+  {
+    "name": "Preview v7b confirmado",
+    "passed": true,
+    "details": "{\n  \"deployExitCode\": 0,\n  \"probeCount\": 6,\n  \"probeStatuses\": {\n    \"youtube-status-direct\": 200,\n    \"youtube-status-redirect\": 200,\n    \"oauth-start-direct\": 200,\n    \"oauth-start-redirect\": 200,\n    \"oauth-callback-direct\": 400,\n    \"oauth-callback-redirect\": 400\n  },\n  \"noHttp502\": true,\n  \"gate\": true\n}"
+  },
+  {
+    "name": "Sintaxe das Functions",
+    "passed": true,
+    "details": "Todos os ficheiros aprovados."
+  },
+  {
+    "name": "Testes automatizados",
+    "passed": true,
+    "details": "npm test aprovado."
+  }
+]
