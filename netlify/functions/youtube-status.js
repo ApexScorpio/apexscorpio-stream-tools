@@ -13,25 +13,19 @@ const HTTP_HEADERS = {
 };
 
 /**
- * Função de parsing de espectadores em tempo real
- * Aceita unicamente textos que descrevam espectadores simultâneos em direto:
- * - "1 a ver agora" -> 1
- * - "12 a ver agora" -> 12
- * - "1 234 a ver agora" -> 1234
- * - "1 watching now" -> 1
- * - "1,234 watching now" -> 1234
- * - "1.234 a ver agora" -> 1234
- * Rejeita categoricamente total de visualizações ou contagens estáticas.
+ * Função de parsing de espectadores em tempo real.
+ * Aceita ESTRITAMENTE palavras-chave de espectadores em direto.
+ * Rejeita total de visualizações, reproduções ou views acumuladas.
  */
 function parseViewersText(text) {
   if (!text || typeof text !== 'string') return null;
 
   const normalized = text.replace(/[\u00a0\u1680\u2000-\u200a\u202f\u205f\u3000]/g, ' ').trim();
 
-  // Verificar se contém estritamente palavras-chave de espectadores em direto
+  // Verificar presença estrita de identificadores de espectadores simultâneos
   const isLiveViewerText = /(?:a ver|watching|espectadores|viewers|espectadores ao vivo)/i.test(normalized);
   if (!isLiveViewerText) {
-    return null; // Rejeita total de visualizações, views e vídeos normais
+    return null; // Rejeita total de visualizações
   }
 
   const match = normalized.match(/([\d\s\,\.]+)\s*(?:a ver|watching|espectadores|viewers)/i);
@@ -46,7 +40,133 @@ function parseViewersText(text) {
   return null;
 }
 
-async function fetchInnerTubePlayer(videoId) {
+/**
+ * Renovar Access Token do OAuth 2.0 usando Refresh Token
+ */
+async function getOAuthAccessToken() {
+  const clientId = process.env.YOUTUBE_OAUTH_CLIENT_ID;
+  const clientSecret = process.env.YOUTUBE_OAUTH_CLIENT_SECRET;
+  const refreshToken = process.env.YOUTUBE_OAUTH_REFRESH_TOKEN;
+
+  if (!clientId || !clientSecret || !refreshToken) {
+    return null;
+  }
+
+  try {
+    const res = await axios.post(
+      'https://oauth2.googleapis.com/token',
+      new URLSearchParams({
+        client_id: clientId,
+        client_secret: clientSecret,
+        refresh_token: refreshToken,
+        grant_type: 'refresh_token'
+      }).toString(),
+      {
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        timeout: 4000
+      }
+    );
+    return res.data?.access_token || null;
+  } catch (err) {
+    return null;
+  }
+}
+
+/**
+ * FONTE A: OAuth liveBroadcasts.list
+ */
+async function fetchSourceOAuthBroadcast(accessToken) {
+  const observedAt = new Date().toISOString();
+  if (!accessToken) {
+    return { status: "unknown", observedAt, error: "OAuth credentials or access_token not available" };
+  }
+
+  try {
+    const res = await axios.get(
+      'https://www.googleapis.com/youtube/v3/liveBroadcasts?part=id,snippet,status&mine=true&broadcastStatus=active&broadcastType=all',
+      {
+        headers: { Authorization: `Bearer ${accessToken}` },
+        timeout: 5000
+      }
+    );
+
+    const item = res.data?.items?.[0];
+    if (item) {
+      return {
+        status: "confirmed",
+        observedAt,
+        videoId: item.id,
+        title: item.snippet?.title || "",
+        lifeCycleStatus: item.status?.lifeCycleStatus || "live",
+        liveChatId: item.snippet?.liveChatId || null,
+        isLive: true
+      };
+    } else {
+      return {
+        status: "confirmed",
+        observedAt,
+        isLive: false,
+        videoId: null
+      };
+    }
+  } catch (err) {
+    return { status: "error", observedAt, error: err.message };
+  }
+}
+
+/**
+ * FONTE B: OAuth / API videos.list (liveStreamingDetails)
+ */
+async function fetchSourceOAuthVideo(videoId, accessToken) {
+  const observedAt = new Date().toISOString();
+  if (!videoId || !accessToken) {
+    return { status: "unknown", observedAt, error: "videoId or accessToken missing" };
+  }
+
+  try {
+    const res = await axios.get(
+      `https://www.googleapis.com/youtube/v3/videos?part=snippet,liveStreamingDetails,status&id=${encodeURIComponent(videoId)}`,
+      {
+        headers: { Authorization: `Bearer ${accessToken}` },
+        timeout: 5000
+      }
+    );
+
+    const item = res.data?.items?.[0];
+    if (item) {
+      const lsd = item.liveStreamingDetails || {};
+      let viewers = null;
+      if (lsd.concurrentViewers !== undefined && lsd.concurrentViewers !== null) {
+        const parsed = parseInt(lsd.concurrentViewers, 10);
+        viewers = isNaN(parsed) ? null : parsed;
+      }
+
+      return {
+        status: "confirmed",
+        observedAt,
+        videoId: item.id,
+        title: item.snippet?.title || "",
+        liveChatId: lsd.activeLiveChatId || null,
+        concurrentViewers: viewers,
+        actualStartTime: lsd.actualStartTime || null,
+        actualEndTime: lsd.actualEndTime || null,
+        isLive: !lsd.actualEndTime && Boolean(lsd.actualStartTime)
+      };
+    }
+
+    return { status: "unknown", observedAt, error: "Video item not found in videos.list" };
+  } catch (err) {
+    return { status: "error", observedAt, error: err.message };
+  }
+}
+
+/**
+ * FONTE C: InnerTube /player
+ */
+async function fetchSourcePlayer(videoId) {
+  const observedAt = new Date().toISOString();
+  if (!videoId) return { status: "unknown", observedAt, error: "videoId missing" };
+
   try {
     const res = await axios.post(
       'https://www.youtube.com/youtubei/v1/player',
@@ -63,16 +183,37 @@ async function fetchInnerTubePlayer(videoId) {
       },
       {
         headers: { 'Content-Type': 'application/json' },
-        timeout: 5000
+        timeout: 4000
       }
     );
-    return res.data;
+
+    const vDetails = res.data?.videoDetails || {};
+    const microformat = res.data?.microformat?.playerMicroformatRenderer?.liveBroadcastDetails || {};
+
+    const isLiveNow = microformat.isLiveNow === true;
+    const isLive = isLiveNow || vDetails.isLive === true;
+
+    return {
+      status: "confirmed",
+      observedAt,
+      videoId: vDetails.videoId || videoId,
+      title: vDetails.title || "",
+      isLiveNow,
+      isLive: isLive,
+      playabilityStatus: res.data?.playabilityStatus?.status || "UNKNOWN"
+    };
   } catch (err) {
-    return null;
+    return { status: "error", observedAt, error: err.message };
   }
 }
 
-async function fetchInnerTubeNext(videoId) {
+/**
+ * FONTE D: InnerTube /next (espectadores em tempo real)
+ */
+async function fetchSourceNext(videoId) {
+  const observedAt = new Date().toISOString();
+  if (!videoId) return { status: "unknown", observedAt, error: "videoId missing" };
+
   try {
     const res = await axios.post(
       'https://www.youtube.com/youtubei/v1/next',
@@ -89,28 +230,136 @@ async function fetchInnerTubeNext(videoId) {
       },
       {
         headers: { 'Content-Type': 'application/json' },
-        timeout: 5000
+        timeout: 4000
       }
     );
-    return res.data;
+
+    let viewerText = null;
+    let title = "";
+    let viewers = null;
+
+    const contents = res.data?.contents?.twoColumnWatchNextResults?.results?.results?.contents || [];
+    for (const item of contents) {
+      const primary = item.videoPrimaryInfoRenderer;
+      if (primary) {
+        if (primary.title?.runs) {
+          title = primary.title.runs.map(r => r.text || '').join('');
+        }
+        if (primary.viewCount?.videoViewCountRenderer) {
+          const vvcr = primary.viewCount.videoViewCountRenderer;
+          if (vvcr.viewCount?.runs) {
+            const txt = vvcr.viewCount.runs.map(r => r.text || '').join('');
+            if (/(?:a ver|watching|espectadores|viewers)/i.test(txt)) {
+              viewerText = txt;
+            }
+          } else if (vvcr.viewCount?.simpleText) {
+            const txt = vvcr.viewCount.simpleText;
+            if (/(?:a ver|watching|espectadores|viewers)/i.test(txt)) {
+              viewerText = txt;
+            }
+          }
+        }
+      }
+    }
+
+    if (viewerText) {
+      viewers = parseViewersText(viewerText);
+    }
+
+    return {
+      status: "confirmed",
+      observedAt,
+      videoId,
+      title,
+      viewerText,
+      viewers,
+      isLive: viewers !== null
+    };
   } catch (err) {
-    return null;
+    return { status: "error", observedAt, error: err.message };
   }
 }
 
-async function fetchOEmbedMetadata(videoId) {
-  try {
-    const res = await axios.get(
-      `https://www.youtube.com/oembed?format=json&url=${encodeURIComponent('https://www.youtube.com/watch?v=' + videoId)}`,
-      { timeout: 4000 }
-    );
-    if (res.status === 200 && res.data) {
-      return res.data; // Usado ESTRITAMENTE para metadados (título, autor, thumbnail)
+/**
+ * FONTE E: Descoberta Dinâmica de Candidatos e HTML Scraping
+ */
+async function fetchSourceHTML() {
+  const observedAt = new Date().toISOString();
+  const candidateIds = new Set();
+  const discoveryUrls = [
+    'https://www.youtube.com/@apexscorpio/streams',
+    'https://www.youtube.com/c/apexscorpio/streams',
+    'https://www.youtube.com/@apexscorpio/live',
+    'https://www.youtube.com/c/apexscorpio/live',
+    'https://www.youtube.com/@apexscorpio'
+  ];
+
+  let resolvedUrl = discoveryUrls[0];
+
+  for (const u of discoveryUrls) {
+    try {
+      const res = await axios.get(u, {
+        headers: HTTP_HEADERS,
+        maxRedirects: 5,
+        timeout: 4000,
+        validateStatus: () => true
+      });
+
+      if (res.request?.res?.responseUrl) {
+        resolvedUrl = res.request.res.responseUrl;
+      }
+
+      const html = typeof res.data === 'string' ? res.data : '';
+      const matches = [...html.matchAll(/"videoId":"([a-zA-Z0-9_-]{11})"/g)].map(m => m[1]);
+      for (const id of matches) {
+        candidateIds.add(id);
+      }
+    } catch (err) {}
+  }
+
+  const topCandidates = Array.from(candidateIds).slice(0, 5);
+
+  let liveVideoId = null;
+  let liveTitle = "";
+  let liveViewers = null;
+  let liveViewerText = null;
+
+  for (const vId of topCandidates) {
+    const [playerResp, nextResp] = await Promise.all([
+      fetchSourcePlayer(vId),
+      fetchSourceNext(vId)
+    ]);
+
+    const isCandidateLive = (playerResp && playerResp.isLive) || (nextResp && nextResp.isLive);
+
+    if (isCandidateLive) {
+      liveVideoId = vId;
+      liveTitle = playerResp?.title || nextResp?.title || "";
+      if (nextResp && nextResp.viewers !== null) {
+        liveViewers = nextResp.viewers;
+        liveViewerText = nextResp.viewerText;
+      }
+      break; // Encontrou a live ativa com sucesso no primeiro candidato válido!
     }
-  } catch (err) {}
-  return null;
+  }
+
+  return {
+    status: "confirmed",
+    observedAt,
+    resolvedUrl,
+    checkedIdsCount: candidateIds.size,
+    checkedIds: topCandidates,
+    videoId: liveVideoId,
+    title: liveTitle,
+    viewerText: liveViewerText,
+    viewers: liveViewers,
+    isLive: Boolean(liveVideoId)
+  };
 }
 
+/**
+ * Função Principal de Agregação Multifonte e Consenso
+ */
 async function getLiveStatus() {
   const now = Date.now();
   if (cachedResponse && (now - lastFetchTimestamp < CACHE_TTL_MS)) {
@@ -123,136 +372,106 @@ async function getLiveStatus() {
     };
   }
 
-  const candidateIds = new Set();
-  const strategyErrors = [];
-  let resolvedUrl = "https://www.youtube.com/c/apexscorpio/live";
+  // 1. Obter Access Token se credenciais OAuth estiverem configuradas
+  const accessToken = await getOAuthAccessToken();
 
-  // FASE 3: Descoberta 100% Dinâmica do Video ID (SEM NENHUM ID FIXO EM CÓDIGO)
-  try {
-    const liveResp = await axios.get(resolvedUrl, {
-      headers: HTTP_HEADERS,
-      maxRedirects: 5,
-      timeout: 5000,
-      validateStatus: () => true
-    });
+  // 2. Consultar Fontes em Paralelo
+  const sourceHTML = await fetchSourceHTML();
+  const sourceOAuthBroadcast = await fetchSourceOAuthBroadcast(accessToken);
 
-    if (liveResp.request?.res?.responseUrl) {
-      resolvedUrl = liveResp.request.res.responseUrl;
-    }
+  // Determinar candidato principal de videoId
+  let targetVideoId = sourceOAuthBroadcast.videoId || sourceHTML.videoId || null;
 
-    const html = typeof liveResp.data === 'string' ? liveResp.data : '';
+  const [sourceOAuthVideo, sourcePlayer, sourceNext] = await Promise.all([
+    fetchSourceOAuthVideo(targetVideoId, accessToken),
+    fetchSourcePlayer(targetVideoId),
+    fetchSourceNext(targetVideoId)
+  ]);
 
-    const canonicalMatch = html.match(/<link rel="canonical" href="https:\/\/www\.youtube\.com\/watch\?v=([a-zA-Z0-9_-]{11})">/) ||
-                           html.match(/"videoId":"([a-zA-Z0-9_-]{11})"/);
+  // 3. PRIORIDADE E CONSENSO PARA `videoId`
+  let videoId = sourceOAuthBroadcast.videoId || sourceHTML.videoId || sourcePlayer.videoId || null;
 
-    if (canonicalMatch && canonicalMatch[1]) {
-      candidateIds.add(canonicalMatch[1]);
-    }
+  // 4. PRIORIDADE E CONSENSO PARA `isLive`
+  let isLive = false;
+  let liveSignalsCount = 0;
 
-    if (resolvedUrl.includes('watch?v=')) {
-      const match = resolvedUrl.match(/watch\?v=([a-zA-Z0-9_-]{11})/);
-      if (match) candidateIds.add(match[1]);
-    }
-  } catch (err) {
-    strategyErrors.push(`Live URL resolution error: ${err.message}`);
+  if (sourceOAuthBroadcast.isLive) liveSignalsCount++;
+  if (sourceOAuthVideo.isLive) liveSignalsCount++;
+  if (sourcePlayer.isLive) liveSignalsCount++;
+  if (sourceNext.isLive) liveSignalsCount++;
+  if (sourceHTML.isLive) liveSignalsCount++;
+
+  if (sourceOAuthBroadcast.isLive || sourcePlayer.isLive || sourceNext.isLive || sourceHTML.isLive || (sourceOAuthVideo.isLive && liveSignalsCount >= 1)) {
+    isLive = true;
   }
 
-  let selectedVideoId = null;
-  let selectedTitle = "";
-  let selectedIsLive = false;
-  let selectedViewers = null;
-  let selectedLiveSignal = null;
-  let selectedViewerSource = null;
-  let selectedRawViewerText = null;
+  // 5. PRIORIDADE E CONSENSO PARA `viewers`
+  let viewers = null;
+  let viewerState = "unknown";
+  let validViewerSourcesCount = 0;
 
-  // FASE 4: Confirmação Estrita do Estado LIVE (sem falsos positivos de oEmbed ou isLiveContent isolado)
-  for (const vId of candidateIds) {
-    try {
-      const playerResp = await fetchInnerTubePlayer(vId);
-      const oembedData = await fetchOEmbedMetadata(vId);
-
-      const vDetails = playerResp?.videoDetails || {};
-      const microformat = playerResp?.microformat?.playerMicroformatRenderer?.liveBroadcastDetails || {};
-
-      let isCandidateLive = false;
-      let liveSignal = null;
-
-      // Sinais fortes permitidos para confirmar uma live atualmente ativa:
-      if (microformat.isLiveNow === true) {
-        isCandidateLive = true;
-        liveSignal = "microformat.liveBroadcastDetails.isLiveNow";
-      } else if (vDetails.isLive === true && playerResp?.playabilityStatus?.status === 'OK') {
-        isCandidateLive = true;
-        liveSignal = "videoDetails.isLive";
-      }
-
-      // IMPORTANTE: oEmbed e isLiveContent NUNCA podem definir isLive = true por si só!
-
-      if (isCandidateLive) {
-        selectedVideoId = vId;
-        selectedTitle = vDetails.title || oembedData?.title || "";
-        selectedIsLive = true;
-        selectedLiveSignal = liveSignal;
-
-        // FASE 5: Obtenção de leitores simultâneos reais via InnerTube Next
-        const nextResp = await fetchInnerTubeNext(vId);
-        if (nextResp) {
-          try {
-            const contents = nextResp.contents?.twoColumnWatchNextResults?.results?.results?.contents || [];
-            for (const item of contents) {
-              const primary = item.videoPrimaryInfoRenderer;
-              if (primary && primary.viewCount?.videoViewCountRenderer) {
-                const vvcr = primary.viewCount.videoViewCountRenderer;
-                if (vvcr.viewCount?.runs) {
-                  const runsText = vvcr.viewCount.runs.map(r => r.text || '').join('');
-                  if (/(?:a ver|watching|espectadores|viewers)/i.test(runsText)) {
-                    selectedRawViewerText = runsText;
-                    selectedViewerSource = "nextResponse.videoPrimaryInfoRenderer.runs";
-                  }
-                } else if (vvcr.viewCount?.simpleText) {
-                  const simpleTxt = vvcr.viewCount.simpleText;
-                  if (/(?:a ver|watching|espectadores|viewers)/i.test(simpleTxt)) {
-                    selectedRawViewerText = simpleTxt;
-                    selectedViewerSource = "nextResponse.videoPrimaryInfoRenderer.simpleText";
-                  }
-                }
-              }
-            }
-          } catch(e) {
-            strategyErrors.push(`InnerTube Next parsing error: ${e.message}`);
-          }
-        }
-        break; // Candidato live validado com sucesso!
-      }
-    } catch(e) {
-      strategyErrors.push(`Candidate ${vId} check error: ${e.message}`);
+  if (isLive) {
+    if (sourceOAuthVideo.concurrentViewers !== null && sourceOAuthVideo.concurrentViewers !== undefined) {
+      viewers = sourceOAuthVideo.concurrentViewers;
+      viewerState = "confirmed";
+      validViewerSourcesCount++;
+    } else if (sourceNext.viewers !== null && sourceNext.viewers !== undefined) {
+      viewers = sourceNext.viewers;
+      viewerState = "confirmed";
+      validViewerSourcesCount++;
+    } else if (sourceHTML.viewers !== null && sourceHTML.viewers !== undefined) {
+      viewers = sourceHTML.viewers;
+      viewerState = "confirmed";
+      validViewerSourcesCount++;
+    } else {
+      viewers = null;
+      viewerState = "unknown";
     }
+  } else {
+    viewers = null;
+    viewerState = "confirmed"; // Offline confirmado
   }
 
-  // Processar texto real de espectadores
-  if (selectedIsLive && selectedRawViewerText) {
-    selectedViewers = parseViewersText(selectedRawViewerText);
+  // 6. AVALIAÇÃO DE CONFIANÇA (`confidence`)
+  let confidence = "none";
+  if (isLive) {
+    if (liveSignalsCount >= 2 || (sourceOAuthBroadcast.isLive && validViewerSourcesCount >= 1)) {
+      confidence = "high";
+    } else if (liveSignalsCount === 1 || validViewerSourcesCount === 1) {
+      confidence = "medium";
+    } else {
+      confidence = "low";
+    }
+  } else {
+    confidence = (sourceOAuthBroadcast.status === "confirmed" || sourcePlayer.status === "confirmed") ? "high" : "medium";
   }
 
-  // FASE 5 REGRA FINAL: Se a contagem estiver indisponível ou for nula, devolve null (NUNCA INVENTA 1 OU 0)
+  let title = sourceOAuthBroadcast.title || sourceOAuthVideo.title || sourcePlayer.title || sourceNext.title || sourceHTML.title || "";
+  let liveChatId = sourceOAuthBroadcast.liveChatId || sourceOAuthVideo.liveChatId || null;
+
   const responseObj = {
-    isLive: selectedIsLive,
-    videoId: selectedIsLive ? selectedVideoId : null,
-    viewers: selectedIsLive ? selectedViewers : null,
-    title: selectedTitle,
-    source: "youtube-innertube-scrape",
+    isLive: isLive,
+    videoId: isLive ? videoId : null,
+    viewers: isLive ? viewers : null,
+    viewerState: viewerState,
+    title: title,
+    liveChatId: isLive ? liveChatId : null,
+    confidence: confidence,
+    source: "youtube-multisource-consensus",
     updatedAt: new Date().toISOString(),
     error: null,
+    sources: {
+      oauthBroadcast: sourceOAuthBroadcast,
+      oauthVideo: sourceOAuthVideo,
+      player: sourcePlayer,
+      next: sourceNext,
+      html: sourceHTML
+    },
     diagnostic: {
-      version: "4.1",
-      discoveryMethod: candidateIds.size > 0 ? "dynamic-live-url-resolution" : "no-candidates-found",
-      liveSignal: selectedLiveSignal || "none",
-      viewerSource: selectedViewerSource || "none",
-      resolvedUrl: resolvedUrl,
-      checkedIds: Array.from(candidateIds),
-      viewerText: selectedRawViewerText || null,
-      cached: false,
-      strategyErrors: strategyErrors
+      version: "5.5",
+      liveSignalsCount: liveSignalsCount,
+      validViewerSourcesCount: validViewerSourcesCount,
+      cached: false
     }
   };
 
