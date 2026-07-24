@@ -1,0 +1,129 @@
+
+> apexscorpio-stream-tools@1.0.0 test
+> node tests/youtube-status.test.js && node --require ./tests/no-network-guard.js --test tests/youtube-oauth-security.test.js && node --require ./tests/no-network-guard.js --test tests/youtube-chat-handler.test.js && node --test tests/youtube-live-backend.test.js
+
+=== EXECUTA TESTES DE FALHA E FIABILIDADE MULTIFONTE ===
+
+✓ OK: Ficheiro de produção não contém credenciais ou tokens gravados
+✓ OK: Ficheiro de produção utiliza variáveis de ambiente para OAuth
+✓ OK: Cenário 1: OAuth funciona, scrape falha => isLive true, confidence high/medium
+✓ OK: Cenário 2: OAuth falha, scrape funciona => isLive true, fallback transparente
+✓ OK: Cenário 3: Count ausente em todas as fontes => viewers: null, nunca 0
+✓ OK: Cenário 4: Uma fonte devolve 0 explícito => viewers 0 (quando explicitamente 0)
+✓ OK: Cenário 5: Fontes devolvem valores de viewers concordantes => prioridade oficial OAuth
+✓ OK: Total exato: Twitch 10 + YouTube 20 => "30"
+✓ OK: Total parcial: Twitch 10 + YouTube null (live) => "≥10"
+✓ OK: Total offline: Todas plataformas offline => "0"
+✓ OK: parseViewersText("1 a ver agora") => 1
+✓ OK: parseViewersText("12 a ver agora") => 12
+✓ OK: parseViewersText("1 234 a ver agora") => 1234
+✓ OK: parseViewersText("1 watching now") => 1
+✓ OK: parseViewersText("1,234 watching now") => 1234
+✓ OK: parseViewersText("123 visualizações") => null
+✓ OK: parseViewersText("1,234 views") => null
+✓ OK: parseViewersText("null") => null
+
+Resumo dos Testes de Falha: 18 passaram, 0 falharam.
+Todos os testes de falha e fiabilidade multifonte passaram com sucesso!
+
+▶ Testes de Arquitetura e Segurança OAuth (Node Native Runner - Sem Asserções Falsas)
+  ✔ 1. GET /oauth/youtube/start apresenta formulário HTML (6.9413ms)
+  ✔ 2. GET não aceita password no URL ou parâmetros (1.0105ms)
+  ✔ 3. POST sem configuração de ambiente falha graciosamente (0.6533ms)
+  ✔ 4. Password errada é rejeitada com HTTP 401 (1.8838ms)
+  ✔ 5. Password correta inicia fluxo e gera Cookie + 302 Redirect (3.9269ms)
+  ✔ 6. Comparação de password usa valores de comprimento fixo (safeCompare) (0.5003ms)
+  ✔ 7. Rate limit contabiliza falhas consecutivas (0.6871ms)
+  ✔ 8. Rate limit bloqueia após o limite máximo de tentativas (5.4039ms)
+  ✔ 9. Rate limit expira após a janela temporal (0.9317ms)
+  ✔ 10. Falha da store de rate limit bloqueia início por segurança (Fail Closed) (0.7284ms)
+  ✔ 11. State gerado é aleatório e HMAC assinado (1.1648ms)
+  ✔ 12. State correto com HMAC assinado é aceite pelo callback (4.782ms)
+  ✔ 13. State com assinatura HMAC adulterada é rejeitado (1.6013ms)
+  ✔ 14. State expirado é rejeitado no callback (0.7934ms)
+  ✔ 15. State reutilizado é rejeitado (Single-Use Token) (0.7576ms)
+  ✔ 16. Cookie contém HttpOnly (5.6837ms)
+  ✔ 17. Cookie contém Secure (0.8955ms)
+  ✔ 18. Cookie contém SameSite apropriado (Lax) (0.457ms)
+  ✔ 19. PKCE exige obrigatoriamente S256 (0.3958ms)
+  ✔ 20. Code challenge SHA-256 corresponde exatamente ao verifier guardado na sessão (1.0423ms)
+  ✔ 21. Callback sem cookie falha (0.4877ms)
+  ✔ 22. Callback sem code falha (0.369ms)
+  ✔ 23. Erro da Google é sanitizado e não exposto no corpo HTTP (0.4153ms)
+  ✔ 24. Refresh token ausente no token response falha obrigatoriamente (0.6785ms)
+  ✔ 25. Access token ausente no token response falha obrigatoriamente (0.4983ms)
+  ✔ 26. Falha ao guardar no Blob não altera setupComplete nem oauth-config (Fail-Closed) (0.8942ms)
+  ✔ 27. Ativação versionada do token preserva o token anterior se a verificação falhar (1.946ms)
+  ✔ 28. setupComplete e oauth-config são gravados em simultâneo após validação e decifragem do token (6.6637ms)
+  ✔ 29. Segunda autorização é bloqueada após oauth-config.setupComplete=true (0.8663ms)
+  ✔ 30. Canal correto é aceite pela validação FASE 5 (2.6912ms)
+  ✔ 31. Canal errado é rejeitado com HTTP 403 (1.6148ms)
+  ✔ 32. Ausência de canal é rejeitada (1.0397ms)
+  ✔ 33. Refresh token nunca aparece no HTML de sucesso (3.9437ms)
+  ✔ 34. Access token nunca aparece no HTML de sucesso (1.3795ms)
+  ✔ 35. Client secret nunca aparece no HTML (0.5389ms)
+  ✔ 36. Código de autorização nunca aparece no HTML final (4.8388ms)
+  ✔ 37. Token cifrado pode ser decifrado com a chave correta (0.3516ms)
+  ✔ 38. Autenticação AES-GCM adulterada falha (AuthTag mismatch) (0.2329ms)
+  ✔ 39. youtube-status lê o Blob cifrado apontado em oauth-config com mock injetado (1.5377ms)
+  ✔ 40. PROVA REAL: youtube-status decifra o token ativo em oauth-config e envia-o no body para o /token endpoint (1.2086ms)
+  ✔ 41. youtube-status não devolve secrets ou tokens (1.2135ms)
+  ✔ 42. Nenhuma rota usa localhost no código-fonte das funções Netlify (Pesquisa Recursiva Integrada) (5.233ms)
+  ✔ 43. PROVA REAL: Guard de rede no-network-guard.js impede qualquer chamada HTTP/HTTPS/Socket real durante os testes (0.3975ms)
+  ✔ 44. getBlobsStore invoca getStore(storeName) sem parâmetros de token/siteID manuais (1.4108ms)
+  ✔ 45. Validação expectedChannelIdHash: rejeita token quando YOUTUBE_EXPECTED_CHANNEL_ID está ausente (2.4488ms)
+  ✔ 46. Validação expectedChannelIdHash: rejeita token quando oauth-config.expectedChannelIdHash está ausente (0.994ms)
+  ✔ 47. Validação expectedChannelIdHash: aceita token quando o hash local e do blob correspondem (1.1621ms)
+  ✔ 48. Validação expectedChannelIdHash: rejeita token quando hashes são diferentes e não chama o token endpoint (1.0307ms)
+  ✔ 49. Limpeza de Sessão: sucesso elimina sessão do store (2.3077ms)
+  ✔ 50. Limpeza de Sessão: tokens ausentes no Google eliminam sessão do store (1.0131ms)
+  ✔ 51. Limpeza de Sessão: canal errado no Google elimina sessão do store (0.625ms)
+  ✔ 52. Limpeza de Sessão: falha de armazenamento no Blob durante gravação final elimina sessão do store (0.9326ms)
+  ✔ 53. Limpeza de Sessão: eliminar uma sessão não afeta a chave de outra sessão no store (0.649ms)
+  ✔ 54. Network Guard: fetch é bloqueado e lança NETWORK ACCESS BLOCKED DURING TESTS (0.4313ms)
+  ✔ 55. Network Guard: http.request, http.get, https.request, https.get são bloqueados (0.3747ms)
+  ✔ 56. Network Guard: net.connect, net.createConnection e tls.connect são bloqueados (0.3409ms)
+  ✔ 57. Os handlers e helpers de produção não utilizam connectLambda (5.2989ms)
+  ✔ 58. Os três entrypoints modernos utilizam withLambda e default export (2.9678ms)
+  ✔ 59. Os entrypoints antigos foram removidos e os handlers internos existem (4.041ms)
+  ✔ 60. Start, Callback e Status continuam testáveis através dos handlers internos (0.8714ms)
+✔ Testes de Arquitetura e Segurança OAuth (Node Native Runner - Sem Asserções Falsas) (114.1038ms)
+ℹ tests 60
+ℹ suites 1
+ℹ pass 60
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 400.7896
+✔ 1. Rejeita métodos diferentes de GET (2.9438ms)
+✔ 2. Falha graciosamente sem configuração OAuth (4.8125ms)
+✔ 3. Devolve estado inativo sem transmissão (2.8437ms)
+✔ 4. Obtém mensagens com OAuth server-side (1.3559ms)
+✔ 5. Encaminha pageToken válido (1.1092ms)
+ℹ tests 5
+ℹ suites 0
+ℹ pass 5
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 226.3784
+✔ 1. Frontend nÃ£o contÃ©m uma API key pÃºblica (3.2678ms)
+✔ 2. Frontend nÃ£o chama diretamente googleapis (0.41ms)
+✔ 3. Estado principal vem de /youtube-status (0.7056ms)
+✔ 4. Chat principal vem de /youtube-chat (0.2168ms)
+✔ 5. Iframe continua como redundÃ¢ncia (0.2553ms)
+✔ 6. oEmbed continua como redundÃ¢ncia (0.1904ms)
+✔ 7. API e redundÃ¢ncias arrancam em paralelo (0.2194ms)
+✔ 8. Eventos oficiais continuam suportados (0.2777ms)
+✔ 9. Viewers desconhecidos nÃ£o sÃ£o inventados como zero (0.2339ms)
+✔ 10. Todos os HTML usam youtube-live.js v3.0 (115.6634ms)
+ℹ tests 10
+ℹ suites 0
+ℹ pass 10
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 298.5667

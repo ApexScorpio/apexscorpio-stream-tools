@@ -1,0 +1,12 @@
+netlify/functions/youtube-chat.mjs	ExitCode=0
+netlify/functions/youtube-oauth-callback.mjs	ExitCode=0
+netlify/functions/youtube-oauth-start.mjs	ExitCode=0
+netlify/functions/youtube-status.mjs	ExitCode=0
+netlify/functions/handlers/youtube-chat-handler.js	ExitCode=0
+netlify/functions/handlers/youtube-oauth-callback-handler.js	ExitCode=0
+netlify/functions/handlers/youtube-oauth-start-handler.js	ExitCode=0
+netlify/functions/handlers/youtube-status-handler.js	ExitCode=0
+netlify/functions/utils/oauth-helpers.js	ExitCode=0
+youtube-live.js	ExitCode=0
+tests/youtube-live-backend.test.js	ExitCode=0
+tests/youtube-chat-handler.test.js	ExitCode=0

@@ -1,0 +1,34 @@
+{
+    "timestampUtc":  "2026-07-24T01:02:38.781Z",
+    "branch":  "fix/migrate-oauth-to-modern-netlify-functions",
+    "headBeforeCommit":  "3915d7108bb699bef478b6e8f26c0e3a48710163",
+    "aheadOfMaster":  20,
+    "behindMaster":  0,
+    "totalChecks":  15,
+    "passedChecks":  15,
+    "failedChecks":  0,
+    "auditPassed":  true,
+    "npmTestExitCode":  0,
+    "syntaxFilesChecked":  12,
+    "syntaxFailures":  0,
+    "previousPreviewDeployId":  "6a62a22fb60f536c911d1f79",
+    "previousPreviewRoutes":  "8/8",
+    "noHttp502":  true,
+    "frontendChecks":  "93/93",
+    "publicApiKeyRemoved":  true,
+    "directGoogleApisCalls":  0,
+    "progressBefore":  76,
+    "progressAfter":  82,
+    "productionDeployExecuted":  false,
+    "oauthAuthorizationStarted":  false,
+    "credentialsRotated":  false,
+    "failedCheckDetails":  [
+
+                           ],
+    "nextAction":  [
+                       "Confirmar este relatório diretamente no GitHub.",
+                       "Criar um único deploy preview da branch atual.",
+                       "Testar as oito rotas e o frontend v3.0.",
+                       "Não fazer produção nem iniciar OAuth antes do novo preview."
+                   ]
+}

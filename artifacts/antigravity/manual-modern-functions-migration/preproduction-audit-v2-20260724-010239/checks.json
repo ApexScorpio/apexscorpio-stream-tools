@@ -1,0 +1,77 @@
+[
+    {
+        "name":  "Branch correta, sincronizada e working tree limpa",
+        "passed":  true,
+        "details":  "branch=fix/migrate-oauth-to-modern-netlify-functions; SHA=3915d7108bb699bef478b6e8f26c0e3a48710163"
+    },
+    {
+        "name":  "Branch baseada na master atual",
+        "passed":  true,
+        "details":  "behind=0; ahead=20"
+    },
+    {
+        "name":  "Diff sem erros de whitespace",
+        "passed":  true,
+        "details":  ""
+    },
+    {
+        "name":  "Âmbito limitado ao projeto OAuth/YouTube",
+        "passed":  true,
+        "details":  "Nenhum ficheiro inesperado."
+    },
+    {
+        "name":  "Estrutura moderna das quatro Functions",
+        "passed":  true,
+        "details":  "Em falta: nenhum; obsoletos: nenhum"
+    },
+    {
+        "name":  "Sem padrões incompatíveis nas Functions",
+        "passed":  true,
+        "details":  "Nenhum padrão incompatível encontrado."
+    },
+    {
+        "name":  "Dependências OAuth/Netlify presentes",
+        "passed":  true,
+        "details":  "axios=^1.6.8; @netlify/blobs=^10.7.9; @netlify/aws-lambda-compat=1.0.2"
+    },
+    {
+        "name":  "Configuração Netlify contém as quatro rotas",
+        "passed":  true,
+        "details":  "esbuild + status + chat + OAuth start/callback"
+    },
+    {
+        "name":  "Sem .env ou credenciais conhecidas rastreadas",
+        "passed":  true,
+        "details":  "env=0; credenciais=0"
+    },
+    {
+        "name":  "Frontend v3.0 usa backend e mantém redundâncias",
+        "passed":  true,
+        "details":  "Todos os HTML usam v3.0."
+    },
+    {
+        "name":  "Relatório da migração do frontend aprovado",
+        "passed":  true,
+        "details":  "checks=93/93; errors=0; progress=76"
+    },
+    {
+        "name":  "Último preview do backend aprovado em 8/8 rotas",
+        "passed":  true,
+        "details":  "deploy=6a62a22fb60f536c911d1f79; rotas=8/8; sem502=True"
+    },
+    {
+        "name":  "Backend não alterado depois do preview aprovado",
+        "passed":  true,
+        "details":  "baseline=e7554f34f68745919846c756f15f2340839707da"
+    },
+    {
+        "name":  "Sintaxe de produção e testes críticos",
+        "passed":  true,
+        "details":  "Aprovados=12/12"
+    },
+    {
+        "name":  "Testes automatizados completos",
+        "passed":  true,
+        "details":  "npm test exit code=0"
+    }
+]
