@@ -219,3 +219,5 @@ Colocar o OAuth oficial do YouTube totalmente funcional na Netlify:
 - 2026-07-24T02:56:31.1238464Z: auditoria OAuth Client ID v2 com HttpClient; HTTP=302; redirectGoogle=True; clientIdNovoEmRuntime=False; OAuth=False; rotação=False; progresso=95%; relatório=artifacts/antigravity/manual-modern-functions-migration/oauth-runtime-client-id-audit-v2-20260724025631.
 
 - 2026-07-24T03:00:44.7272755Z: auditoria OAuth Client ID v2 com HttpClient; HTTP=302; redirectGoogle=True; clientIdNovoEmRuntime=False; OAuth=False; rotação=False; progresso=95%; relatório=artifacts/antigravity/manual-modern-functions-migration/oauth-runtime-client-id-audit-v2-20260724030044.
+
+- 2026-07-24T03:24:49.7951659Z: auditoria direta da variável OAuth na Netlify; clientIdNovoNaNetlify=False; OAuth=False; rotação=False; progresso=95%; relatório=artifacts/antigravity/manual-modern-functions-migration/netlify-oauth-env-audit-v1-20260724032449.
