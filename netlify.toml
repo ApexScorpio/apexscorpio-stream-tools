@@ -1,6 +1,6 @@
 [build]
-  command = "echo Netlify build complete"
-  publish = "public"
+  command = "node scripts/build-netlify-public.js"
+  publish = "dist"
   functions = "netlify/functions"
 
 [[redirects]]

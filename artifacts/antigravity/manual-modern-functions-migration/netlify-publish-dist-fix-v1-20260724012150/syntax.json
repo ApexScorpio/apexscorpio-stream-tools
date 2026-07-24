@@ -1,0 +1,12 @@
+[
+  {
+    "file": "scripts/build-netlify-public.js",
+    "exitCode": 0,
+    "stderr": ""
+  },
+  {
+    "file": "tests/netlify-publish-build.test.js",
+    "exitCode": 0,
+    "stderr": ""
+  }
+]

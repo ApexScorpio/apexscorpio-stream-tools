@@ -1,0 +1,1 @@
+Netlify publish preparado em dist com frontend v3.0.

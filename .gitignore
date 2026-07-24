@@ -4,3 +4,6 @@ apexscorpio-stream-tools.zip
 
 # Local Netlify folder
 .netlify
+
+# Netlify build output
+dist/

@@ -1,0 +1,10 @@
+{
+  "missingOutput": [],
+  "youtubeLiveExists": true,
+  "backendBasePresent": true,
+  "youtubeStatusPresent": true,
+  "youtubeChatPresent": true,
+  "publicApiKeyRemoved": true,
+  "directGoogleApisCallsRemoved": true,
+  "approved": true
+}
