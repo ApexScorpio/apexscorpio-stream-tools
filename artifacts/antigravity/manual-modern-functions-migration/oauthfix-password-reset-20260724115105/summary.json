@@ -1,0 +1,12 @@
+{
+    "timestampUtc":  "2026-07-24T11:51:05.0614273Z",
+    "branch":  "fix/migrate-oauth-to-modern-netlify-functions",
+    "operationSucceeded":  true,
+    "deployContext":  "deploy-preview",
+    "deployAlias":  "oauthfix",
+    "oauthUrl":  "https://oauthfix--apexscorpio-youtube-scraper-6e2678f9.netlify.app/oauth/youtube/start",
+    "productionDeployAttempted":  false,
+    "passwordReset":  true,
+    "passwordStoredInReport":  false,
+    "nextAction":  "Abrir o OAuth e usar a nova password administrativa."
+}
