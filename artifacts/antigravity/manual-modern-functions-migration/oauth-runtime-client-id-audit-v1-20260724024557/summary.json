@@ -1,0 +1,21 @@
+{
+    "timestampUtc":  "2026-07-24T02:45:57.5235719Z",
+    "branch":  "fix/migrate-oauth-to-modern-netlify-functions",
+    "headBeforeCommit":  "88a1d37b6d2ee9dd1c80167a7a0c0b868313e985",
+    "oauthStartUrl":  "https://apexscorpio-youtube-scraper-6e2678f9.netlify.app/oauth/youtube/start",
+    "postHttpStatus":  null,
+    "postError":  "A operação não é válida devido ao estado actual do objecto.",
+    "googleRedirectCaptured":  false,
+    "redirectHost":  "",
+    "expectedClientFingerprint":  "196631DD0659",
+    "runtimeClientFingerprint":  null,
+    "runtimeClientMatchesExpected":  false,
+    "rawClientIdsStored":  false,
+    "clientSecretStored":  false,
+    "setupPasswordStored":  false,
+    "diagnosis":  "Não foi possível capturar o Client ID do redirect OAuth.",
+    "oauthAuthorizationCompleted":  false,
+    "credentialsRotated":  false,
+    "progressBefore":  95,
+    "progressAfter":  95
+}
