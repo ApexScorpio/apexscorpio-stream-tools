@@ -1,0 +1,9 @@
+{
+  "site_id": "76ea2513-2651-4965-8241-a40070af3502",
+  "site_name": "apexscorpio-youtube-scraper-6e2678f9",
+  "deploy_id": "6a62c3e790a1d915eeab5432",
+  "deploy_url": "https://6a62c3e790a1d915eeab5432--apexscorpio-youtube-scraper-6e2678f9.netlify.app",
+  "logs": "https://app.netlify.com/projects/apexscorpio-youtube-scraper-6e2678f9/deploys/6a62c3e790a1d915eeab5432",
+  "function_logs": "https://app.netlify.com/projects/apexscorpio-youtube-scraper-6e2678f9/logs/functions?scope=deploy:6a62c3e790a1d915eeab5432",
+  "edge_function_logs": "https://app.netlify.com/projects/apexscorpio-youtube-scraper-6e2678f9/logs/edge-functions?scope=deployid:6a62c3e790a1d915eeab5432"
+}

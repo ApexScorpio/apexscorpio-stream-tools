@@ -1,0 +1,45 @@
+{
+  "timestampUtc": "2026-07-24T01:46:01.785Z",
+  "branch": "fix/migrate-oauth-to-modern-netlify-functions",
+  "headBeforeCommit": "9a89aa6a865d5f2d155f5eceb5fb62e42b96eb87",
+  "removedIncompleteReports": [
+    "artifacts/antigravity/manual-modern-functions-migration/preview-frontend-v3-dist-gate-v2-20260724-013955"
+  ],
+  "netlifyCliEntry": "node_modules\\netlify-cli\\bin\\run.js",
+  "npmTestExitCode": 0,
+  "deployExitCode": 0,
+  "deployParseError": null,
+  "deployId": "6a62c3e790a1d915eeab5432",
+  "deployUrl": "https://6a62c3e790a1d915eeab5432--apexscorpio-youtube-scraper-6e2678f9.netlify.app",
+  "totalRoutes": 8,
+  "approvedRoutes": 8,
+  "failedRoutes": 0,
+  "probeStatuses": {
+    "youtube-status-direct": 200,
+    "youtube-status-redirect": 200,
+    "oauth-start-direct": 200,
+    "oauth-start-redirect": 200,
+    "oauth-callback-direct": 400,
+    "oauth-callback-redirect": 400,
+    "youtube-chat-direct": 503,
+    "youtube-chat-redirect": 503
+  },
+  "noHttp502": true,
+  "frontendVersion": "3.0",
+  "frontendPassed": true,
+  "remoteJavascriptMatchesLocal": true,
+  "publicApiKeyRemoved": true,
+  "directGoogleApisCallsRemoved": true,
+  "fullPreviewGatePassed": true,
+  "progressBefore": 86,
+  "progressAfter": 90,
+  "productionDeployExecuted": false,
+  "oauthAuthorizationStarted": false,
+  "credentialsRotated": false,
+  "nextAction": [
+    "Confirmar este relatório diretamente no GitHub.",
+    "Preparar a publicação controlada da branch atual.",
+    "Validar produção antes de iniciar OAuth.",
+    "Não rodar credenciais antes dos 100% funcionais."
+  ]
+}
