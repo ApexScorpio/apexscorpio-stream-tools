@@ -1,0 +1,26 @@
+{
+  "timestampUtc": "2026-07-24T01:57:49.366Z",
+  "branch": "fix/migrate-oauth-to-modern-netlify-functions",
+  "masterBefore": "962fe9f295788786981a8b784dc3d1883f557ed9",
+  "branchHeadBeforeRecord": "db8032ba7eb66f644e25445101ca79d8d43d0115",
+  "aheadOfMaster": 25,
+  "behindMaster": 0,
+  "sourceProductionReport": "artifacts/antigravity/manual-modern-functions-migration/production-v3-pre-oauth-v1-20260724015250",
+  "sourceProductionDeployId": "6a62c584708a1b1a254b6365",
+  "productionGatePassed": true,
+  "masterFastForwarded": false,
+  "masterAfterInitialFastForward": null,
+  "branchAfterInitialRecord": null,
+  "finalMasterSha": null,
+  "finalBranchSha": null,
+  "masterMatchesBranch": false,
+  "oauthAuthorizationStarted": false,
+  "credentialsRotated": false,
+  "progressBefore": 95,
+  "progressAfter": 95,
+  "nextAction": [
+    "Concluir o fast-forward para master.",
+    "Confirmar o relatório final na master.",
+    "Não iniciar OAuth nem rodar credenciais antes da confirmação."
+  ]
+}
