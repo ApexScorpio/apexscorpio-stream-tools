@@ -6,6 +6,13 @@ const {
   decryptRefreshToken
 } = require('../utils/oauth-helpers.js');
 
+const {
+  fetchPublicLiveChat,
+  resetPublicChatCache,
+  validContinuation,
+  validVideoId
+} = require('./youtube-public-chat-fallback.js');
+
 let runtimeAxios = null;
 
 let cachedLiveChat = {
@@ -13,6 +20,8 @@ let cachedLiveChat = {
   videoId: null,
   expiresAt: 0
 };
+
+let oauthBlockedUntil = 0;
 
 function setRuntimeAxios(axiosInstance) {
   if (
@@ -32,17 +41,23 @@ function resetCacheForTests() {
     videoId: null,
     expiresAt: 0
   };
+
+  oauthBlockedUntil = 0;
+  resetPublicChatCache();
 }
 
 function jsonResponse(statusCode, body) {
   return {
     statusCode,
     headers: {
-      'Content-Type': 'application/json; charset=utf-8',
+      'Content-Type':
+        'application/json; charset=utf-8',
       'Cache-Control': 'no-store',
       'Access-Control-Allow-Origin': '*',
-      'Access-Control-Allow-Headers': 'Content-Type',
-      'Access-Control-Allow-Methods': 'GET, OPTIONS'
+      'Access-Control-Allow-Headers':
+        'Content-Type',
+      'Access-Control-Allow-Methods':
+        'GET, OPTIONS'
     },
     body: JSON.stringify(body)
   };
@@ -58,6 +73,32 @@ function resolveCustomStore(customStores) {
   );
 }
 
+function providerReason(error) {
+  return (
+    error?.response?.data
+      ?.error?.errors?.[0]?.reason ||
+    error?.response?.data
+      ?.error?.status ||
+    error?.code ||
+    null
+  );
+}
+
+function isQuotaOrPermissionError(error) {
+  const status =
+    Number(error?.response?.status || 0);
+
+  const reason =
+    String(providerReason(error) || '');
+
+  return (
+    status === 403 ||
+    reason === 'quotaExceeded' ||
+    reason === 'dailyLimitExceeded' ||
+    reason === 'forbidden'
+  );
+}
+
 async function getOAuthAccessToken(
   http,
   customSecretsStore = null
@@ -69,7 +110,8 @@ async function getOAuthAccessToken(
     process.env.YOUTUBE_OAUTH_CLIENT_SECRET;
 
   const encryptionKey =
-    process.env.YOUTUBE_OAUTH_TOKEN_ENCRYPTION_KEY;
+    process.env
+      .YOUTUBE_OAUTH_TOKEN_ENCRYPTION_KEY;
 
   const expectedChannelId =
     process.env.YOUTUBE_EXPECTED_CHANNEL_ID;
@@ -142,10 +184,16 @@ async function getOAuthAccessToken(
     }
   );
 
-  return tokenResponse?.data?.access_token || null;
+  return (
+    tokenResponse?.data?.access_token ||
+    null
+  );
 }
 
-async function getCurrentLiveChat(http, accessToken) {
+async function getCurrentLiveChat(
+  http,
+  accessToken
+) {
   const now = Date.now();
 
   if (
@@ -154,8 +202,10 @@ async function getCurrentLiveChat(http, accessToken) {
   ) {
     return {
       active: true,
-      videoId: cachedLiveChat.videoId,
-      liveChatId: cachedLiveChat.liveChatId
+      videoId:
+        cachedLiveChat.videoId,
+      liveChatId:
+        cachedLiveChat.liveChatId
     };
   }
 
@@ -169,17 +219,26 @@ async function getCurrentLiveChat(http, accessToken) {
         maxResults: 1
       },
       headers: {
-        Authorization: `Bearer ${accessToken}`
+        Authorization:
+          `Bearer ${accessToken}`
       },
       timeout: 5000
     }
   );
 
-  const broadcast = response?.data?.items?.[0] || null;
-  const liveChatId = broadcast?.snippet?.liveChatId || null;
+  const broadcast =
+    response?.data?.items?.[0] || null;
+
+  const liveChatId =
+    broadcast?.snippet?.liveChatId ||
+    null;
 
   if (!broadcast || !liveChatId) {
-    resetCacheForTests();
+    cachedLiveChat = {
+      liveChatId: null,
+      videoId: null,
+      expiresAt: 0
+    };
 
     return {
       active: Boolean(broadcast),
@@ -201,16 +260,58 @@ async function getCurrentLiveChat(http, accessToken) {
   };
 }
 
-function validPageToken(value) {
-  if (value === undefined || value === null || value === '') {
-    return true;
+async function getOfficialMessages(
+  http,
+  accessToken,
+  live,
+  pageToken
+) {
+  const params = {
+    liveChatId: live.liveChatId,
+    part: 'id,snippet,authorDetails',
+    maxResults: 200,
+    hl: 'pt-PT'
+  };
+
+  if (pageToken) {
+    params.pageToken = pageToken;
   }
 
-  return (
-    typeof value === 'string' &&
-    value.length <= 2048 &&
-    /^[A-Za-z0-9._~+/=-]+$/.test(value)
+  const messagesResponse = await http.get(
+    'https://www.googleapis.com/youtube/v3/liveChat/messages',
+    {
+      params,
+      headers: {
+        Authorization:
+          `Bearer ${accessToken}`
+      },
+      timeout: 10000
+    }
   );
+
+  const data = messagesResponse?.data || {};
+
+  return {
+    active: true,
+    videoId: live.videoId,
+    liveChatId: live.liveChatId,
+    chatAvailable: true,
+    items:
+      Array.isArray(data.items)
+        ? data.items
+        : [],
+    nextPageToken:
+      data.nextPageToken || null,
+    pollingIntervalMillis:
+      Number(
+        data.pollingIntervalMillis ||
+        5000
+      ),
+    offlineAt:
+      data.offlineAt || null,
+    source: 'youtube-data-api',
+    oauthFallback: false
+  };
 }
 
 exports.handler = async function(
@@ -229,119 +330,173 @@ exports.handler = async function(
     });
   }
 
-  const http = customAxios || runtimeAxios;
+  const http =
+    customAxios || runtimeAxios;
 
   if (!http) {
     return jsonResponse(503, {
-      error: 'Serviço OAuth indisponível'
+      error:
+        'Serviço HTTP indisponível'
     });
   }
 
   const pageToken =
-    event?.queryStringParameters?.pageToken || null;
+    event?.queryStringParameters
+      ?.pageToken || null;
 
-  if (!validPageToken(pageToken)) {
+  const requestedVideoId =
+    event?.queryStringParameters
+      ?.videoId || null;
+
+  if (!validContinuation(pageToken)) {
     return jsonResponse(400, {
-      error: 'Page token inválido'
+      error:
+        'Page token inválido'
     });
   }
 
-  try {
-    const accessToken = await getOAuthAccessToken(
-      http,
-      resolveCustomStore(customStores)
-    );
+  if (
+    requestedVideoId &&
+    !validVideoId(requestedVideoId)
+  ) {
+    return jsonResponse(400, {
+      error:
+        'Video ID inválido'
+    });
+  }
 
-    if (!accessToken) {
-      return jsonResponse(503, {
-        active: false,
-        chatAvailable: false,
-        error: 'OAuth do YouTube ainda não está configurado'
-      });
-    }
+  let oauthFailure =
+    Date.now() < oauthBlockedUntil
+      ? 'oauth_temporarily_blocked'
+      : null;
 
-    const live = await getCurrentLiveChat(
-      http,
-      accessToken
-    );
+  if (!oauthFailure) {
+    try {
+      const accessToken =
+        await getOAuthAccessToken(
+          http,
+          resolveCustomStore(customStores)
+        );
 
-    if (!live.active || !live.liveChatId) {
-      return jsonResponse(200, {
-        active: live.active,
-        videoId: live.videoId,
-        liveChatId: null,
-        chatAvailable: false,
-        items: [],
-        nextPageToken: null,
-        pollingIntervalMillis: 5000
-      });
-    }
+      if (accessToken) {
+        const live =
+          await getCurrentLiveChat(
+            http,
+            accessToken
+          );
 
-    const params = {
-      liveChatId: live.liveChatId,
-      part: 'id,snippet,authorDetails',
-      maxResults: 200,
-      hl: 'pt-PT'
-    };
+        if (
+          live.active &&
+          live.liveChatId
+        ) {
+          try {
+            const official =
+              await getOfficialMessages(
+                http,
+                accessToken,
+                live,
+                pageToken
+              );
 
-    if (pageToken) {
-      params.pageToken = pageToken;
-    }
+            return jsonResponse(
+              200,
+              official
+            );
+          } catch (error) {
+            oauthFailure =
+              providerReason(error) ||
+              'official_chat_failed';
 
-    const messagesResponse = await http.get(
-      'https://www.googleapis.com/youtube/v3/liveChat/messages',
-      {
-        params,
-        headers: {
-          Authorization: `Bearer ${accessToken}`
-        },
-        timeout: 10000
+            if (
+              isQuotaOrPermissionError(
+                error
+              )
+            ) {
+              oauthBlockedUntil =
+                Date.now() +
+                10 * 60 * 1000;
+            }
+          }
+        } else if (!live.active) {
+          return jsonResponse(200, {
+            active: false,
+            videoId: null,
+            liveChatId: null,
+            chatAvailable: false,
+            items: [],
+            nextPageToken: null,
+            pollingIntervalMillis: 5000,
+            source: 'youtube-data-api',
+            oauthFallback: false
+          });
+        } else {
+          oauthFailure =
+            'official_live_chat_id_missing';
+        }
+      } else {
+        oauthFailure =
+          'oauth_unavailable';
       }
-    );
+    } catch (error) {
+      oauthFailure =
+        providerReason(error) ||
+        'oauth_request_failed';
 
-    const data = messagesResponse?.data || {};
+      if (
+        isQuotaOrPermissionError(error)
+      ) {
+        oauthBlockedUntil =
+          Date.now() +
+          10 * 60 * 1000;
+      }
+    }
+  }
+
+  try {
+    const fallback =
+      await fetchPublicLiveChat({
+        http,
+        videoId: requestedVideoId,
+        pageToken,
+        channelId:
+          process.env
+            .YOUTUBE_EXPECTED_CHANNEL_ID
+      });
 
     return jsonResponse(200, {
-      active: true,
-      videoId: live.videoId,
-      liveChatId: live.liveChatId,
-      chatAvailable: true,
-      items: Array.isArray(data.items)
-        ? data.items
-        : [],
-      nextPageToken: data.nextPageToken || null,
-      pollingIntervalMillis:
-        Number(data.pollingIntervalMillis || 5000),
-      offlineAt: data.offlineAt || null
+      ...fallback,
+      fallbackReason:
+        oauthFailure ||
+        'official_chat_unavailable'
     });
   } catch (error) {
-    const reason =
-      error?.response?.data?.error?.errors?.[0]?.reason ||
-      null;
-
-    if (
-      reason === 'liveChatEnded' ||
-      reason === 'liveChatNotFound'
-    ) {
-      resetCacheForTests();
-
-      return jsonResponse(200, {
-        active: false,
-        chatAvailable: false,
-        items: [],
-        nextPageToken: null,
-        pollingIntervalMillis: 5000
-      });
-    }
-
     return jsonResponse(502, {
       active: false,
+      videoId:
+        requestedVideoId || null,
+      liveChatId: null,
       chatAvailable: false,
-      error: 'Não foi possível obter o chat do YouTube'
+      items: [],
+      nextPageToken: null,
+      pollingIntervalMillis: 5000,
+      source: 'public-live-chat',
+      oauthFallback: true,
+      error:
+        'Não foi possível obter o chat do YouTube',
+      fallbackReason:
+        oauthFailure ||
+        'official_chat_unavailable',
+      fallbackCode:
+        error?.code || null
     });
   }
 };
 
-exports.setRuntimeAxios = setRuntimeAxios;
-exports.resetCacheForTests = resetCacheForTests;
-exports.getOAuthAccessToken = getOAuthAccessToken;
+exports.setRuntimeAxios =
+  setRuntimeAxios;
+
+exports.resetCacheForTests =
+  resetCacheForTests;
+
+exports.getOAuthAccessToken =
+  getOAuthAccessToken;

@@ -1,5 +1,5 @@
 /**
- * ApexScorpio YouTube Live Module v4.1
+ * ApexScorpio YouTube Live Module v4.2
  *
  * Sticky live detection:
  * - the official YouTube iframe player is authoritative for online/offline;
@@ -1299,6 +1299,15 @@
 
     try {
       const params = {};
+
+      const chatVideoId = normalizeVideoId(
+        state.videoId ||
+        activeVideoId
+      );
+
+      if (chatVideoId) {
+        params.videoId = chatVideoId;
+      }
 
       if (liveChatPageToken) {
         params.pageToken =

@@ -80,7 +80,7 @@ test('9. Viewers desconhecidos nÃ£o sÃ£o inventados como zero', () => {
   );
 });
 
-test('10. Todos os HTML usam youtube-live.js v4.1', () => {
+test('10. Todos os HTML usam youtube-live.js v4.2', () => {
   const files = execFileSync(
     'git',
     ['ls-files', '*.html'],
@@ -104,7 +104,7 @@ test('10. Todos os HTML usam youtube-live.js v4.1', () => {
 
     assert.match(
       html,
-      /youtube-live\.js\?v=4\.1/,
+      /youtube-live\.js\?v=4\.2/,
       file
     );
   }
@@ -120,5 +120,12 @@ test('11. Backend YouTube usa o domínio atual', () => {
   assert.doesNotMatch(
     source,
     /apexscorpio-youtube-scraper-6e2678f9\.netlify\.app/
+  );
+});
+
+test('12. Chat envia o videoId ao fallback público', () => {
+  assert.match(
+    source,
+    /params\.videoId\s*=\s*chatVideoId/
   );
 });

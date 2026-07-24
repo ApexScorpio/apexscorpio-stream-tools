@@ -1,0 +1,17 @@
+{
+    "timestampUtc":  "2026-07-24T16:56:20.3275949Z",
+    "operationSucceeded":  true,
+    "testsPassed":  true,
+    "liveFallbackTestPassed":  true,
+    "liveVideoId":  "P11xnU5iwc4",
+    "primarySource":  "youtube-data-api",
+    "fallbackSource":  "public-live-chat",
+    "fallbackActivation":  [
+                               "OAuth unavailable",
+                               "OAuth request failure",
+                               "YouTube Data API quota exhausted",
+                               "Official liveChatId unavailable"
+                           ],
+    "frontendVersion":  "4.2",
+    "progressAfter":  99
+}
