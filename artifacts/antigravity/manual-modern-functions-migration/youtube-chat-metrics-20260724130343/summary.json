@@ -1,0 +1,26 @@
+{
+    "timestampUtc":  "2026-07-24T13:03:43.8834179Z",
+    "branch":  "fix/migrate-oauth-to-modern-netlify-functions",
+    "operationSucceeded":  true,
+    "testsPassed":  true,
+    "previewDeployCompleted":  true,
+    "deployAlias":  "oauthfix",
+    "deployId":  "6a636298daca1d421fa1afed",
+    "productionDeployAttempted":  false,
+    "oauthAuthorizationRepeated":  false,
+    "oauthBroadcastStatus":  "confirmed",
+    "channelStatisticsStatus":  "",
+    "chatEndpointVerified":  true,
+    "chatAvailable":  null,
+    "metrics":  {
+                    "isLive":  false,
+                    "concurrentViewers":  null,
+                    "liveViews":  null,
+                    "likes":  null,
+                    "subscribers":  null,
+                    "subscriberCountHidden":  null,
+                    "channelViews":  null,
+                    "channelVideos":  null
+                },
+    "progressAfter":  85
+}
