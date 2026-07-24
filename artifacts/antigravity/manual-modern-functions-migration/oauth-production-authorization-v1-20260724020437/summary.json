@@ -1,0 +1,34 @@
+{
+  "timestampUtc": "2026-07-24T02:04:37.249Z",
+  "branch": "fix/migrate-oauth-to-modern-netlify-functions",
+  "headBeforeCommit": "a9080caa79df0ba89914621dfa6e828caf3fffd1",
+  "masterBefore": "a9080caa79df0ba89914621dfa6e828caf3fffd1",
+  "productionUrl": "https://apexscorpio-youtube-scraper-6e2678f9.netlify.app",
+  "browserOpened": true,
+  "alreadyConfigured": false,
+  "authorizationCompleted": false,
+  "completionPoll": {
+    "completed": false,
+    "attempts": 300,
+    "lastStatus": 200,
+    "error": null
+  },
+  "setupLockedAfterCompletion": false,
+  "encryptedTokenVerificationGatePassed": false,
+  "tokenOperational": false,
+  "runtimeValidation": null,
+  "operationError": "A autorização OAuth não foi concluída dentro da sessão de validação.",
+  "oauthAuthorizationStarted": true,
+  "oauthAuthorizationCompleted": false,
+  "oauthFunctional": false,
+  "functionalProgressBefore": 95,
+  "functionalProgressAfter": 95,
+  "progressBefore": 95,
+  "progressAfter": 95,
+  "credentialsRotated": false,
+  "nextAction": [
+    "Confirmar este relatório diretamente no GitHub.",
+    "Corrigir apenas a falha indicada em operationError.",
+    "Não rodar credenciais até o OAuth ficar 100% funcional."
+  ]
+}
