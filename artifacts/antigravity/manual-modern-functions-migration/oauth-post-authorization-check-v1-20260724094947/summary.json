@@ -1,0 +1,52 @@
+﻿{
+    "timestampUtc":  "2026-07-24T09:49:47.2457082Z",
+    "branch":  "fix/migrate-oauth-to-modern-netlify-functions",
+    "productionUrl":  "https://apexscorpio-youtube-scraper-6e2678f9.netlify.app",
+    "diagnosticStatus":  "error",
+    "diagnosticStage":  "youtube_channel_lookup",
+    "diagnosticHttpStatus":  403,
+    "diagnosticCode":  "quotaExceeded",
+    "diagnosticDetail":  "The request cannot be completed because you have exceeded your \u003ca href=\"/youtube/v3/getting-started#quota\"\u003equota\u003c/a\u003e.",
+    "setupLocked":  false,
+    "statusHttp":  200,
+    "chatHttp":  503,
+    "oauthStartHttp":  200,
+    "diagnosticHttp":  200,
+    "oauthAppearsComplete":  false,
+    "probes":  {
+                   "diagnostic":  {
+                                      "name":  "diagnostic",
+                                      "url":  "https://apexscorpio-youtube-scraper-6e2678f9.netlify.app/oauth/youtube/callback?diagnostic=safe",
+                                      "httpStatus":  200,
+                                      "reason":  "OK",
+                                      "body":  "{\n  \"status\": \"error\",\n  \"stage\": \"youtube_channel_lookup\",\n  \"httpStatus\": 403,\n  \"code\": \"quotaExceeded\",\n  \"detail\": \"The request cannot be completed because you have exceeded your \u003ca href=\\\"/youtube/v3/getting-started#quota\\\"\u003equota\u003c/a\u003e.\",\n  \"updatedAt\": \"2026-07-24T09:44:49.972Z\"\n}",
+                                      "error":  null
+                                  },
+                   "oauthStart":  {
+                                      "name":  "oauthStart",
+                                      "url":  "https://apexscorpio-youtube-scraper-6e2678f9.netlify.app/oauth/youtube/start",
+                                      "httpStatus":  200,
+                                      "reason":  "OK",
+                                      "body":  "\n        \u003c!DOCTYPE html\u003e\n        \u003chtml lang=\"pt\"\u003e\n        \u003chead\u003e\u003cmeta charset=\"UTF-8\"\u003e\u003ctitle\u003eInício de Configuração OAuth\u003c/title\u003e\n        \u003cstyle\u003e\n          body{font-family:sans-serif;background:#0f172a;color:#f8fafc;display:flex;justify-content:center;align-items:center;height:100vh;margin:0;}\n          .card{background:#1e293b;padding:2rem;border-radius:12px;box-shadow:0 10px 25px rgba(0,0,0,0.5);width:100%;max-width:400px;border:1px solid #334155;}\n          h2{color:#f43f5e;margin-top:0;font-size:1.4rem;}\n          p{color:#94a3b8;font-size:0.9rem;}\n          label{display:block;margin-top:1rem;color:#cbd5e1;font-size:0.85rem;font-weight:bold;}\n          input[type=\"password\"]{width:100%;padding:0.75rem;margin-top:0.4rem;border-radius:6px;border:1px solid #475569;background:#0f172a;color:#fff;box-sizing:border-box;}\n          button{width:100%;padding:0.75rem;margin-top:1.5rem;border-radius:6px;border:none;background:#2563eb;color:#fff;font-weight:bold;cursor:pointer;}\n          button:hover{background:#1d4ed8;}\n        \u003c/style\u003e\n        \u003c/head\u003e\n        \u003cbody\u003e\n          \u003cdiv class=\"card\"\u003e\n            \u003ch2\u003eAutenticação de Configuração\u003c/h2\u003e\n            \u003cp\u003eInsira a palavra-passe administrativa para iniciar a autorização oficial no Google Cloud.\u003c/p\u003e\n            \u003cform method=\"POST\" action=\"/oauth/youtube/start\"\u003e\n              \u003clabel for=\"password\"\u003ePalavra-passe de Setup:\u003c/label\u003e\n              \u003cinput type=\"password\" id=\"password\" name=\"password\" required autocomplete=\"current-password\" /\u003e\n              \u003cbutton type=\"submit\"\u003eAutenticar e Iniciar OAuth\u003c/button\u003e\n            \u003c/form\u003e\n          \u003c/div\u003e\n        \u003c/body\u003e\n        \u003c/html\u003e\n      ",
+                                      "error":  null
+                                  },
+                   "youtubeStatus":  {
+                                         "name":  "youtubeStatus",
+                                         "url":  "https://apexscorpio-youtube-scraper-6e2678f9.netlify.app/youtube-status",
+                                         "httpStatus":  200,
+                                         "reason":  "OK",
+                                         "body":  "{\n  \"isLive\": false,\n  \"videoId\": null,\n  \"viewers\": null,\n  \"viewerState\": \"confirmed\",\n  \"title\": \"\",\n  \"liveChatId\": null,\n  \"confidence\": \"medium\",\n  \"source\": \"youtube-multisource-consensus\",\n  \"updatedAt\": \"2026-07-24T09:49:39.814Z\",\n  \"error\": null,\n  \"sources\": {\n    \"oauthBroadcast\": {\n      \"status\": \"unknown\",\n      \"observedAt\": \"2026-07-24T09:49:39.814Z\",\n      \"error\": \"OAuth credentials or access_token not available\"\n    },\n    \"oauthVideo\": {\n      \"status\": \"unknown\",\n      \"observedAt\": \"2026-07-24T09:49:39.814Z\",\n      \"error\": \"videoId or accessToken missing\"\n    },\n    \"player\": {\n      \"status\": \"unknown\",\n      \"observedAt\": \"2026-07-24T09:49:39.814Z\",\n      \"error\": \"videoId missing\"\n    },\n    \"next\": {\n      \"status\": \"unknown\",\n      \"observedAt\": \"2026-07-24T09:49:39.814Z\",\n      \"error\": \"videoId missing\"\n    },\n    \"html\": {\n      \"status\": \"confirmed\",\n      \"observedAt\": \"2026-07-24T09:49:34.833Z\",\n      \"resolvedUrl\": \"https://www.youtube.com/@apexscorpio\",\n      \"checkedIdsCount\": 95,\n      \"checkedIds\": [\n        \"a9XO-1Xi0-M\",\n        \"0bDpBd_HZsk\",\n        \"uXCV8AKgKGk\",\n        \"XGvkdFtBFec\",\n        \"30U1oucAcjg\"\n      ],\n      \"videoId\": null,\n      \"title\": \"\",\n      \"viewerText\": null,\n      \"viewers\": null,\n      \"isLive\": false\n    }\n  },\n  \"diagnostic\": {\n    \"version\": \"6.0\",\n    \"liveSignalsCount\": 0,\n    \"validViewerSourcesCount\": 0,\n    \"cached\": true\n  }\n}",
+                                         "error":  null
+                                     },
+                   "youtubeChat":  {
+                                       "name":  "youtubeChat",
+                                       "url":  "https://apexscorpio-youtube-scraper-6e2678f9.netlify.app/youtube-chat",
+                                       "httpStatus":  503,
+                                       "reason":  "Service Unavailable",
+                                       "body":  "{\"active\":false,\"chatAvailable\":false,\"error\":\"OAuth do YouTube ainda não está configurado\"}",
+                                       "error":  null
+                                   }
+               },
+    "progressBefore":  99,
+    "progressAfter":  99
+}
