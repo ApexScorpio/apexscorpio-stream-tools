@@ -1,0 +1,17 @@
+{
+  "oauthStart": {
+    "status": 200,
+    "approved": true,
+    "error": null
+  },
+  "youtubeStatus": {
+    "status": 200,
+    "approved": true,
+    "error": null
+  },
+  "youtubeChat": {
+    "status": 503,
+    "approved": true,
+    "error": null
+  }
+}
