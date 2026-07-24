@@ -155,6 +155,19 @@ for (const tc of viewerTestCases) {
   });
 }
 
+runTest('liveBroadcasts não combina mine com broadcastStatus', () => {
+  assert.strictEqual(
+    prodCode.includes('mine=true&broadcastStatus='),
+    false,
+    'A API só aceita um filtro principal por pedido'
+  );
+
+  assert.strictEqual(
+    prodCode.includes('broadcastStatus=active&broadcastType=all'),
+    true,
+    'O filtro broadcastStatus=active deve permanecer ativo'
+  );
+});
 console.log(`\nResumo dos Testes de Falha: ${passed} passaram, ${failed} falharam.`);
 
 if (failed > 0) {

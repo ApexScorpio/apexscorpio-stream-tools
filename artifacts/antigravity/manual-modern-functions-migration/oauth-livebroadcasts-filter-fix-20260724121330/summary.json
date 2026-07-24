@@ -1,0 +1,19 @@
+{
+    "timestampUtc":  "2026-07-24T12:13:30.3314777Z",
+    "branch":  "fix/migrate-oauth-to-modern-netlify-functions",
+    "operationSucceeded":  true,
+    "testsPassed":  true,
+    "previewDeployCompleted":  true,
+    "deployAlias":  "oauthfix",
+    "deployId":  "6a635600e57afd023f3343e1",
+    "productionDeployAttempted":  false,
+    "oauthAuthorizationRepeated":  false,
+    "oauthBroadcastStatus":  "confirmed",
+    "oauthBroadcastError":  null,
+    "isLive":  false,
+    "videoId":  null,
+    "viewers":  null,
+    "confidence":  "high",
+    "source":  "youtube-multisource-consensus",
+    "progressAfter":  100
+}

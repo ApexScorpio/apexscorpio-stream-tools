@@ -144,7 +144,7 @@ async function fetchSourceOAuthBroadcast(accessToken, customAxios = null) {
 
   try {
     const res = await http.get(
-      'https://www.googleapis.com/youtube/v3/liveBroadcasts?part=id,snippet,status&mine=true&broadcastStatus=active&broadcastType=all',
+      'https://www.googleapis.com/youtube/v3/liveBroadcasts?part=id,snippet,status&broadcastStatus=active&broadcastType=all',
       {
         headers: { Authorization: `Bearer ${accessToken}` },
         timeout: 5000
