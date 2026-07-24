@@ -326,13 +326,22 @@ async function requestToEvent(request) {
 }
 
 function lambdaToResponse(result) {
+  const headers =
+    new Headers(result?.headers || {});
+
+  for (
+    const [name, value]
+    of Object.entries(corsHeaders)
+  ) {
+    headers.set(name, value);
+  }
+
   return new Response(
     result?.body || "",
     {
       status:
         Number(result?.statusCode || 200),
-      headers:
-        new Headers(result?.headers || {})
+      headers
     }
   );
 }

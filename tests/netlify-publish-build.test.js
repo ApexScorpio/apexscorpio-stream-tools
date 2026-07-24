@@ -24,7 +24,7 @@ const frontendFiles = [
 ];
 
 test(
-  'build Netlify publica exatamente o frontend v4.3',
+  'build Netlify publica exatamente o frontend v4.4',
   () => {
     try {
       const result = spawnSync(
@@ -121,7 +121,7 @@ test(
 
         assert.match(
           html,
-          /youtube-live\.js\?v=4\.3/
+          /youtube-live\.js\?v=4\.4/
         );
       }
 

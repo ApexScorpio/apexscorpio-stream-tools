@@ -1,8 +1,14 @@
 (function (global) {
   'use strict';
 
+  const BACKEND_BASE_URL = String(
+    global.APEX_BACKEND_URL ||
+    global.APEX_YOUTUBE_BACKEND_URL ||
+    'https://apexscorpio-stream-tools.scorpioapex.workers.dev'
+  ).replace(/\/+$/, '');
+
   const ENDPOINT =
-    global.location.origin + '/overlay-config';
+    BACKEND_BASE_URL + '/overlay-config';
 
   const activePollers = new Map();
 

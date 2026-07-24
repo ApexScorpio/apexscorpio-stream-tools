@@ -64,5 +64,5 @@ for (const relativeFile of frontendFiles) {
 require('./prepare-cloudflare-assets.js');
 
 console.log(
-  'Netlify publish preparado em dist com frontend v4.3.'
+  'Netlify publish preparado em dist com frontend v4.4.'
 );
