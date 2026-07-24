@@ -1,0 +1,24 @@
+{
+  "timestampUtc": "2026-07-24T09:57:25.023Z",
+  "branch": "fix/migrate-oauth-to-modern-netlify-functions",
+  "operationSucceeded": false,
+  "diagnosticPatchApplied": false,
+  "testsPassed": false,
+  "productionDeployCompleted": false,
+  "deployId": null,
+  "productionUrl": "https://apexscorpio-youtube-scraper-6e2678f9.netlify.app",
+  "oauthStartUrl": "https://apexscorpio-youtube-scraper-6e2678f9.netlify.app/oauth/youtube/start",
+  "safeDiagnosticUrl": "https://apexscorpio-youtube-scraper-6e2678f9.netlify.app/oauth/youtube/callback?diagnostic=safe",
+  "rawAuthorizationCodeStored": false,
+  "accessTokenStoredInDiagnostic": false,
+  "refreshTokenStoredInDiagnostic": false,
+  "clientSecretStoredInDiagnostic": false,
+  "error": "O diagnóstico seguro v2 já está instalado.",
+  "progressBefore": 98,
+  "progressAfter": 98,
+  "nextAction": [
+    "Consultar este relatório de falha.",
+    "Corrigir a causa registada.",
+    "Repetir a instalação do diagnóstico."
+  ]
+}
