@@ -1,0 +1,32 @@
+{
+  "timestampUtc": "2026-07-24T02:38:55.837Z",
+  "branch": "fix/migrate-oauth-to-modern-netlify-functions",
+  "headBeforeCommit": "a3ebb14f517cc7f0054f34c11ca5973001449fa8",
+  "productionUrl": "https://apexscorpio-youtube-scraper-6e2678f9.netlify.app",
+  "deployId": "6a62d048a77bc950f916ced9",
+  "deployUrl": "https://6a62d048a77bc950f916ced9--apexscorpio-youtube-scraper-6e2678f9.netlify.app",
+  "npmTestExitCode": 0,
+  "deployExitCode": 0,
+  "oauthStartHttpStatus": 200,
+  "oauthFormPassed": true,
+  "youtubeStatusHttpStatus": 200,
+  "youtubeStatusPassed": true,
+  "youtubeChatHttpStatus": 503,
+  "youtubeChatPassed": true,
+  "noHttp502": true,
+  "redeployGatePassed": true,
+  "environmentRedeployedAfterCredentialUpdate": true,
+  "googleClientValidityConfirmed": false,
+  "oauthAuthorizationStarted": false,
+  "oauthAuthorizationCompleted": false,
+  "credentialsRotated": false,
+  "progressBefore": 95,
+  "progressAfter": 95,
+  "nextAction": [
+    "Abrir o formulário OAuth de produção.",
+    "Colar a palavra-passe de Setup.",
+    "Confirmar que a Google aceita o novo cliente.",
+    "Autorizar a conta proprietária do canal.",
+    "Validar token cifrado e rotas OAuth."
+  ]
+}
