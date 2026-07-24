@@ -1,0 +1,7 @@
+ alerts.html     |   2 +-
+ chat.html       |   2 +-
+ events.html     |   2 +-
+ package.json    |   2 +-
+ viewers.html    |   2 +-
+ youtube-live.js | 540 ++++++++++++++++++++++++++++++++++----------------------
+ 6 files changed, 338 insertions(+), 212 deletions(-)

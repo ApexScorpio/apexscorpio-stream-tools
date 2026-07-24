@@ -1,0 +1,40 @@
+{
+  "timestampUtc": "2026-07-24T00:41:57.695Z",
+  "branch": "fix/migrate-oauth-to-modern-netlify-functions",
+  "headBeforeCommit": "e7554f34f68745919846c756f15f2340839707da",
+  "frontendVersion": "3.0",
+  "backendPrimary": true,
+  "youtubeStatusPrimary": true,
+  "youtubeChatPrimary": true,
+  "iframeFallback": true,
+  "oembedFallback": true,
+  "scrapingFallback": "mantido no backend /youtube-status",
+  "publicApiKeyRemoved": true,
+  "directGoogleApisCalls": 0,
+  "unknownViewersRemainNull": true,
+  "htmlFilesUpdated": [
+    "alerts.html",
+    "chat.html",
+    "events.html",
+    "viewers.html"
+  ],
+  "syntaxPassed": true,
+  "existingMultisourceChecks": "18/18",
+  "existingOAuthTests": "60/60",
+  "chatBackendTests": "5/5",
+  "newFrontendTests": "10/10",
+  "totalKnownChecks": "93/93",
+  "errorsFound": 0,
+  "codeReady": true,
+  "productionDeployExecuted": false,
+  "oauthAuthorizationStarted": false,
+  "credentialsRotated": false,
+  "progressBefore": 68,
+  "progressAfter": 76,
+  "nextAction": [
+    "Confirmar o relatÃ³rio diretamente no GitHub.",
+    "Repetir a auditoria prÃ©-produÃ§Ã£o.",
+    "Fazer deploy do backend antes de publicar o frontend.",
+    "NÃ£o iniciar OAuth atÃ© o backend de produÃ§Ã£o estar validado."
+  ]
+}

@@ -193,3 +193,5 @@ Colocar o OAuth oficial do YouTube totalmente funcional na Netlify:
 - 2026-07-23T23:15:20.764Z: endpoint OAuth server-side /youtube-chat criado; sintaxe=True; testes=83/83; erros=0; API key pública ainda não removida; preview=False; produção=False; OAuth real=False; progresso=62%; relatório=artifacts/antigravity/manual-modern-functions-migration/youtube-chat-oauth-backend-v1.
 
 - 2026-07-23T23:22:47.384Z: preview do endpoint OAuth /youtube-chat; rotas=8/8; erros=0; sem502=true; gate=true; API key pública ainda presente; produção=False; OAuth real=False; progresso=68%; relatório=artifacts/antigravity/manual-modern-functions-migration/youtube-chat-preview-v1.
+
+- 2026-07-24T00:41:57.695Z: frontend YouTube v3.0 migrado para /youtube-status e /youtube-chat; iframe=True; oEmbed=True; scraping backend=True; API key pÃºblica removida=True; googleapis frontend=0; testes=93/93; erros=0; produÃ§Ã£o=False; OAuth real=False; progresso=76%; relatÃ³rio=artifacts/antigravity/manual-modern-functions-migration/frontend-oauth-primary-with-fallback-v3.

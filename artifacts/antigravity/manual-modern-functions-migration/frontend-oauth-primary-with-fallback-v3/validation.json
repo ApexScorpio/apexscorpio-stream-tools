@@ -1,0 +1,9 @@
+{
+  "publicApiKeyRemoved": true,
+  "directGoogleApisCalls": 0,
+  "usesYoutubeStatus": true,
+  "usesYoutubeChat": true,
+  "iframeFallback": true,
+  "oembedFallback": true,
+  "cacheVersion": "3.0"
+}
