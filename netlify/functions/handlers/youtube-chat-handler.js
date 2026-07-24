@@ -164,7 +164,6 @@ async function getCurrentLiveChat(http, accessToken) {
     {
       params: {
         part: 'id,snippet,status',
-        mine: 'true',
         broadcastStatus: 'active',
         broadcastType: 'all',
         maxResults: 1

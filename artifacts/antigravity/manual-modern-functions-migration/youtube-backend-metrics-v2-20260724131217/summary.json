@@ -1,26 +1,27 @@
 {
-    "timestampUtc":  "2026-07-24T13:03:43.8834179Z",
+    "timestampUtc":  "2026-07-24T13:12:17.7787944Z",
     "branch":  "fix/migrate-oauth-to-modern-netlify-functions",
     "operationSucceeded":  true,
+    "falsePreviousReportRemoved":  true,
     "testsPassed":  true,
     "previewDeployCompleted":  true,
     "deployAlias":  "oauthfix",
-    "deployId":  "6a636298daca1d421fa1afed",
+    "deployId":  "6a636494ea5f4755502d2f11",
     "productionDeployAttempted":  false,
     "oauthAuthorizationRepeated":  false,
     "oauthBroadcastStatus":  "confirmed",
-    "channelStatisticsStatus":  "",
+    "channelStatisticsStatus":  "confirmed",
     "chatEndpointVerified":  true,
-    "chatAvailable":  null,
+    "chatAvailable":  false,
     "metrics":  {
-                    "isLive":  false,
                     "concurrentViewers":  null,
                     "liveViews":  null,
                     "likes":  null,
-                    "subscribers":  null,
-                    "subscriberCountHidden":  null,
-                    "channelViews":  null,
-                    "channelVideos":  null
+                    "comments":  null,
+                    "subscribers":  226,
+                    "subscriberCountHidden":  false,
+                    "channelViews":  130133,
+                    "channelVideos":  347
                 },
     "progressAfter":  85
 }

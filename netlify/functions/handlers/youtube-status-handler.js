@@ -20,12 +20,18 @@ let cachedResponse = null;
 let lastFetchTimestamp = 0;
 const CACHE_TTL_MS = 12000;
 
+let cachedChannelResponse = null;
+let lastChannelFetchTimestamp = 0;
+const CHANNEL_CACHE_TTL_MS = 5 * 60 * 1000;
+
 /**
  * Função utilitária para resetar a cache em memória durante os testes
  */
 function resetCacheForTests() {
   cachedResponse = null;
   lastFetchTimestamp = 0;
+  cachedChannelResponse = null;
+  lastChannelFetchTimestamp = 0;
 }
 
 const HTTP_HEADERS = {
@@ -58,6 +64,24 @@ function parseViewersText(text) {
   }
 
   return null;
+}
+
+function parseApiCount(value) {
+  if (
+    value === null ||
+    value === undefined ||
+    value === ''
+  ) {
+    return null;
+  }
+
+  const parsed = Number(value);
+
+  if (!Number.isFinite(parsed) || parsed < 0) {
+    return null;
+  }
+
+  return Math.floor(parsed);
 }
 
 /**
@@ -187,7 +211,7 @@ async function fetchSourceOAuthVideo(videoId, accessToken, customAxios = null) {
 
   try {
     const res = await http.get(
-      `https://www.googleapis.com/youtube/v3/videos?part=snippet,liveStreamingDetails,status&id=${encodeURIComponent(videoId)}`,
+      `https://www.googleapis.com/youtube/v3/videos?part=snippet,liveStreamingDetails,status,statistics&id=${encodeURIComponent(videoId)}`,
       {
         headers: { Authorization: `Bearer ${accessToken}` },
         timeout: 5000
@@ -197,6 +221,7 @@ async function fetchSourceOAuthVideo(videoId, accessToken, customAxios = null) {
     const item = res.data?.items?.[0];
     if (item) {
       const lsd = item.liveStreamingDetails || {};
+      const stats = item.statistics || {};
       let viewers = null;
       if (lsd.concurrentViewers !== undefined && lsd.concurrentViewers !== null) {
         const parsed = parseInt(lsd.concurrentViewers, 10);
@@ -210,6 +235,9 @@ async function fetchSourceOAuthVideo(videoId, accessToken, customAxios = null) {
         title: item.snippet?.title || "",
         liveChatId: lsd.activeLiveChatId || null,
         concurrentViewers: viewers,
+        viewCount: parseApiCount(stats.viewCount),
+        likeCount: parseApiCount(stats.likeCount),
+        commentCount: parseApiCount(stats.commentCount),
         actualStartTime: lsd.actualStartTime || null,
         actualEndTime: lsd.actualEndTime || null,
         isLive: !lsd.actualEndTime && Boolean(lsd.actualStartTime)
@@ -223,7 +251,90 @@ async function fetchSourceOAuthVideo(videoId, accessToken, customAxios = null) {
 }
 
 /**
- * FONTE C: InnerTube /player
+ * FONTE C: Estatísticas oficiais do canal autenticado
+ */
+async function fetchSourceChannel(
+  accessToken,
+  customAxios = null
+) {
+  const http = customAxios || runtimeAxios;
+  const now = Date.now();
+
+  if (
+    cachedChannelResponse &&
+    now - lastChannelFetchTimestamp <
+      CHANNEL_CACHE_TTL_MS
+  ) {
+    return {
+      ...cachedChannelResponse,
+      cached: true
+    };
+  }
+
+  const observedAt = new Date().toISOString();
+
+  if (!accessToken) {
+    return {
+      status: "unknown",
+      observedAt,
+      error: "OAuth access token not available"
+    };
+  }
+
+  try {
+    const res = await http.get(
+      'https://www.googleapis.com/youtube/v3/channels?part=snippet,statistics&mine=true',
+      {
+        headers: {
+          Authorization: `Bearer ${accessToken}`
+        },
+        timeout: 5000
+      }
+    );
+
+    const item = res.data?.items?.[0] || null;
+
+    if (!item) {
+      return {
+        status: "unknown",
+        observedAt,
+        error: "Authenticated channel not found"
+      };
+    }
+
+    const stats = item.statistics || {};
+
+    const result = {
+      status: "confirmed",
+      observedAt,
+      channelId: item.id || null,
+      title: item.snippet?.title || "",
+      subscriberCount:
+        parseApiCount(stats.subscriberCount),
+      hiddenSubscriberCount:
+        stats.hiddenSubscriberCount === true,
+      viewCount:
+        parseApiCount(stats.viewCount),
+      videoCount:
+        parseApiCount(stats.videoCount),
+      cached: false
+    };
+
+    cachedChannelResponse = result;
+    lastChannelFetchTimestamp = now;
+
+    return result;
+  } catch (err) {
+    return {
+      status: "error",
+      observedAt,
+      error: err.message
+    };
+  }
+}
+
+/**
+ * FONTE D: InnerTube /player
  */
 async function fetchSourcePlayer(videoId, customAxios = null) {
   const http = customAxios || runtimeAxios;
@@ -271,7 +382,7 @@ async function fetchSourcePlayer(videoId, customAxios = null) {
 }
 
 /**
- * FONTE D: InnerTube /next (espectadores em tempo real)
+ * FONTE E: InnerTube /next (espectadores em tempo real)
  */
 async function fetchSourceNext(videoId, customAxios = null) {
   const http = customAxios || runtimeAxios;
@@ -345,7 +456,7 @@ async function fetchSourceNext(videoId, customAxios = null) {
 }
 
 /**
- * FONTE E: Descoberta Dinâmica de Candidatos e HTML Scraping
+ * FONTE F: Descoberta Dinâmica de Candidatos e HTML Scraping
  */
 async function fetchSourceHTML(customAxios = null) {
   const http = customAxios || runtimeAxios;
@@ -442,8 +553,15 @@ async function getLiveStatus(customSecretsStore = null, customAxios = null) {
   const accessToken = await getOAuthAccessToken(customSecretsStore, http);
 
   // 2. Consultar Fontes em Paralelo
-  const sourceHTML = await fetchSourceHTML(http);
-  const sourceOAuthBroadcast = await fetchSourceOAuthBroadcast(accessToken, http);
+  const [
+    sourceHTML,
+    sourceOAuthBroadcast,
+    sourceChannel
+  ] = await Promise.all([
+    fetchSourceHTML(http),
+    fetchSourceOAuthBroadcast(accessToken, http),
+    fetchSourceChannel(accessToken, http)
+  ]);
 
   // Determinar candidato principal de videoId
   let targetVideoId = sourceOAuthBroadcast.videoId || sourceHTML.videoId || null;
@@ -522,6 +640,60 @@ async function getLiveStatus(customSecretsStore = null, customAxios = null) {
     viewerState: viewerState,
     title: title,
     liveChatId: isLive ? liveChatId : null,
+
+    liveViews: isLive
+      ? (sourceOAuthVideo.viewCount ?? null)
+      : null,
+
+    likes: isLive
+      ? (sourceOAuthVideo.likeCount ?? null)
+      : null,
+
+    comments: isLive
+      ? (sourceOAuthVideo.commentCount ?? null)
+      : null,
+
+    subscribers:
+      sourceChannel.subscriberCount ?? null,
+
+    subscriberCountHidden:
+      sourceChannel.hiddenSubscriberCount ?? null,
+
+    channelViews:
+      sourceChannel.viewCount ?? null,
+
+    channelVideos:
+      sourceChannel.videoCount ?? null,
+
+    metrics: {
+      concurrentViewers:
+        isLive ? viewers : null,
+
+      liveViews: isLive
+        ? (sourceOAuthVideo.viewCount ?? null)
+        : null,
+
+      likes: isLive
+        ? (sourceOAuthVideo.likeCount ?? null)
+        : null,
+
+      comments: isLive
+        ? (sourceOAuthVideo.commentCount ?? null)
+        : null,
+
+      subscribers:
+        sourceChannel.subscriberCount ?? null,
+
+      subscriberCountHidden:
+        sourceChannel.hiddenSubscriberCount ?? null,
+
+      channelViews:
+        sourceChannel.viewCount ?? null,
+
+      channelVideos:
+        sourceChannel.videoCount ?? null
+    },
+
     confidence: confidence,
     source: "youtube-multisource-consensus",
     updatedAt: new Date().toISOString(),
@@ -529,12 +701,13 @@ async function getLiveStatus(customSecretsStore = null, customAxios = null) {
     sources: {
       oauthBroadcast: sourceOAuthBroadcast,
       oauthVideo: sourceOAuthVideo,
+      channel: sourceChannel,
       player: sourcePlayer,
       next: sourceNext,
       html: sourceHTML
     },
     diagnostic: {
-      version: "6.0",
+      version: "7.0",
       liveSignalsCount: liveSignalsCount,
       validViewerSourcesCount: validViewerSourcesCount,
       cached: false
@@ -562,6 +735,7 @@ exports.handler = async function(event, context) {
 };
 
 exports.parseViewersText = parseViewersText;
+exports.parseApiCount = parseApiCount;
 exports.getLiveStatus = getLiveStatus;
 exports.resetCacheForTests = resetCacheForTests;
 exports.setRuntimeAxios = setRuntimeAxios;

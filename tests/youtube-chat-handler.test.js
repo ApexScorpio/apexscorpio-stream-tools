@@ -251,3 +251,36 @@ test('5. Encaminha pageToken válido', async () => {
     'page-token_123'
   );
 });
+
+
+test('6. liveBroadcasts do chat não combina mine com broadcastStatus', async () => {
+  const axios = createAxios();
+
+  const response = await handler(
+    {
+      httpMethod: 'GET',
+      queryStringParameters: {}
+    },
+    {},
+    { secretsStore: createStore() },
+    axios
+  );
+
+  assert.equal(response.statusCode, 200);
+
+  const call = axios.calls.find(
+    current =>
+      current.url.includes('/liveBroadcasts')
+  );
+
+  assert.ok(call);
+  assert.equal(call.config.params.mine, undefined);
+  assert.equal(
+    call.config.params.broadcastStatus,
+    'active'
+  );
+  assert.equal(
+    call.config.params.broadcastType,
+    'all'
+  );
+});

@@ -168,6 +168,24 @@ runTest('liveBroadcasts não combina mine com broadcastStatus', () => {
     'O filtro broadcastStatus=active deve permanecer ativo'
   );
 });
+runTest('Estatísticas OAuth do canal e da live estão implementadas', () => {
+  for (const value of [
+    'part=snippet,liveStreamingDetails,status,statistics',
+    '/youtube/v3/channels?part=snippet,statistics&mine=true',
+    'subscriberCount',
+    'liveViews',
+    'likeCount',
+    'channelViews',
+    'metrics:'
+  ]) {
+    assert.strictEqual(
+      prodCode.includes(value),
+      true,
+      value
+    );
+  }
+});
+
 console.log(`\nResumo dos Testes de Falha: ${passed} passaram, ${failed} falharam.`);
 
 if (failed > 0) {
