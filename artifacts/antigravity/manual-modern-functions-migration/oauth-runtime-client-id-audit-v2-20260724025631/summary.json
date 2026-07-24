@@ -1,0 +1,20 @@
+{
+    "timestampUtc":  "2026-07-24T02:56:31.1238464Z",
+    "branch":  "fix/migrate-oauth-to-modern-netlify-functions",
+    "headBeforeCommit":  "79294bba04c76bf69b75d5054f8a1c52cd1619b9",
+    "postHttpStatus":  302,
+    "googleRedirectCaptured":  true,
+    "redirectHost":  "accounts.google.com",
+    "expectedClientFingerprint":  "196631DD0659",
+    "runtimeClientFingerprint":  "DFF7625E4503",
+    "runtimeClientMatchesExpected":  false,
+    "rawRedirectStored":  false,
+    "rawClientIdsStored":  false,
+    "clientSecretStored":  false,
+    "setupPasswordStored":  false,
+    "diagnosis":  "A produção está a enviar um Client ID diferente do novo. YOUTUBE_OAUTH_CLIENT_ID não foi atualizado no contexto ou scope efetivamente utilizado pelas Functions de produção.",
+    "oauthAuthorizationCompleted":  false,
+    "credentialsRotated":  false,
+    "progressBefore":  95,
+    "progressAfter":  95
+}
