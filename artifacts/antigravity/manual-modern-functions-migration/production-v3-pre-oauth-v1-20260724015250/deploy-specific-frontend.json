@@ -1,0 +1,65 @@
+{
+  "environment": "deploy-specific",
+  "approved": true,
+  "javascriptApproved": true,
+  "htmlApproved": true,
+  "remoteJavascriptMatchesLocal": true,
+  "files": [
+    {
+      "environment": "deploy-specific",
+      "file": "youtube-live.js",
+      "url": "https://6a62c584708a1b1a254b6365--apexscorpio-youtube-scraper-6e2678f9.netlify.app/youtube-live.js?v=3.0",
+      "status": 200,
+      "approved": true,
+      "checks": {
+        "http200": true,
+        "matchesLocalFrontend": true,
+        "backendBase": true,
+        "youtubeStatus": true,
+        "youtubeChat": true,
+        "iframeFallback": true,
+        "oembedFallback": true,
+        "viewersNull": true,
+        "publicApiKeyRemoved": true,
+        "directGoogleApisCallsRemoved": true
+      },
+      "error": null
+    },
+    {
+      "environment": "deploy-specific",
+      "file": "alerts.html",
+      "url": "https://6a62c584708a1b1a254b6365--apexscorpio-youtube-scraper-6e2678f9.netlify.app/alerts.html",
+      "status": 200,
+      "approved": true,
+      "matchesLocal": true,
+      "error": null
+    },
+    {
+      "environment": "deploy-specific",
+      "file": "chat.html",
+      "url": "https://6a62c584708a1b1a254b6365--apexscorpio-youtube-scraper-6e2678f9.netlify.app/chat.html",
+      "status": 200,
+      "approved": true,
+      "matchesLocal": true,
+      "error": null
+    },
+    {
+      "environment": "deploy-specific",
+      "file": "events.html",
+      "url": "https://6a62c584708a1b1a254b6365--apexscorpio-youtube-scraper-6e2678f9.netlify.app/events.html",
+      "status": 200,
+      "approved": true,
+      "matchesLocal": true,
+      "error": null
+    },
+    {
+      "environment": "deploy-specific",
+      "file": "viewers.html",
+      "url": "https://6a62c584708a1b1a254b6365--apexscorpio-youtube-scraper-6e2678f9.netlify.app/viewers.html",
+      "status": 200,
+      "approved": true,
+      "matchesLocal": true,
+      "error": null
+    }
+  ]
+}

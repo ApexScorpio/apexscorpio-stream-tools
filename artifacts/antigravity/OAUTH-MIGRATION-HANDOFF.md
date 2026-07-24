@@ -203,3 +203,5 @@ Colocar o OAuth oficial do YouTube totalmente funcional na Netlify:
 - 2026-07-24T01:21:50.227Z: correção do diretório de publicação Netlify; dist=0; sintaxe=true; testes=0; output=true; codeReady=true; produção=False; OAuth=False; rotação=False; progresso=86%; relatório=artifacts/antigravity/manual-modern-functions-migration/netlify-publish-dist-fix-v1-20260724012150.
 
 - 2026-07-24T01:46:01.785Z: preview v3 do frontend v3.0 publicado através de dist; deploy=0; deployId=6a62c3e790a1d915eeab5432; rotas=8/8; falhas=0; sem502=true; frontend=true; javascriptIgual=true; gate=true; testes=0; produção=False; OAuth=False; rotação=False; progresso=90%; relatório=artifacts/antigravity/manual-modern-functions-migration/preview-frontend-v3-dist-gate-v3-20260724014601.
+
+- 2026-07-24T01:52:50.836Z: publicação controlada em produção antes do OAuth; deploy=0; deployId=6a62c584708a1b1a254b6365; produçãoRotas=8/8; produçãoFrontend=true; deployRotas=8/8; deployFrontend=true; sem502=true; gate=true; testes=0; OAuth=False; rotação=False; progresso=95%; relatório=artifacts/antigravity/manual-modern-functions-migration/production-v3-pre-oauth-v1-20260724015250.

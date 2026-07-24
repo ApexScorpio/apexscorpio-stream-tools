@@ -1,0 +1,98 @@
+[
+  {
+    "environment": "production-before",
+    "name": "youtube-status-direct",
+    "url": "https://apexscorpio-youtube-scraper-6e2678f9.netlify.app/.netlify/functions/youtube-status",
+    "attempt": 1,
+    "status": 200,
+    "contentType": "application/json",
+    "approved": true,
+    "validation": "status JSON aprovado",
+    "body": "{\n  \"isLive\": false,\n  \"videoId\": null,\n  \"viewers\": null,\n  \"viewerState\": \"confirmed\",\n  \"title\": \"\",\n  \"liveChatId\": null,\n  \"confidence\": \"medium\",\n  \"source\": \"youtube-multisource-consensus\",\n  \"updatedAt\": \"2026-07-24T01:52:55.832Z\",\n  \"error\": null,\n  \"sources\": {\n    \"oauthBroadcast\": {\n      \"status\": \"unknown\",\n      \"observedAt\": \"2026-07-24T01:52:55.832Z\",\n      \"error\": \"OAuth credentials or access_token not available\"\n    },\n    \"oauthVideo\": {\n      \"status\": \"unknown\",\n      \"observedAt\": \"2026-07-24T01:52:55.832Z\",\n      \"error\": \"videoId or accessToken missing\"\n    },\n    \"player\": {\n      \"status\": \"unknown\",\n      \"observedAt\": \"2026-07-24T01:52:55.832Z\",\n      \"error\": \"videoId missing\"\n    },\n    \"next\": {\n      \"status\": \"unknown\",\n      \"observedAt\": \"2026-07-24T01:52:55.832Z\",\n      \"error\": \"videoId missing\"\n    },\n    \"html\": {\n      \"status\": \"confirmed\",\n      \"observedAt\": \"2026-07-24T01:52:51.178Z\",\n      \"resolvedUrl\": \"https://www.youtube.com/@apexscorpio\",\n      \"checkedIdsCount\": 99,\n      \"checkedIds\": [\n        \"a9XO-1Xi0-M\",\n        \"0bDpBd_HZsk\",\n        \"uXCV8AKgKGk\",\n        \"XGvkdFtBFec\",\n        \"30U1oucAcjg\"\n      ],\n      \"videoId\": null,\n      \"title\": \"\",\n      \"viewerText\": null,\n      \"viewers\": null,\n      \"isLive\": false\n    }\n  },\n  \"diagnostic\": {\n    \"version\": \"6.0\",\n    \"liveSignalsCount\": 0,\n    \"validViewerSourcesCount\": 0,\n    \"cached\": false\n  }\n}",
+    "error": null
+  },
+  {
+    "environment": "production-before",
+    "name": "youtube-status-redirect",
+    "url": "https://apexscorpio-youtube-scraper-6e2678f9.netlify.app/youtube-status",
+    "attempt": 1,
+    "status": 200,
+    "contentType": "application/json",
+    "approved": true,
+    "validation": "status JSON aprovado",
+    "body": "{\n  \"isLive\": false,\n  \"videoId\": null,\n  \"viewers\": null,\n  \"viewerState\": \"confirmed\",\n  \"title\": \"\",\n  \"liveChatId\": null,\n  \"confidence\": \"medium\",\n  \"source\": \"youtube-multisource-consensus\",\n  \"updatedAt\": \"2026-07-24T01:52:55.832Z\",\n  \"error\": null,\n  \"sources\": {\n    \"oauthBroadcast\": {\n      \"status\": \"unknown\",\n      \"observedAt\": \"2026-07-24T01:52:55.832Z\",\n      \"error\": \"OAuth credentials or access_token not available\"\n    },\n    \"oauthVideo\": {\n      \"status\": \"unknown\",\n      \"observedAt\": \"2026-07-24T01:52:55.832Z\",\n      \"error\": \"videoId or accessToken missing\"\n    },\n    \"player\": {\n      \"status\": \"unknown\",\n      \"observedAt\": \"2026-07-24T01:52:55.832Z\",\n      \"error\": \"videoId missing\"\n    },\n    \"next\": {\n      \"status\": \"unknown\",\n      \"observedAt\": \"2026-07-24T01:52:55.832Z\",\n      \"error\": \"videoId missing\"\n    },\n    \"html\": {\n      \"status\": \"confirmed\",\n      \"observedAt\": \"2026-07-24T01:52:51.178Z\",\n      \"resolvedUrl\": \"https://www.youtube.com/@apexscorpio\",\n      \"checkedIdsCount\": 99,\n      \"checkedIds\": [\n        \"a9XO-1Xi0-M\",\n        \"0bDpBd_HZsk\",\n        \"uXCV8AKgKGk\",\n        \"XGvkdFtBFec\",\n        \"30U1oucAcjg\"\n      ],\n      \"videoId\": null,\n      \"title\": \"\",\n      \"viewerText\": null,\n      \"viewers\": null,\n      \"isLive\": false\n    }\n  },\n  \"diagnostic\": {\n    \"version\": \"6.0\",\n    \"liveSignalsCount\": 0,\n    \"validViewerSourcesCount\": 0,\n    \"cached\": true\n  }\n}",
+    "error": null
+  },
+  {
+    "environment": "production-before",
+    "name": "oauth-start-direct",
+    "url": "https://apexscorpio-youtube-scraper-6e2678f9.netlify.app/.netlify/functions/youtube-oauth-start",
+    "attempt": 1,
+    "status": 500,
+    "contentType": "text/html; charset=utf-8",
+    "approved": false,
+    "validation": "formulário OAuth inválido",
+    "body": "<h2>Serviço Indisponível</h2><p>Falha ao verificar a configuração no armazenamento backend.</p>",
+    "error": null
+  },
+  {
+    "environment": "production-before",
+    "name": "oauth-start-redirect",
+    "url": "https://apexscorpio-youtube-scraper-6e2678f9.netlify.app/oauth/youtube/start",
+    "attempt": 1,
+    "status": 500,
+    "contentType": "text/html; charset=utf-8",
+    "approved": false,
+    "validation": "formulário OAuth inválido",
+    "body": "<h2>Serviço Indisponível</h2><p>Falha ao verificar a configuração no armazenamento backend.</p>",
+    "error": null
+  },
+  {
+    "environment": "production-before",
+    "name": "oauth-callback-direct",
+    "url": "https://apexscorpio-youtube-scraper-6e2678f9.netlify.app/.netlify/functions/youtube-oauth-callback",
+    "attempt": 1,
+    "status": 400,
+    "contentType": "text/html; charset=utf-8",
+    "approved": true,
+    "validation": "callback inválido rejeitado corretamente",
+    "body": "\n        <!DOCTYPE html>\n        <html lang=\"pt\">\n        <head><meta charset=\"UTF-8\"><title>Autorização Falhou</title>\n        <style>body{font-family:sans-serif;background:#0f172a;color:#f8fafc;display:flex;justify-content:center;align-items:center;height:100vh;margin:0;} .card{background:#1e293b;padding:2rem;border-radius:12px;box-shadow:0 10px 25px rgba(0,0,0,0.5);max-width:450px;text-align:center;border:1px solid #334155;} h2{color:#f43f5e;margin-top:0;} p{color:#94a3b8;}</style>\n        </head>\n        <body>\n          <div class=\"card\">\n            <h2>Autorização Falhou ou Expirou</h2>\n            <p>O pedido de autorização OAuth não pôde ser concluído por parâmetros inválidos ou sessão expirada.</p>\n            <p>Pode fechar esta janela.</p>\n          </div>\n        </body>\n        </html>\n      ",
+    "error": null
+  },
+  {
+    "environment": "production-before",
+    "name": "oauth-callback-redirect",
+    "url": "https://apexscorpio-youtube-scraper-6e2678f9.netlify.app/oauth/youtube/callback",
+    "attempt": 1,
+    "status": 400,
+    "contentType": "text/html; charset=utf-8",
+    "approved": true,
+    "validation": "callback inválido rejeitado corretamente",
+    "body": "\n        <!DOCTYPE html>\n        <html lang=\"pt\">\n        <head><meta charset=\"UTF-8\"><title>Autorização Falhou</title>\n        <style>body{font-family:sans-serif;background:#0f172a;color:#f8fafc;display:flex;justify-content:center;align-items:center;height:100vh;margin:0;} .card{background:#1e293b;padding:2rem;border-radius:12px;box-shadow:0 10px 25px rgba(0,0,0,0.5);max-width:450px;text-align:center;border:1px solid #334155;} h2{color:#f43f5e;margin-top:0;} p{color:#94a3b8;}</style>\n        </head>\n        <body>\n          <div class=\"card\">\n            <h2>Autorização Falhou ou Expirou</h2>\n            <p>O pedido de autorização OAuth não pôde ser concluído por parâmetros inválidos ou sessão expirada.</p>\n            <p>Pode fechar esta janela.</p>\n          </div>\n        </body>\n        </html>\n      ",
+    "error": null
+  },
+  {
+    "environment": "production-before",
+    "name": "youtube-chat-direct",
+    "url": "https://apexscorpio-youtube-scraper-6e2678f9.netlify.app/.netlify/functions/youtube-chat",
+    "attempt": 1,
+    "status": 404,
+    "contentType": "text/html; charset=utf-8",
+    "approved": false,
+    "validation": "chat JSON inválido",
+    "body": "<!DOCTYPE html>\n<html lang=\"en\">\n  <head>\n    <meta charset=\"utf-8\" />\n    <meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\" />\n    <title>Page not found</title>\n    <style>\n      :root {\n        --colorRgbFacetsTeal600: 2 128 125;\n        --colorTealAction: var(--colorRgbFacetsTeal600);\n        --colorRgbFacetsNeutralLight200: 233 235 237;\n        --colorHr: var(--colorRgbFacetsNeutralLight200);\n        --colorRgbFacetsNeutralLight700: 53 58 62;\n        --colorGrayDarkest: var(--colorRgbFacetsNeutralLight700);\n        --colorGrayLighter: var(--colorRgbFacetsNeutralLight200);\n        --colorText: var(--colorGrayDarkest);\n        --effectShadowLightShallow: 0 1px 10px 0 rgb(53 58 62 / 6%),\n          0 2px 4px 0 rgb(53 58 62 / 8%);\n        --colorRgbFacetsNeutralDark900: 6 11 16;\n      }\n      body {\n        font-family: system-ui, -apple-system, BlinkMacSystemFont, \"Segoe UI\",\n          Roboto, Helvetica, Arial, sans-serif, \"Apple Color Emoji\",\n          \"Segoe UI Emoji\", \"Segoe UI Symbol\";\n        background: white;\n        overflow: hidden;\n        margin: 0;\n        padding: 0;\n        line-height: 1.5;\n        color: rgb(var(--colorText));\n      }\n\n      @media (prefers-color-scheme: dark) {\n        body {\n          background: rgb(var(--colorRgbFacetsNeutralDark900));\n        }\n      }\n\n      h1 {\n        margin: 0;\n        font-size: 1.375rem;\n        line-height: 1;\n      }\n\n      h1 + p {\n        margin-top: 8px;\n      }\n\n      .main {\n        position: relative;\n        display: flex;\n        flex-direction: column;\n        align-items: center;\n        justify-content: center;\n        height: 100vh;\n        width: 100vw;\n      }\n\n      .card {\n        position: relative;\n        width: 75%;\n        max-width: 364px;\n        padding: 24px;\n        background: white;\n        border-radius: 8px;\n        box-shadow: var(--effectShadowLightShallow);\n        border: 1px solid rgb(var(--colorGrayLighter));\n      }\n\n      a {\n        margin: 0;\n        font-weight: 600;\n        color: rgb(var(--colorTealAction));\n        text-decoration-skip-ink: all;\n        text-decoration-thickness: 1px;\n        text-underline-offset: 2px;\n        text-decoration-color: rgb(var(--colorTealAction) / 0.5);\n        transition: text-decoration-color 0.15s ease-in-out;\n      }\n\n      a:hover,\n      a:focus-visible {\n        text-decoration-color: rgb(var(--colorTealAction));\n      }\n\n      p:last-of-type {\n        margin-bottom: 0;\n      }\n\n      hr {\n        border: 0;\n        height: 1px;\n        background: rgb(var(--colorHr));\n        margin-top: 16px;\n        margin-bottom: 16px;\n      }\n\n      .your-site {\n        font-size: 0.875rem;\n      }\n    </style>\n  </head>\n  <body>\n    <div class=\"main\">\n      <div class=\"card\">\n        <h1>Page not found</h1>\n        <p>\n          Looks like you’ve followed a broken link or entered a URL that doesn’t\n          exist on this site.\n        </p>\n        <hr />\n        <p class=\"your-site\">\n          If this is your site, and you weren’t expecting a 404 for this path,\n          please visit Netlify’s\n          <a\n            href=\"https://answers.netlify.com/t/support-guide-i-ve-deployed-my-site-but-i-still-see-page-not-found/125?utm_source=404page&utm_campaign=community_tracking\"\n            >“page not found” support guide</a\n          >\n          for troubleshooting tips.\n        </p>\n      </div>\n    </div>\n  </body>\n</html>\n",
+    "error": null
+  },
+  {
+    "environment": "production-before",
+    "name": "youtube-chat-redirect",
+    "url": "https://apexscorpio-youtube-scraper-6e2678f9.netlify.app/youtube-chat",
+    "attempt": 1,
+    "status": 404,
+    "contentType": "text/html; charset=utf-8",
+    "approved": false,
+    "validation": "chat JSON inválido",
+    "body": "<!DOCTYPE html>\n<html lang=\"en\">\n  <head>\n    <meta charset=\"utf-8\" />\n    <meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\" />\n    <title>Page not found</title>\n    <style>\n      :root {\n        --colorRgbFacetsTeal600: 2 128 125;\n        --colorTealAction: var(--colorRgbFacetsTeal600);\n        --colorRgbFacetsNeutralLight200: 233 235 237;\n        --colorHr: var(--colorRgbFacetsNeutralLight200);\n        --colorRgbFacetsNeutralLight700: 53 58 62;\n        --colorGrayDarkest: var(--colorRgbFacetsNeutralLight700);\n        --colorGrayLighter: var(--colorRgbFacetsNeutralLight200);\n        --colorText: var(--colorGrayDarkest);\n        --effectShadowLightShallow: 0 1px 10px 0 rgb(53 58 62 / 6%),\n          0 2px 4px 0 rgb(53 58 62 / 8%);\n        --colorRgbFacetsNeutralDark900: 6 11 16;\n      }\n      body {\n        font-family: system-ui, -apple-system, BlinkMacSystemFont, \"Segoe UI\",\n          Roboto, Helvetica, Arial, sans-serif, \"Apple Color Emoji\",\n          \"Segoe UI Emoji\", \"Segoe UI Symbol\";\n        background: white;\n        overflow: hidden;\n        margin: 0;\n        padding: 0;\n        line-height: 1.5;\n        color: rgb(var(--colorText));\n      }\n\n      @media (prefers-color-scheme: dark) {\n        body {\n          background: rgb(var(--colorRgbFacetsNeutralDark900));\n        }\n      }\n\n      h1 {\n        margin: 0;\n        font-size: 1.375rem;\n        line-height: 1;\n      }\n\n      h1 + p {\n        margin-top: 8px;\n      }\n\n      .main {\n        position: relative;\n        display: flex;\n        flex-direction: column;\n        align-items: center;\n        justify-content: center;\n        height: 100vh;\n        width: 100vw;\n      }\n\n      .card {\n        position: relative;\n        width: 75%;\n        max-width: 364px;\n        padding: 24px;\n        background: white;\n        border-radius: 8px;\n        box-shadow: var(--effectShadowLightShallow);\n        border: 1px solid rgb(var(--colorGrayLighter));\n      }\n\n      a {\n        margin: 0;\n        font-weight: 600;\n        color: rgb(var(--colorTealAction));\n        text-decoration-skip-ink: all;\n        text-decoration-thickness: 1px;\n        text-underline-offset: 2px;\n        text-decoration-color: rgb(var(--colorTealAction) / 0.5);\n        transition: text-decoration-color 0.15s ease-in-out;\n      }\n\n      a:hover,\n      a:focus-visible {\n        text-decoration-color: rgb(var(--colorTealAction));\n      }\n\n      p:last-of-type {\n        margin-bottom: 0;\n      }\n\n      hr {\n        border: 0;\n        height: 1px;\n        background: rgb(var(--colorHr));\n        margin-top: 16px;\n        margin-bottom: 16px;\n      }\n\n      .your-site {\n        font-size: 0.875rem;\n      }\n    </style>\n  </head>\n  <body>\n    <div class=\"main\">\n      <div class=\"card\">\n        <h1>Page not found</h1>\n        <p>\n          Looks like you’ve followed a broken link or entered a URL that doesn’t\n          exist on this site.\n        </p>\n        <hr />\n        <p class=\"your-site\">\n          If this is your site, and you weren’t expecting a 404 for this path,\n          please visit Netlify’s\n          <a\n            href=\"https://answers.netlify.com/t/support-guide-i-ve-deployed-my-site-but-i-still-see-page-not-found/125?utm_source=404page&utm_campaign=community_tracking\"\n            >“page not found” support guide</a\n          >\n          for troubleshooting tips.\n        </p>\n      </div>\n    </div>\n  </body>\n</html>\n",
+    "error": null
+  }
+]

@@ -1,0 +1,65 @@
+{
+  "environment": "production",
+  "approved": true,
+  "javascriptApproved": true,
+  "htmlApproved": true,
+  "remoteJavascriptMatchesLocal": true,
+  "files": [
+    {
+      "environment": "production",
+      "file": "youtube-live.js",
+      "url": "https://apexscorpio-youtube-scraper-6e2678f9.netlify.app/youtube-live.js?v=3.0",
+      "status": 200,
+      "approved": true,
+      "checks": {
+        "http200": true,
+        "matchesLocalFrontend": true,
+        "backendBase": true,
+        "youtubeStatus": true,
+        "youtubeChat": true,
+        "iframeFallback": true,
+        "oembedFallback": true,
+        "viewersNull": true,
+        "publicApiKeyRemoved": true,
+        "directGoogleApisCallsRemoved": true
+      },
+      "error": null
+    },
+    {
+      "environment": "production",
+      "file": "alerts.html",
+      "url": "https://apexscorpio-youtube-scraper-6e2678f9.netlify.app/alerts.html",
+      "status": 200,
+      "approved": true,
+      "matchesLocal": true,
+      "error": null
+    },
+    {
+      "environment": "production",
+      "file": "chat.html",
+      "url": "https://apexscorpio-youtube-scraper-6e2678f9.netlify.app/chat.html",
+      "status": 200,
+      "approved": true,
+      "matchesLocal": true,
+      "error": null
+    },
+    {
+      "environment": "production",
+      "file": "events.html",
+      "url": "https://apexscorpio-youtube-scraper-6e2678f9.netlify.app/events.html",
+      "status": 200,
+      "approved": true,
+      "matchesLocal": true,
+      "error": null
+    },
+    {
+      "environment": "production",
+      "file": "viewers.html",
+      "url": "https://apexscorpio-youtube-scraper-6e2678f9.netlify.app/viewers.html",
+      "status": 200,
+      "approved": true,
+      "matchesLocal": true,
+      "error": null
+    }
+  ]
+}
