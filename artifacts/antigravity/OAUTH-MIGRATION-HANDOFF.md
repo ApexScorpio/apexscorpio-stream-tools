@@ -232,3 +232,6 @@ Colocar o OAuth oficial do YouTube totalmente funcional na Netlify:
 - 2026-07-24T09:57:25.023Z: diagnóstico OAuth seguro v2; sucesso=false; patch=false; testes=false; deploy=false; deployId=n/a; progresso=98%; relatório=artifacts/antigravity/manual-modern-functions-migration/oauth-safe-diagnostic-v2-20260724095725.
 
 - 2026-07-24T09:58:39.0827697Z: verificação pós-autorização OAuth; diagnosticStatus=error; diagnosticStage=youtube_channel_lookup; diagnosticCode=quotaExceeded; setupLocked=False; statusHTTP=200; chatHTTP=503; progresso=99%; relatório=artifacts/antigravity/manual-modern-functions-migration/oauth-post-authorization-check-v1-20260724095839.
+
+
+- 2026-07-24T11:42:59.017Z: oauthfix preview v1; sucesso=true; patch=true; testes=true; deployPreview=true; deployId=6a634fa9e77980fe683f1028; preview=https://oauthfix--apexscorpio-youtube-scraper-6e2678f9.netlify.app; progresso=99.5%; relatório=artifacts/antigravity/manual-modern-functions-migration/oauthfix-preview-v1-20260724114259.

@@ -36,9 +36,12 @@ exports.handler = async function(event, context, customStores = null, customAxio
   const expectedChannelId = process.env.YOUTUBE_EXPECTED_CHANNEL_ID;
   const redirectUri = process.env.YOUTUBE_OAUTH_REDIRECT_URI;
 
-  const expectedRedirectUri = 'https://apexscorpio-youtube-scraper-6e2678f9.netlify.app/oauth/youtube/callback';
+  const allowedRedirectUris = new Set([
+    'https://apexscorpio-youtube-scraper-6e2678f9.netlify.app/oauth/youtube/callback',
+    'https://oauthfix--apexscorpio-youtube-scraper-6e2678f9.netlify.app/oauth/youtube/callback'
+  ]);
 
-  if (!clientId || !clientSecret || !encryptionKey || !stateSecret || !expectedChannelId || !redirectUri || redirectUri !== expectedRedirectUri) {
+  if (!clientId || !clientSecret || !encryptionKey || !stateSecret || !expectedChannelId || !redirectUri || !allowedRedirectUris.has(redirectUri)) {
     return {
       statusCode: 500,
       headers: genericHeaders,
