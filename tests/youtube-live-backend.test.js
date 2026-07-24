@@ -58,9 +58,11 @@ test('8. Eventos oficiais continuam suportados', () => {
   for (const type of [
     'newSponsorEvent',
     'membershipGiftingEvent',
+    'giftMembershipReceivedEvent',
     'memberMilestoneChatEvent',
     'superChatEvent',
-    'superStickerEvent'
+    'superStickerEvent',
+    'giftEvent'
   ]) {
     assert.ok(source.includes(type), type);
   }
@@ -78,7 +80,7 @@ test('9. Viewers desconhecidos nÃ£o sÃ£o inventados como zero', () => {
   );
 });
 
-test('10. Todos os HTML usam youtube-live.js v3.0', () => {
+test('10. Todos os HTML usam youtube-live.js v4.0', () => {
   const files = execFileSync(
     'git',
     ['ls-files', '*.html'],
@@ -102,8 +104,21 @@ test('10. Todos os HTML usam youtube-live.js v3.0', () => {
 
     assert.match(
       html,
-      /youtube-live\.js\?v=3\.0/,
+      /youtube-live\.js\?v=4\.0/,
       file
     );
   }
+});
+
+
+test('11. Backend YouTube usa o domínio atual', () => {
+  assert.match(
+    source,
+    /global\.location\.origin/
+  );
+
+  assert.doesNotMatch(
+    source,
+    /apexscorpio-youtube-scraper-6e2678f9\.netlify\.app/
+  );
 });

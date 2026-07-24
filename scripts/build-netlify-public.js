@@ -9,10 +9,15 @@ const outputDirectory = path.join(repo, 'dist');
 
 const frontendFiles = [
   'alerts.html',
+  'alerts.js',
   'chat.html',
   'events.html',
+  'events.js',
   'viewers.html',
-  'youtube-live.js'
+  'viewers.js',
+  'youtube-live.js',
+  'youtube-stats.html',
+  'youtube-stats.js'
 ];
 
 if (!fs.existsSync(publicDirectory)) {
@@ -56,5 +61,5 @@ for (const relativeFile of frontendFiles) {
 }
 
 console.log(
-  'Netlify publish preparado em dist com frontend v3.0.'
+  'Netlify publish preparado em dist com frontend v4.0.'
 );

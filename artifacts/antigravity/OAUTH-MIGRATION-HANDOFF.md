@@ -243,3 +243,5 @@ Colocar o OAuth oficial do YouTube totalmente funcional na Netlify:
 - 2026-07-24T12:13:30.3314777Z: liveBroadcasts.list corrigido; removido mine=true incompatível; testes completos aprovados; deploy oauthfix=6a635600e57afd023f3343e1; oauthBroadcast=confirmed; isLive=False; relatório=artifacts/antigravity/manual-modern-functions-migration/oauth-livebroadcasts-filter-fix-20260724121330; progresso=100%.
 
 - 2026-07-24T13:12:17.7787944Z: relatório incorreto ce79998 removido; chat OAuth verificado; métricas oficiais do canal e da live implementadas; deploy oauthfix=6a636494ea5f4755502d2f11; relatório=artifacts/antigravity/manual-modern-functions-migration/youtube-backend-metrics-v2-20260724131217; progresso=85%.
+
+- 2026-07-24T14:35:35.7966781Z: overlays finais do YouTube instalados; chat, métricas, Super Chats, Super Stickers, membros, ofertas, memberships recebidas e Gifts/Jewels suportados; deploy oauthfix=6a63781c13e477c395227e62; relatório=artifacts/antigravity/manual-modern-functions-migration/youtube-complete-overlays-20260724143535; progresso=95%; falta teste numa live real.

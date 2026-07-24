@@ -11,14 +11,19 @@ const outputDirectory = path.join(repo, 'dist');
 
 const frontendFiles = [
   'alerts.html',
+  'alerts.js',
   'chat.html',
   'events.html',
+  'events.js',
   'viewers.html',
-  'youtube-live.js'
+  'viewers.js',
+  'youtube-live.js',
+  'youtube-stats.html',
+  'youtube-stats.js'
 ];
 
 test(
-  'build Netlify publica exatamente o frontend v3.0',
+  'build Netlify publica exatamente o frontend v4.0',
   () => {
     try {
       const result = spawnSync(
@@ -115,7 +120,7 @@ test(
 
         assert.match(
           html,
-          /youtube-live\.js\?v=3\.0/
+          /youtube-live\.js\?v=4\.0/
         );
       }
 
@@ -136,5 +141,30 @@ test(
         force: true
       });
     }
+  }
+);
+
+
+test(
+  'overlay de estatísticas do YouTube é publicado',
+  () => {
+    const html = fs.readFileSync(
+      path.join(repo, 'youtube-stats.html'),
+      'utf8'
+    );
+
+    const javascript = fs.readFileSync(
+      path.join(repo, 'youtube-stats.js'),
+      'utf8'
+    );
+
+    assert.match(html, /metric-subs/);
+    assert.match(html, /metric-likes/);
+    assert.match(html, /metric-channelviews/);
+    assert.match(javascript, /\/youtube-status/);
+    assert.match(
+      javascript,
+      /metrics\.subscribers/
+    );
   }
 );

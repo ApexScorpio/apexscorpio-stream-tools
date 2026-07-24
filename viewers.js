@@ -1,6 +1,11 @@
-/* ApexScorpio Viewers Counter Overlay v3.1 (Multi-Source Reliability) */
+/* ApexScorpio Viewers Counter Overlay v4.0 (Multi-Source Reliability) */
 (function () {
   'use strict';
+
+  const YOUTUBE_BACKEND_BASE = String(
+    window.APEX_YOUTUBE_BACKEND_URL ||
+    window.location.origin
+  ).replace(/\/+$/, '');
 
   const bar = document.getElementById('viewers-bar');
   const pills = {
@@ -170,7 +175,7 @@
   async function checkNetlifyYoutubeStatus() {
     if (isTestActive) return;
     try {
-      const res = await fetch('https://apexscorpio-youtube-scraper-6e2678f9.netlify.app/youtube-status?cb=' + Date.now());
+      const res = await fetch(YOUTUBE_BACKEND_BASE + '/youtube-status?cb=' + Date.now());
       if (res.ok) {
         const data = await res.json();
         realState.youtube = {
@@ -225,7 +230,7 @@
   window.ApexYoutubeScrapeDebug = async function() {
     console.log('--- ApexScorpio Multi-Source Scrape Debug ---');
     try {
-      const res = await fetch('https://apexscorpio-youtube-scraper-6e2678f9.netlify.app/youtube-status?cb=' + Date.now());
+      const res = await fetch(YOUTUBE_BACKEND_BASE + '/youtube-status?cb=' + Date.now());
       const json = await res.json();
       console.log(JSON.stringify(json, null, 2));
       return json;

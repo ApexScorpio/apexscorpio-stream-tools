@@ -1,5 +1,5 @@
 /**
- * ApexScorpio YouTube Live Module v3.0
+ * ApexScorpio YouTube Live Module v4.0
  *
  * Sticky live detection:
  * - the official YouTube iframe player is authoritative for online/offline;
@@ -13,7 +13,7 @@
 
   const BACKEND_BASE_URL = String(
     global.APEX_YOUTUBE_BACKEND_URL ||
-    'https://apexscorpio-youtube-scraper-6e2678f9.netlify.app'
+    global.location.origin
   ).replace(/\/+$/, '');
   const STATUS_ENDPOINT = '/youtube-status';
   const CHAT_ENDPOINT = '/youtube-chat';
@@ -1081,6 +1081,21 @@
         milestone.memberMonth ? `${milestone.memberMonth} meses como membro` : 'Mensagem de membro',
         milestone.userComment || text
       ].filter(Boolean).join(' · ');
+    } else if (type === 'giftMembershipReceivedEvent') {
+      const gift = snippet.giftMembershipReceivedDetails || {};
+      text = text || [
+        'Recebeu uma membership',
+        gift.memberLevelName || ''
+      ].filter(Boolean).join(' · ');
+    } else if (type === 'giftEvent') {
+      const gift = snippet.giftEventDetails?.giftMetadata || {};
+      text = text || [
+        gift.giftName || 'YouTube Gift',
+        gift.jewelsAmount ? `${gift.jewelsAmount} Jewels` : '',
+        Number(gift.comboCount || 0) > 1
+          ? `Combo x${gift.comboCount}`
+          : ''
+      ].filter(Boolean).join(' · ');
     }
 
     if (!text) return null;
@@ -1155,6 +1170,42 @@
         amountMicros: Number(details.amountMicros || 0),
         currency: details.currency || '',
         message: details.superStickerMetadata?.altText || 'Super Sticker'
+      };
+    }
+
+    if (snippet.type === 'giftMembershipReceivedEvent') {
+      const details = snippet.giftMembershipReceivedDetails || {};
+      return {
+        ...base,
+        type: 'membership',
+        months: 0,
+        memberLevel: details.memberLevelName || '',
+        message: [
+          'Recebeu uma membership',
+          details.memberLevelName || ''
+        ].filter(Boolean).join(' · ')
+      };
+    }
+
+    if (snippet.type === 'giftEvent') {
+      const gift = snippet.giftEventDetails?.giftMetadata || {};
+      return {
+        ...base,
+        type: 'donation',
+        amount: gift.jewelsAmount
+          ? `${gift.jewelsAmount} Jewels`
+          : 'YouTube Gift',
+        jewels: Number(gift.jewelsAmount || 0),
+        giftName: gift.giftName || 'YouTube Gift',
+        giftUrl: gift.giftUrl || '',
+        comboCount: Number(gift.comboCount || 0),
+        message: [
+          gift.giftName || 'YouTube Gift',
+          Number(gift.comboCount || 0) > 1
+            ? `Combo x${gift.comboCount}`
+            : '',
+          gift.altText || ''
+        ].filter(Boolean).join(' · ')
       };
     }
 
@@ -1403,7 +1454,7 @@
 
     debug() {
       return {
-        version: '3.0',
+        version: '4.0',
         instanceId,
         stateLeader,
         chatLeader,
@@ -1434,7 +1485,7 @@
 
     channelId: CHANNEL_ID,
     channelHandle: CHANNEL_HANDLE,
-    version: '3.0'
+    version: '4.0'
   };
 
   start();

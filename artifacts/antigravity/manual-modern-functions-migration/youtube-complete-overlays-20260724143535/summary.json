@@ -1,0 +1,38 @@
+{
+    "timestampUtc":  "2026-07-24T14:35:35.7966781Z",
+    "branch":  "fix/migrate-oauth-to-modern-netlify-functions",
+    "operationSucceeded":  true,
+    "testsPassed":  true,
+    "previewDeployCompleted":  true,
+    "deployAlias":  "oauthfix",
+    "deployId":  "6a63781c13e477c395227e62",
+    "productionDeployAttempted":  false,
+    "oauthAuthorizationRepeated":  false,
+    "metricsOverlayVerified":  true,
+    "chatEndpointVerified":  true,
+    "chatAvailableWhileOffline":  false,
+    "supportedEvents":  [
+                            "normal_chat",
+                            "new_member",
+                            "membership_upgrade",
+                            "membership_gifting",
+                            "gift_membership_received",
+                            "member_milestone",
+                            "super_chat",
+                            "super_sticker",
+                            "youtube_gift_jewels"
+                        ],
+    "currentMetrics":  {
+                           "concurrentViewers":  null,
+                           "liveViews":  null,
+                           "likes":  null,
+                           "comments":  null,
+                           "subscribers":  226,
+                           "subscriberCountHidden":  false,
+                           "channelViews":  130133,
+                           "channelVideos":  347
+                       },
+    "paypalStreamlabsTipsIncluded":  false,
+    "readyForLiveTest":  true,
+    "progressAfter":  95
+}

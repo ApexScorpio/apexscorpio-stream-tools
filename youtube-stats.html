@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+  <meta charset="UTF-8">
+  <meta
+    http-equiv="Cache-Control"
+    content="no-cache, no-store, must-revalidate"
+  >
+  <meta
+    name="viewport"
+    content="width=device-width,initial-scale=1"
+  >
+  <title>ApexScorpio - Estatísticas YouTube</title>
+
+  <style>
+    * { box-sizing: border-box; }
+
+    html,
+    body {
+      width: 100%;
+      height: 100%;
+      margin: 0;
+      overflow: hidden;
+      background: transparent;
+      font-family: Arial, sans-serif;
+    }
+
+    #youtube-stats {
+      display: inline-flex;
+      gap: 7px;
+      padding: 7px;
+      border-radius: 14px;
+      color: #fff;
+    }
+
+    #youtube-stats.horizontal {
+      flex-direction: row;
+      flex-wrap: wrap;
+    }
+
+    #youtube-stats.vertical {
+      flex-direction: column;
+    }
+
+    #youtube-stats.has-bg {
+      background: rgba(8, 8, 12, .88);
+      box-shadow: 0 8px 30px rgba(0, 0, 0, .55);
+      backdrop-filter: blur(14px);
+    }
+
+    .metric {
+      display: flex;
+      align-items: center;
+      gap: 7px;
+      min-height: 36px;
+      padding: 7px 11px;
+      border: 1px solid rgba(255, 255, 255, .16);
+      border-radius: 11px;
+      background: rgba(255, 255, 255, .055);
+      white-space: nowrap;
+    }
+
+    .metric-icon {
+      width: 19px;
+      text-align: center;
+      font-size: 14px;
+    }
+
+    .metric-copy {
+      display: flex;
+      flex-direction: column;
+      line-height: 1.05;
+    }
+
+    .metric-label {
+      color: #aeb6c4;
+      font-size: 9px;
+      font-weight: 800;
+      letter-spacing: .8px;
+      text-transform: uppercase;
+    }
+
+    .metric-value {
+      margin-top: 3px;
+      color: #fff;
+      font-size: 16px;
+      font-weight: 900;
+    }
+
+    #live-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: #5f6672;
+    }
+
+    #live-dot.online {
+      background: #e8181f;
+      box-shadow: 0 0 10px rgba(232, 24, 31, .9);
+    }
+  </style>
+</head>
+
+<body>
+  <div
+    id="youtube-stats"
+    class="horizontal has-bg"
+  >
+    <div class="metric" data-metric="live">
+      <span id="live-dot"></span>
+      <span class="metric-copy">
+        <span class="metric-label">A VER</span>
+        <span class="metric-value" id="metric-live">0</span>
+      </span>
+    </div>
+
+    <div class="metric" data-metric="views">
+      <span class="metric-icon">▶</span>
+      <span class="metric-copy">
+        <span class="metric-label">VIEWS LIVE</span>
+        <span class="metric-value" id="metric-views">—</span>
+      </span>
+    </div>
+
+    <div class="metric" data-metric="likes">
+      <span class="metric-icon">♥</span>
+      <span class="metric-copy">
+        <span class="metric-label">LIKES</span>
+        <span class="metric-value" id="metric-likes">—</span>
+      </span>
+    </div>
+
+    <div class="metric" data-metric="subs">
+      <span class="metric-icon">★</span>
+      <span class="metric-copy">
+        <span class="metric-label">SUBS</span>
+        <span class="metric-value" id="metric-subs">—</span>
+      </span>
+    </div>
+
+    <div class="metric" data-metric="channelviews">
+      <span class="metric-icon">◉</span>
+      <span class="metric-copy">
+        <span class="metric-label">VIEWS CANAL</span>
+        <span class="metric-value" id="metric-channelviews">—</span>
+      </span>
+    </div>
+
+    <div class="metric" data-metric="videos">
+      <span class="metric-icon">▣</span>
+      <span class="metric-copy">
+        <span class="metric-label">VÍDEOS</span>
+        <span class="metric-value" id="metric-videos">—</span>
+      </span>
+    </div>
+  </div>
+
+  <script src="youtube-stats.js?v=1.0"></script>
+</body>
+</html>
