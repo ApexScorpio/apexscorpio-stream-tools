@@ -1,0 +1,47 @@
+{
+  "youtubeLive": {
+    "url": "https://6a62bc1aea5f47fb0b2d2f7d--apexscorpio-youtube-scraper-6e2678f9.netlify.app/youtube-live.js?v=3.0",
+    "status": 404,
+    "contentType": "text/html; charset=utf-8",
+    "checks": {
+      "http200": false,
+      "version30": false,
+      "backendBase": false,
+      "youtubeStatus": false,
+      "youtubeChat": false,
+      "iframeFallback": false,
+      "oembedFallback": false,
+      "viewersNull": false,
+      "publicApiKeyRemoved": true,
+      "directGoogleApisCallsRemoved": true
+    },
+    "approved": false
+  },
+  "html": [
+    {
+      "file": "alerts.html",
+      "url": "https://6a62bc1aea5f47fb0b2d2f7d--apexscorpio-youtube-scraper-6e2678f9.netlify.app/alerts.html",
+      "status": 200,
+      "approved": false
+    },
+    {
+      "file": "chat.html",
+      "url": "https://6a62bc1aea5f47fb0b2d2f7d--apexscorpio-youtube-scraper-6e2678f9.netlify.app/chat.html",
+      "status": 200,
+      "approved": false
+    },
+    {
+      "file": "events.html",
+      "url": "https://6a62bc1aea5f47fb0b2d2f7d--apexscorpio-youtube-scraper-6e2678f9.netlify.app/events.html",
+      "status": 200,
+      "approved": false
+    },
+    {
+      "file": "viewers.html",
+      "url": "https://6a62bc1aea5f47fb0b2d2f7d--apexscorpio-youtube-scraper-6e2678f9.netlify.app/viewers.html",
+      "status": 200,
+      "approved": false
+    }
+  ],
+  "approved": false
+}

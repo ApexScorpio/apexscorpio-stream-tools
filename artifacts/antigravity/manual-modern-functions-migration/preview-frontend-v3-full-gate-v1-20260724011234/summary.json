@@ -1,0 +1,41 @@
+{
+  "timestampUtc": "2026-07-24T01:12:34.820Z",
+  "branch": "fix/migrate-oauth-to-modern-netlify-functions",
+  "headBeforeCommit": "53b8f2840ad75e543e1d9a6d6c520dff4753e6ad",
+  "netlifyCliEntry": "node_modules\\netlify-cli\\bin\\run.js",
+  "npmTestExitCode": -1,
+  "deployExitCode": 0,
+  "deployParseError": null,
+  "deployId": "6a62bc1aea5f47fb0b2d2f7d",
+  "deployUrl": "https://6a62bc1aea5f47fb0b2d2f7d--apexscorpio-youtube-scraper-6e2678f9.netlify.app",
+  "totalRoutes": 8,
+  "approvedRoutes": 8,
+  "failedRoutes": 0,
+  "probeStatuses": {
+    "youtube-status-direct": 200,
+    "youtube-status-redirect": 200,
+    "oauth-start-direct": 200,
+    "oauth-start-redirect": 200,
+    "oauth-callback-direct": 400,
+    "oauth-callback-redirect": 400,
+    "youtube-chat-direct": 503,
+    "youtube-chat-redirect": 503
+  },
+  "noHttp502": true,
+  "frontendVersion": "3.0",
+  "frontendPassed": false,
+  "publicApiKeyRemoved": true,
+  "directGoogleApisCallsRemoved": true,
+  "fullPreviewGatePassed": false,
+  "progressBefore": 82,
+  "progressAfter": 82,
+  "productionDeployExecuted": false,
+  "oauthAuthorizationStarted": false,
+  "credentialsRotated": false,
+  "nextAction": [
+    "Confirmar este relatório diretamente no GitHub.",
+    "Corrigir apenas a primeira falha concreta.",
+    "Repetir um único deploy preview.",
+    "Não fazer produção, OAuth ou rotação."
+  ]
+}

@@ -1,0 +1,2 @@
+
+spawnSync npm.cmd EINVAL
