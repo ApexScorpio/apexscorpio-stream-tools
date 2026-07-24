@@ -9,9 +9,9 @@
   <link rel="stylesheet" href="css/style.css?v=8.0">
   <script src="https://cdn.jsdelivr.net/npm/mqtt@5.3.4/dist/mqtt.min.js"></script>
   <script>
-    window.APEX_YOUTUBE_BACKEND_URL = 'https://oauthfix--apexscorpio-youtube-scraper-6e2678f9.netlify.app';
+    window.APEX_YOUTUBE_BACKEND_URL = window.location.origin;
   </script>
-  <script src="youtube-live.js?v=4.2"></script>
+  <script src="youtube-live.js?v=4.3"></script>
   <style>
     body{background:transparent;overflow:hidden;display:flex;align-items:center;justify-content:center;width:100vw;height:100vh}
     .alert-box{display:none;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:28px 48px;background:rgba(8,8,12,.96);backdrop-filter:blur(24px);-webkit-backdrop-filter:blur(24px);--platform-accent:#E8181F;--platform-rgb:232,24,31;border:2px solid var(--platform-accent);border-radius:24px;box-shadow:0 10px 45px rgba(0,0,0,.95),0 0 40px rgba(var(--platform-rgb),.5);position:relative}
@@ -22,6 +22,7 @@
     @keyframes alertPopIn{0%{opacity:0;transform:scale(.4) translateY(60px);filter:blur(10px)}70%{opacity:1;transform:scale(1.05) translateY(-5px);filter:blur(0)}100%{opacity:1;transform:scale(1) translateY(0);filter:blur(0)}}
     @keyframes alertPopOut{0%{opacity:1;transform:scale(1) translateY(0);filter:blur(0)}30%{opacity:1;transform:scale(1.05) translateY(-5px);filter:blur(0)}100%{opacity:0;transform:scale(.4) translateY(60px);filter:blur(10px)}}
   </style>
+  <script defer src="overlay-relay.js?v=1.0"></script>
 </head>
 <body>
   <div class="alert-box" id="alert-box">

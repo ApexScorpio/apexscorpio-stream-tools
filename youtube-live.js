@@ -1,5 +1,5 @@
 /**
- * ApexScorpio YouTube Live Module v4.2
+ * ApexScorpio YouTube Live Module v4.3
  *
  * Sticky live detection:
  * - the official YouTube iframe player is authoritative for online/offline;
@@ -15,6 +15,14 @@
     global.APEX_YOUTUBE_BACKEND_URL ||
     global.location.origin
   ).replace(/\/+$/, '');
+
+  const TOP_LEVEL_CONTEXT = (() => {
+    try {
+      return global.top === global.self;
+    } catch (_) {
+      return true;
+    }
+  })();
   const STATUS_ENDPOINT = '/youtube-status';
   const CHAT_ENDPOINT = '/youtube-chat';
   const CHANNEL_ID = 'UCF3aydfOlV88XVqW8vpdKEw';
@@ -1038,6 +1046,13 @@
   }
 
   function electStateLeader() {
+    if (TOP_LEVEL_CONTEXT) {
+      if (!stateLeader) {
+        becomeStateLeader();
+      }
+      return;
+    }
+
     const lock = readLock(STATE_LEADER_KEY);
     const now = Date.now();
 
@@ -1235,6 +1250,13 @@
       if (chatLeader) {
         releaseLock(CHAT_LEADER_KEY);
         stopChatLeaderWork();
+      }
+      return;
+    }
+
+    if (TOP_LEVEL_CONTEXT) {
+      if (!chatLeader) {
+        becomeChatLeader();
       }
       return;
     }
@@ -1463,7 +1485,7 @@
 
     debug() {
       return {
-        version: '4.0',
+        version: '4.3',
         instanceId,
         stateLeader,
         chatLeader,
@@ -1494,7 +1516,7 @@
 
     channelId: CHANNEL_ID,
     channelHandle: CHANNEL_HANDLE,
-    version: '4.0'
+    version: '4.3'
   };
 
   start();

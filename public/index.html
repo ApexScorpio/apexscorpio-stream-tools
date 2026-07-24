@@ -9,6 +9,7 @@
   <title>ApexScorpio - Central de Overlays & Opções Avançadas</title>
   <link rel="stylesheet" href="css/style.css?v=6.0">
   <script src="https://cdn.jsdelivr.net/npm/mqtt@5.3.4/dist/mqtt.min.js"></script>
+  <script defer src="overlay-relay.js?v=1.0"></script>
   <style>
     body {
       background: #08080C;
@@ -606,6 +607,13 @@
         localStorage.setItem('apex_event_config_update', JSON.stringify({ payload: { [overlayName]: versionedConfig }, timestamp: updatedAt }));
       } catch(e) {}
 
+      if (window.ApexOverlayRelay) {
+        window.ApexOverlayRelay.save(
+          overlayName,
+          versionedConfig
+        );
+      }
+
       const iframeMap = {
         viewers: 'iframe-viewers',
         chat: 'iframe-chat',
@@ -665,7 +673,7 @@
       const isLocal = window.location.protocol === 'file:';
       const baseUrl = isLocal
         ? window.location.href.replace('index.html', '').replace(/#.*$/, '').replace(/\?.*$/, '')
-        : 'https://apexscorpio.github.io/apexscorpio-stream-tools/';
+        : window.location.origin + '/';
 
       document.getElementById('url-viewers').value = `${baseUrl}viewers.html`;
       document.getElementById('url-chat').value = `${baseUrl}chat.html`;

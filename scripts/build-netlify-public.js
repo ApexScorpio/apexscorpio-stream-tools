@@ -16,6 +16,7 @@ const frontendFiles = [
   'viewers.html',
   'viewers.js',
   'youtube-live.js',
+  'overlay-relay.js',
   'youtube-stats.html',
   'youtube-stats.js'
 ];
@@ -60,6 +61,8 @@ for (const relativeFile of frontendFiles) {
   fs.copyFileSync(source, destination);
 }
 
+require('./prepare-cloudflare-assets.js');
+
 console.log(
-  'Netlify publish preparado em dist com frontend v4.2.'
+  'Netlify publish preparado em dist com frontend v4.3.'
 );

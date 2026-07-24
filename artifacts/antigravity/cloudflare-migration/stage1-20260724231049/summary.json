@@ -1,0 +1,18 @@
+{
+    "timestampUtc":  "2026-07-24T22:10:49.3434681Z",
+    "cloudflareAccount":  "scorpioapex@gmail.com",
+    "workersSubdomain":  "scorpioapex.workers.dev",
+    "workerUrl":  "https://apexscorpio-stream-tools.scorpioapex.workers.dev",
+    "cloudflareVersionId":  "0a9e0181-7f6a-478a-9d97-8a8bce161b70",
+    "testsPassed":  true,
+    "healthPassed":  true,
+    "dashboardPassed":  true,
+    "chatBrowserSourcePassed":  true,
+    "overlayRelayPassed":  true,
+    "youtubeStatusPassed":  true,
+    "youtubeIsLive":  false,
+    "youtubeVideoId":  null,
+    "frontendVersion":  "4.3",
+    "oauthMigrated":  false,
+    "nextStage":  "Migrar o OAuth do YouTube"
+}

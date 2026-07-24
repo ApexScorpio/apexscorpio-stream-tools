@@ -18,12 +18,13 @@ const frontendFiles = [
   'viewers.html',
   'viewers.js',
   'youtube-live.js',
+  'overlay-relay.js',
   'youtube-stats.html',
   'youtube-stats.js'
 ];
 
 test(
-  'build Netlify publica exatamente o frontend v4.2',
+  'build Netlify publica exatamente o frontend v4.3',
   () => {
     try {
       const result = spawnSync(
@@ -120,7 +121,7 @@ test(
 
         assert.match(
           html,
-          /youtube-live\.js\?v=4\.2/
+          /youtube-live\.js\?v=4\.3/
         );
       }
 

@@ -9,9 +9,10 @@
   <link rel="stylesheet" href="css/style.css?v=6.2">
   <script src="https://cdn.jsdelivr.net/npm/mqtt@5.3.4/dist/mqtt.min.js"></script>
   <script>
-    window.APEX_YOUTUBE_BACKEND_URL = 'https://oauthfix--apexscorpio-youtube-scraper-6e2678f9.netlify.app';
+    window.APEX_YOUTUBE_BACKEND_URL = window.location.origin;
   </script>
-  <script src="youtube-live.js?v=4.2"></script>
+  <script src="youtube-live.js?v=4.3"></script>
+  <script defer src="overlay-relay.js?v=1.0"></script>
 </head>
 <body class="chat-page">
   <div class="chat-container has-bg" id="chat-container"></div>
