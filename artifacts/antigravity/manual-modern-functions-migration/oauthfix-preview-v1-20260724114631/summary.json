@@ -1,0 +1,64 @@
+{
+  "timestampUtc": "2026-07-24T11:46:31.694Z",
+  "branch": "fix/migrate-oauth-to-modern-netlify-functions",
+  "operationSucceeded": true,
+  "callbackWhitelistApplied": true,
+  "testsPassed": true,
+  "previewDeployCompleted": true,
+  "deployId": "6a635089840332d366860755",
+  "productionUrl": "https://apexscorpio-youtube-scraper-6e2678f9.netlify.app",
+  "previewUrl": "https://oauthfix--apexscorpio-youtube-scraper-6e2678f9.netlify.app",
+  "oauthStartUrl": "https://oauthfix--apexscorpio-youtube-scraper-6e2678f9.netlify.app/oauth/youtube/start",
+  "productionRedirectUri": "https://apexscorpio-youtube-scraper-6e2678f9.netlify.app/oauth/youtube/callback",
+  "previewRedirectUri": "https://oauthfix--apexscorpio-youtube-scraper-6e2678f9.netlify.app/oauth/youtube/callback",
+  "productionDeployAttempted": false,
+  "productionDeployCreditsConsumed": false,
+  "clientIdStoredInReport": false,
+  "clientSecretStoredInReport": false,
+  "accessTokenStoredInReport": false,
+  "refreshTokenStoredInReport": false,
+  "error": null,
+  "probes": {
+    "oauthStart": {
+      "name": "oauthStart",
+      "url": "https://oauthfix--apexscorpio-youtube-scraper-6e2678f9.netlify.app/oauth/youtube/start",
+      "httpStatus": 200,
+      "accepted": true,
+      "body": "\n        <!DOCTYPE html>\n        <html lang=\"pt\">\n        <head><meta charset=\"UTF-8\"><title>Início de Configuração OAuth</title>\n        <style>\n          body{font-family:sans-serif;background:#0f172a;color:#f8fafc;display:flex;justify-content:center;align-items:center;height:100vh;margin:0;}\n          .card{background:#1e293b;padding:2rem;border-radius:12px;box-shadow:0 10px 25px rgba(0,0,0,0.5);width:100%;max-width:400px;border:1px solid #334155;}\n          h2{color:#f43f5e;margin-top:0;font-size:1.4rem;}\n          p{color:#94a3b8;font-size:0.9rem;}\n          label{display:block;margin-top:1rem;color:#cbd5e1;font-size:0.85rem;font-weight:bold;}\n          input[type=\"password\"]{width:100%;padding:0.75rem;margin-top:0.4rem;border-radius:6px;border:1px solid #475569;background:#0f172a;color:#fff;box-sizing:border-box;}\n          button{width:100%;padding:0.75rem;margin-top:1.5rem;border-radius:6px;border:none;background:#2563eb;color:#fff;font-weight:bold;cursor:pointer;}\n          button:hover{background:#1d4ed8;}\n        </style>\n        </head>\n        <body>\n          <div class=\"card\">\n            <h2>Autenticação de Configuração</h2>\n            <p>Insira a palavra-passe administrativa para iniciar a autorização oficial no Google Cloud.</p>\n            <form method=\"POST\" action=\"/oauth/youtube/start\">\n              <label for=\"password\">Palavra-passe de Setup:</label>\n              <input type=\"password\" id=\"password\" name=\"password\" required autocomplete=\"current-password\" />\n              <button type=\"submit\">Autenticar e Iniciar OAuth</button>\n            </form>\n          </div>\n        </body>\n        </html>\n      ",
+      "error": null
+    },
+    "diagnostic": {
+      "name": "diagnostic",
+      "url": "https://oauthfix--apexscorpio-youtube-scraper-6e2678f9.netlify.app/oauth/youtube/callback?diagnostic=safe",
+      "httpStatus": 200,
+      "accepted": true,
+      "body": "{\n  \"status\": \"error\",\n  \"stage\": \"youtube_channel_lookup\",\n  \"httpStatus\": 403,\n  \"code\": \"quotaExceeded\",\n  \"detail\": \"The request cannot be completed because you have exceeded your <a href=\\\"/youtube/v3/getting-started#quota\\\">quota</a>.\",\n  \"updatedAt\": \"2026-07-24T09:44:49.972Z\"\n}",
+      "error": null
+    },
+    "youtubeStatus": {
+      "name": "youtubeStatus",
+      "url": "https://oauthfix--apexscorpio-youtube-scraper-6e2678f9.netlify.app/youtube-status",
+      "httpStatus": 200,
+      "accepted": true,
+      "body": "{\n  \"isLive\": false,\n  \"videoId\": null,\n  \"viewers\": null,\n  \"viewerState\": \"confirmed\",\n  \"title\": \"\",\n  \"liveChatId\": null,\n  \"confidence\": \"medium\",\n  \"source\": \"youtube-multisource-consensus\",\n  \"updatedAt\": \"2026-07-24T11:46:30.598Z\",\n  \"error\": null,\n  \"sources\": {\n    \"oauthBroadcast\": {\n      \"status\": \"unknown\",\n      \"observedAt\": \"2026-07-24T11:46:30.598Z\",\n      \"error\": \"OAuth credentials or access_token not available\"\n    },\n    \"oauthVideo\": {\n      \"status\": \"unknown\",\n      \"observedAt\": \"2026-07-24T11:46:30.598Z\",\n      \"error\": \"videoId or accessToken missing\"\n    },\n    \"player\": {\n      \"status\": \"unknown\",\n      \"observedAt\": \"2026-07-24T11:46:30.598Z\",\n      \"error\": \"videoId missing\"\n    },\n    \"next\": {\n      \"status\": \"unknown\",\n      \"observedAt\": \"2026-07-24T11:46:30.598Z\",\n      \"error\": \"videoId missing\"\n    },\n    \"html\": {\n      \"status\": \"confirmed\",\n      \"observedAt\": \"2026-07-24T11:46:25.583Z\",\n      \"resolvedUrl\": \"https://www.youtube.com/@apexscorpio\",\n      \"checkedIdsCount\": 99,\n      \"checkedIds\": [\n        \"a9XO-1Xi0-M\",\n        \"0bDpBd_HZsk\",\n        \"uXCV8AKgKGk\",\n        \"XGvkdFtBFec\",\n        \"30U1oucAcjg\"\n      ],\n      \"videoId\": null,\n      \"title\": \"\",\n      \"viewerText\": null,\n      \"viewers\": null,\n      \"isLive\": false\n    }\n  },\n  \"diagnostic\": {\n    \"version\": \"6.0\",\n    \"liveSignalsCount\": 0,\n    \"validViewerSourcesCount\": 0,\n    \"cached\": false\n  }\n}",
+      "error": null
+    },
+    "youtubeChat": {
+      "name": "youtubeChat",
+      "url": "https://oauthfix--apexscorpio-youtube-scraper-6e2678f9.netlify.app/youtube-chat",
+      "httpStatus": 503,
+      "accepted": true,
+      "body": "{\"active\":false,\"chatAvailable\":false,\"error\":\"OAuth do YouTube ainda não está configurado\"}",
+      "error": null
+    }
+  },
+  "progressBefore": 99,
+  "progressAfter": 99.5,
+  "nextAction": [
+    "Concluir a autorização no endereço oauthfix.",
+    "Selecionar a identidade Apex Scorpio.",
+    "Responder apenas feito.",
+    "Confirmar o OAuth e as rotas temporárias.",
+    "Fazer um único deploy de produção após a reposição dos créditos."
+  ]
+}
