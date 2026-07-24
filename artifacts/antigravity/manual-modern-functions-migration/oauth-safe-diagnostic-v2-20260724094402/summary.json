@@ -1,0 +1,26 @@
+{
+  "timestampUtc": "2026-07-24T09:44:02.827Z",
+  "branch": "fix/migrate-oauth-to-modern-netlify-functions",
+  "operationSucceeded": true,
+  "diagnosticPatchApplied": true,
+  "testsPassed": true,
+  "productionDeployCompleted": true,
+  "deployId": "6a6333d47cac9a7014505964",
+  "productionUrl": "https://apexscorpio-youtube-scraper-6e2678f9.netlify.app",
+  "oauthStartUrl": "https://apexscorpio-youtube-scraper-6e2678f9.netlify.app/oauth/youtube/start",
+  "safeDiagnosticUrl": "https://apexscorpio-youtube-scraper-6e2678f9.netlify.app/oauth/youtube/callback?diagnostic=safe",
+  "rawAuthorizationCodeStored": false,
+  "accessTokenStoredInDiagnostic": false,
+  "refreshTokenStoredInDiagnostic": false,
+  "clientSecretStoredInDiagnostic": false,
+  "error": null,
+  "progressBefore": 98,
+  "progressAfter": 99,
+  "nextAction": [
+    "Concluir uma nova autorização OAuth.",
+    "Responder apenas feito.",
+    "Consultar o diagnóstico seguro.",
+    "Corrigir a causa exata.",
+    "Remover o diagnóstico temporário."
+  ]
+}

@@ -59,6 +59,45 @@ exports.handler = async function(event, context, customStores = null, customAxio
     };
   }
 
+  if (event.httpMethod === 'GET' && event.queryStringParameters?.diagnostic === 'safe') {
+    let diagnostic = null;
+
+    try {
+      diagnostic = await secretsStore.get('oauth-last-safe-diagnostic-v2', { type: 'json' });
+    } catch (_secretsDiagnosticReadError) {
+      // Tentar a store de sessões como redundância.
+    }
+
+    if (!diagnostic) {
+      try {
+        diagnostic = await sessionsStore.get('oauth-last-safe-diagnostic-v2', { type: 'json' });
+      } catch (_sessionsDiagnosticReadError) {
+        // A resposta abaixo continuará em estado pendente.
+      }
+    }
+
+    return {
+      statusCode: 200,
+      headers: {
+        'Content-Type': 'application/json; charset=utf-8',
+        'Cache-Control': 'no-store, no-cache, must-revalidate',
+        'X-Content-Type-Options': 'nosniff'
+      },
+      body: JSON.stringify(
+        diagnostic || {
+          status: 'pending',
+          stage: null,
+          httpStatus: null,
+          code: null,
+          detail: 'Ainda não existe um diagnóstico para a tentativa atual.',
+          updatedAt: null
+        },
+        null,
+        2
+      )
+    };
+  }
+
   const code = event.queryStringParameters?.code;
   const state = event.queryStringParameters?.state;
   const error = event.queryStringParameters?.error;
@@ -164,6 +203,8 @@ exports.handler = async function(event, context, customStores = null, customAxio
   }
 
   // Executar trocas e gravações terminais garantindo eliminação final da sessão
+  let processingStage = 'token_exchange';
+
   try {
     const tokenResp = await http.post(
       'https://oauth2.googleapis.com/token',
@@ -181,6 +222,8 @@ exports.handler = async function(event, context, customStores = null, customAxio
       }
     );
 
+    processingStage = 'token_response_validation';
+
     const refreshToken = tokenResp.data?.refresh_token;
     const accessToken = tokenResp.data?.access_token;
 
@@ -194,6 +237,8 @@ exports.handler = async function(event, context, customStores = null, customAxio
         body: `<h2>Tokens Incompletos</h2><p>A resposta de autorização não incluiu o refresh token e o access token simultaneamente. Repita o processo com consentimento.</p>`
       };
     }
+
+    processingStage = 'youtube_channel_lookup';
 
     const channelResp = await http.get(
       'https://www.googleapis.com/youtube/v3/channels?part=id,snippet&mine=true',
@@ -215,21 +260,27 @@ exports.handler = async function(event, context, customStores = null, customAxio
       };
     }
 
+    processingStage = 'token_encryption';
+
     const randomTokenKey = `token-v-${crypto.randomBytes(8).toString('hex')}`;
     const encryptedPayload = encryptRefreshToken(refreshToken, encryptionKey);
 
+    processingStage = 'blob_token_write';
     await secretsStore.setJSON(randomTokenKey, encryptedPayload);
 
+    processingStage = 'blob_token_readback';
     const verifiedBlob = await secretsStore.get(randomTokenKey, { type: 'json' });
     if (!verifiedBlob || !verifiedBlob.iv || !verifiedBlob.ciphertext || !verifiedBlob.authTag) {
       throw new Error('Falha na leitura de verificação do Blob cifrado');
     }
 
+    processingStage = 'blob_token_decrypt_verify';
     const decryptedVerificationToken = decryptRefreshToken(verifiedBlob, encryptionKey);
     if (!decryptedVerificationToken || !safeCompare(decryptedVerificationToken, refreshToken)) {
       throw new Error('Falha na verificação de decifragem do token gravado');
     }
 
+    processingStage = 'blob_config_write';
     const expectedChannelIdHash = crypto.createHash('sha256').update(expectedChannelId).digest('hex');
     await secretsStore.setJSON('oauth-config', {
       version: '1.0',
@@ -264,6 +315,72 @@ exports.handler = async function(event, context, customStores = null, customAxio
     };
 
   } catch (err) {
+    const responseStatus = Number(err?.response?.status || 0) || null;
+    const responseData = err?.response?.data;
+
+    const providerCode =
+      typeof responseData?.error === 'string'
+        ? responseData.error
+        : typeof responseData?.error?.status === 'string'
+          ? responseData.error.status
+          : typeof responseData?.error?.errors?.[0]?.reason === 'string'
+            ? responseData.error.errors[0].reason
+            : null;
+
+    const providerDescription =
+      typeof responseData?.error_description === 'string'
+        ? responseData.error_description
+        : typeof responseData?.error?.message === 'string'
+          ? responseData.error.message
+          : typeof err?.message === 'string'
+            ? err.message
+            : 'erro desconhecido';
+
+    const internalCode =
+      typeof err?.code === 'string'
+        ? err.code
+        : null;
+
+    const safeDetail = String(providerDescription)
+      .replace(/ya29\.[A-Za-z0-9._-]+/g, '[REDACTED]')
+      .replace(/1\/\/[A-Za-z0-9._-]+/g, '[REDACTED]')
+      .replace(/[A-Za-z0-9._-]{48,}/g, '[REDACTED]')
+      .slice(0, 500);
+
+    const diagnostic = {
+      status: 'error',
+      stage: processingStage,
+      httpStatus: responseStatus,
+      code: providerCode || internalCode,
+      detail: safeDetail,
+      updatedAt: new Date().toISOString()
+    };
+
+    let diagnosticStored = false;
+
+    try {
+      await secretsStore.setJSON('oauth-last-safe-diagnostic-v2', diagnostic);
+      diagnosticStored = true;
+    } catch (_secretsDiagnosticWriteError) {
+      // Usar a store temporária como redundância.
+    }
+
+    if (!diagnosticStored) {
+      try {
+        await sessionsStore.setJSON('oauth-last-safe-diagnostic-v2', diagnostic);
+        diagnosticStored = true;
+      } catch (diagnosticStoreError) {
+        diagnostic.diagnosticStore = typeof diagnosticStoreError?.message === 'string'
+          ? diagnosticStoreError.message.slice(0, 250)
+          : 'falha desconhecida';
+      }
+    }
+
+    console.error(
+      '[youtube-oauth-callback-safe-diagnostic-v2]',
+      JSON.stringify(diagnostic)
+    );
+
     return {
       statusCode: 500,
       headers: {
