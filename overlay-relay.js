@@ -49,6 +49,41 @@
     }
   }
 
+  async function load(overlayName) {
+    if (!validOverlayName(overlayName)) {
+      return null;
+    }
+
+    try {
+      const response = await fetch(
+        ENDPOINT +
+          '?overlay=' +
+          encodeURIComponent(overlayName) +
+          '&cb=' +
+          Date.now(),
+        {
+          cache: 'no-store'
+        }
+      );
+
+      if (!response.ok) {
+        return null;
+      }
+
+      const data = await response.json();
+
+      return (
+        data &&
+        data.config &&
+        typeof data.config === 'object'
+      )
+        ? data.config
+        : null;
+    } catch (_) {
+      return null;
+    }
+  }
+
   function deliver(overlayName, config) {
     global.postMessage(
       {
@@ -150,6 +185,7 @@
 
   global.ApexOverlayRelay = {
     save,
+    load,
     start
   };
 

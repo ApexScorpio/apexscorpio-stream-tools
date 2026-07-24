@@ -13,7 +13,7 @@
     window.APEX_YOUTUBE_BACKEND_URL = window.APEX_BACKEND_URL;
   </script>
   <script src="youtube-live.js?v=4.4"></script>
-  <script defer src="overlay-relay.js?v=1.1"></script>
+  <script defer src="overlay-relay.js?v=1.2"></script>
 </head>
 <body class="chat-page">
   <div class="chat-container has-bg" id="chat-container"></div>
@@ -32,6 +32,19 @@
     function normalizeFadeSeconds(value) {
       const seconds = Number(value);
       return Number.isFinite(seconds) && seconds > 0 ? seconds : 0;
+    }
+
+    function normalizeMaxMessages(value) {
+      const parsed = Math.floor(Number(value));
+
+      if (!Number.isFinite(parsed)) {
+        return 50;
+      }
+
+      return Math.max(
+        1,
+        Math.min(50, parsed)
+      );
     }
 
     function cancelMessageExpiry(element) {
@@ -53,6 +66,7 @@
       if (updatedAt > 0) lastConfigUpdatedAt = updatedAt;
       cfg = { ...cfg, ...config };
       cfg.fadeSeconds = normalizeFadeSeconds(cfg.fadeSeconds);
+      cfg.maxMessages = normalizeMaxMessages(cfg.maxMessages);
       applyConfig();
     }
 
@@ -75,7 +89,10 @@
       if (p.has('bg')) cfg.showBg = p.get('bg') === '1' || p.get('bg') === 'true';
       if (p.has('bdg')) cfg.showBadges = p.get('bdg') === '1' || p.get('bdg') === 'true';
       if (p.has('fs')) cfg.fontSize = Number(p.get('fs')) || 14;
-      if (p.has('max')) cfg.maxMessages = Number(p.get('max')) || 50;
+      if (p.has('max')) {
+        cfg.maxMessages =
+          normalizeMaxMessages(p.get('max'));
+      }
     }
 
     const icons = {
@@ -292,7 +309,11 @@
 
     function applyConfig() {
       cfg.fadeSeconds = normalizeFadeSeconds(cfg.fadeSeconds);
-      if (cfg.fadeSeconds === 0) cancelAllMessageExpiries();
+      cfg.maxMessages = normalizeMaxMessages(cfg.maxMessages);
+
+      if (cfg.fadeSeconds === 0) {
+        cancelAllMessageExpiries();
+      }
 
       if (cfg.showBg) {
         chatContainer.classList.add('has-bg');
@@ -308,8 +329,22 @@
         msg.classList.toggle('mode-compact', cfg.displayMode === 'compact');
       });
       chatContainer.querySelectorAll('.chat-text').forEach(el => {
-        el.style.fontSize = (cfg.fontSize || 14) + 'px';
+        el.style.fontSize =
+          (cfg.fontSize || 14) + 'px';
       });
+
+      while (
+        chatContainer.children.length >
+        cfg.maxMessages
+      ) {
+        cancelMessageExpiry(
+          chatContainer.firstChild
+        );
+
+        chatContainer.removeChild(
+          chatContainer.firstChild
+        );
+      }
     }
 
     function addMsg(msg, platform) {
@@ -341,7 +376,10 @@
       chatContainer.appendChild(el);
       chatContainer.scrollTop = chatContainer.scrollHeight;
 
-      while (chatContainer.children.length > (cfg.maxMessages || 50)) {
+      while (
+        chatContainer.children.length >
+        normalizeMaxMessages(cfg.maxMessages)
+      ) {
         cancelMessageExpiry(chatContainer.firstChild);
         chatContainer.removeChild(chatContainer.firstChild);
       }

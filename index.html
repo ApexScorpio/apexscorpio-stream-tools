@@ -9,6 +9,12 @@
   <title>ApexScorpio - Central de Overlays v7</title><!-- cache-bust:2026-07-22T16 -->
   <link rel="stylesheet" href="css/style.css?v=7.1">
   <script src="https://cdn.jsdelivr.net/npm/mqtt@5.3.4/dist/mqtt.min.js"></script>
+  <script>
+    window.APEX_BACKEND_URL = 'https://apexscorpio-stream-tools.scorpioapex.workers.dev';
+    window.APEX_YOUTUBE_BACKEND_URL =
+      window.APEX_BACKEND_URL;
+  </script>
+  <script defer src="overlay-relay.js?v=1.2"></script>
   <style>
     body {
       background: #08080C;
@@ -262,7 +268,7 @@
         <span style="background: #38BDF8; color: #08080C; font-size: 12px; font-weight: 900; padding: 4px 12px; border-radius: 6px; box-shadow: 0 0 10px rgba(56,189,248,0.4);">📐 Resolução no SLOBS: Largura = 600px | Altura = 90px</span>
       </div>
       <div style="display: flex; gap: 8px; align-items: center; margin-bottom: 16px;">
-        <input type="text" readonly class="url-box" id="url-viewers" value="https://apexscorpio.github.io/apexscorpio-stream-tools/viewers.html?v=4.4" style="margin-top: 0; margin-bottom: 0;">
+        <input type="text" readonly class="url-box" id="url-viewers" value="https://apexscorpio.github.io/apexscorpio-stream-tools/viewers.html?v=4.5" style="margin-top: 0; margin-bottom: 0;">
         <button class="btn" style="padding: 8px 14px; font-size: 12px; white-space: nowrap; height: 38px;" onclick="copyUrl('url-viewers', this)">📋 Copiar URL</button>
       </div>
 
@@ -327,13 +333,15 @@
               <option value="16">Grande (16px)</option>
               <option value="18">Extra Grande (18px)</option>
             </select>
+              <label style="margin-top: 6px;">Número máximo de pills apresentadas:</label>
+              <input type="number" min="1" max="50" step="1" value="50" class="opt-input" id="chat-max-pills" onchange="saveChatConfig()">
           </div>
         </div>
       </div>
 
       <label style="font-weight: 700; font-size: 13px; color: #94A3B8; text-transform: uppercase;">URL para o Streamlabs OBS (Browser Source - 440x580):</label>
       <div style="display: flex; gap: 8px; align-items: center; margin-bottom: 16px; margin-top: 6px;">
-        <input type="text" readonly class="url-box" id="url-chat" value="https://apexscorpio.github.io/apexscorpio-stream-tools/chat.html?v=4.4" style="margin-top: 0; margin-bottom: 0;">
+        <input type="text" readonly class="url-box" id="url-chat" value="https://apexscorpio.github.io/apexscorpio-stream-tools/chat.html?v=4.5" style="margin-top: 0; margin-bottom: 0;">
         <button class="btn" style="padding: 8px 14px; font-size: 12px; white-space: nowrap; height: 38px;" onclick="copyUrl('url-chat', this)">📋 Copiar URL</button>
       </div>
 
@@ -391,7 +399,7 @@
 
       <label style="font-weight: 700; font-size: 13px; color: #94A3B8; text-transform: uppercase;">URL para o Streamlabs OBS (Browser Source - 380x460):</label>
       <div style="display: flex; gap: 8px; align-items: center; margin-bottom: 16px; margin-top: 6px;">
-        <input type="text" readonly class="url-box" id="url-events" value="https://apexscorpio.github.io/apexscorpio-stream-tools/events.html?v=4.4" style="margin-top: 0; margin-bottom: 0;">
+        <input type="text" readonly class="url-box" id="url-events" value="https://apexscorpio.github.io/apexscorpio-stream-tools/events.html?v=4.5" style="margin-top: 0; margin-bottom: 0;">
         <button class="btn" style="padding: 8px 14px; font-size: 12px; white-space: nowrap; height: 38px;" onclick="copyUrl('url-events', this)">📋 Copiar URL</button>
       </div>
 
@@ -450,7 +458,7 @@
         <span style="background: #38BDF8; color: #08080C; font-size: 12px; font-weight: 900; padding: 4px 12px; border-radius: 6px; box-shadow: 0 0 10px rgba(56,189,248,0.4);">📐 Resolução no SLOBS: Largura = 600px | Altura = 300px</span>
       </div>
       <div style="display: flex; gap: 8px; align-items: center; margin-bottom: 16px;">
-        <input type="text" readonly class="url-box" id="url-alerts" value="https://apexscorpio.github.io/apexscorpio-stream-tools/alerts.html?v=4.4" style="margin-top: 0; margin-bottom: 0;">
+        <input type="text" readonly class="url-box" id="url-alerts" value="https://apexscorpio.github.io/apexscorpio-stream-tools/alerts.html?v=4.5" style="margin-top: 0; margin-bottom: 0;">
         <button class="btn" style="padding: 8px 14px; font-size: 12px; white-space: nowrap; height: 38px;" onclick="copyUrl('url-alerts', this)">📋 Copiar URL</button>
       </div>
 
@@ -553,7 +561,6 @@
       'wss://broker.emqx.io:8084/mqtt'
     ];
     let activeClients = [];
-    let savedChatConfigRepublished = false;
 
     if (typeof mqtt !== 'undefined') {
       MQTT_BROKERS.forEach(url => {
@@ -568,10 +575,6 @@
             if (badge) {
               badge.style.color = '#10B981';
               badge.innerText = '● CLOUD RELAY ATIVO (Porta 443 WSS)';
-            }
-            if (!savedChatConfigRepublished && restoreChatControls()) {
-              savedChatConfigRepublished = true;
-              saveChatConfig();
             }
           });
           activeClients.push(client);
@@ -668,20 +671,32 @@
     }
 
     function updatePublicUrls() {
-      const isLocal = window.location.protocol === 'file:';
-      const baseUrl = isLocal
-        ? window.location.href.replace('index.html', '').replace(/#.*$/, '').replace(/\?.*$/, '')
-        : 'https://apexscorpio.github.io/apexscorpio-stream-tools/';
+      const baseUrl =
+        'https://apexscorpio.github.io/apexscorpio-stream-tools/';
 
-      document.getElementById('url-viewers').value = `${baseUrl}viewers.html`;
-      document.getElementById('url-chat').value = `${baseUrl}chat.html`;
-      document.getElementById('url-events').value = `${baseUrl}events.html`;
-      document.getElementById('url-alerts').value = `${baseUrl}alerts.html`;
+      document.getElementById('url-viewers').value =
+        baseUrl + 'viewers.html?v=4.5';
 
-      document.getElementById('url-starting').value = `${baseUrl}starting.html`;
-      document.getElementById('url-brb').value = `${baseUrl}brb.html`;
-      document.getElementById('url-technical').value = `${baseUrl}technical.html`;
-      document.getElementById('url-ending').value = `${baseUrl}ending.html`;
+      document.getElementById('url-chat').value =
+        baseUrl + 'chat.html?v=4.5';
+
+      document.getElementById('url-events').value =
+        baseUrl + 'events.html?v=4.5';
+
+      document.getElementById('url-alerts').value =
+        baseUrl + 'alerts.html?v=4.5';
+
+      document.getElementById('url-starting').value =
+        baseUrl + 'starting.html';
+
+      document.getElementById('url-brb').value =
+        baseUrl + 'brb.html';
+
+      document.getElementById('url-technical').value =
+        baseUrl + 'technical.html';
+
+      document.getElementById('url-ending').value =
+        baseUrl + 'ending.html';
     }
 
     function toggleDrawer(id) {
@@ -703,68 +718,253 @@
       publishConfig('viewers', cfg);
     }
 
-    function restoreChatControls() {
-      try {
-        const saved = localStorage.getItem('apex_cfg_chat');
-        if (!saved) return false;
-        const config = JSON.parse(saved);
-        document.getElementById('chat-twitch').checked = config.showTwitch !== false;
-        document.getElementById('chat-youtube').checked = config.showYoutube !== false;
-        document.getElementById('chat-facebook').checked = config.showFacebook !== false;
-        document.getElementById('chat-mode').value = config.displayMode || 'pill';
-        document.getElementById('chat-fade').value = String(Number(config.fadeSeconds) > 0 ? Number(config.fadeSeconds) : 0);
-        document.getElementById('chat-bg').checked = config.showBg !== false;
-        document.getElementById('chat-badges').checked = config.showBadges !== false;
-        document.getElementById('chat-fontsize').value = String(Number(config.fontSize) || 14);
-        return true;
-      } catch(e) {
+
+    function setChecked(id, value, fallback = true) {
+      const element = document.getElementById(id);
+      if (!element) return;
+      element.checked =
+        value === undefined
+          ? fallback
+          : value !== false;
+    }
+
+    function setValue(id, value, fallback) {
+      const element = document.getElementById(id);
+      if (!element) return;
+
+      const selected =
+        value === undefined ||
+        value === null ||
+        value === ''
+          ? fallback
+          : value;
+
+      element.value = String(selected);
+    }
+
+    function normalizeDashboardMaxPills(value) {
+      const parsed = Math.floor(Number(value));
+
+      if (!Number.isFinite(parsed)) {
+        return 50;
+      }
+
+      return Math.max(
+        1,
+        Math.min(50, parsed)
+      );
+    }
+
+    function applyControls(
+      overlayName,
+      config
+    ) {
+      if (
+        !config ||
+        typeof config !== 'object'
+      ) {
         return false;
+      }
+
+      if (overlayName === 'viewers') {
+        setChecked('vw-twitch', config.showTwitch);
+        setChecked('vw-youtube', config.showYoutube);
+        setChecked('vw-facebook', config.showFacebook);
+        setChecked('vw-total', config.showTotal);
+        setChecked('vw-bg', config.showBg);
+        setValue('vw-layout', config.layout, 'horizontal');
+        setValue('vw-fontsize', config.fontSize, 15);
+      }
+
+      if (overlayName === 'chat') {
+        setChecked('chat-twitch', config.showTwitch);
+        setChecked('chat-youtube', config.showYoutube);
+        setChecked('chat-facebook', config.showFacebook);
+        setValue(
+          'chat-mode',
+          config.displayMode,
+          'pill'
+        );
+        setValue(
+          'chat-fade',
+          Number(config.fadeSeconds) > 0
+            ? Number(config.fadeSeconds)
+            : 0,
+          0
+        );
+        setChecked('chat-bg', config.showBg);
+        setChecked('chat-badges', config.showBadges);
+        setValue(
+          'chat-fontsize',
+          Number(config.fontSize) || 14,
+          14
+        );
+        setValue(
+          'chat-max-pills',
+          normalizeDashboardMaxPills(
+            config.maxMessages
+          ),
+          50
+        );
+      }
+
+      if (overlayName === 'events') {
+        setChecked('evt-twitch', config.showTwitch);
+        setChecked('evt-youtube', config.showYoutube);
+        setChecked('evt-facebook', config.showFacebook);
+        setChecked('evt-logos', config.showLogos);
+        setChecked('evt-bg', config.showBg);
+        setValue('evt-max', config.maxItems, 8);
+      }
+
+      if (overlayName === 'alerts') {
+        setChecked('alt-twitch', config.showTwitch);
+        setChecked('alt-youtube', config.showYoutube);
+        setChecked('alt-facebook', config.showFacebook);
+        setChecked('alt-sound', config.playSound);
+        setValue(
+          'alt-duration',
+          config.durationSeconds,
+          5
+        );
+      }
+
+      if (overlayName === 'starting') {
+        setValue(
+          'st-timer',
+          config.timerMinutes,
+          5
+        );
+      }
+
+      return true;
+    }
+
+    function readLocalConfig(overlayName) {
+      try {
+        const raw = localStorage.getItem(
+          'apex_cfg_' + overlayName
+        );
+
+        return raw
+          ? JSON.parse(raw)
+          : null;
+      } catch (_) {
+        return null;
       }
     }
 
+    function restoreStoredControls(
+      overlayName
+    ) {
+      return applyControls(
+        overlayName,
+        readLocalConfig(overlayName)
+      );
+    }
+
+    function restoreAllControls() {
+      [
+        'viewers',
+        'chat',
+        'events',
+        'alerts',
+        'starting'
+      ].forEach(restoreStoredControls);
+    }
+
+    async function restoreCloudControls() {
+      const relay = window.ApexOverlayRelay;
+
+      if (
+        !relay ||
+        typeof relay.load !== 'function'
+      ) {
+        return;
+      }
+
+      await Promise.all(
+        [
+          'viewers',
+          'chat',
+          'events',
+          'alerts',
+          'starting'
+        ].map(async overlayName => {
+          const local =
+            readLocalConfig(overlayName);
+
+          const cloud =
+            await relay.load(overlayName);
+
+          const localUpdatedAt =
+            Number(local?._updatedAt || 0);
+
+          const cloudUpdatedAt =
+            Number(cloud?._updatedAt || 0);
+
+          const useCloud =
+            cloud &&
+            (
+              !local ||
+              cloudUpdatedAt >= localUpdatedAt
+            );
+
+          const selected =
+            useCloud
+              ? cloud
+              : local;
+
+          if (!selected) {
+            return;
+          }
+
+          try {
+            localStorage.setItem(
+              'apex_cfg_' + overlayName,
+              JSON.stringify(selected)
+            );
+          } catch (_) {}
+
+          applyControls(
+            overlayName,
+            selected
+          );
+
+          if (
+            local &&
+            (
+              !cloud ||
+              localUpdatedAt > cloudUpdatedAt
+            )
+          ) {
+            await relay.save(
+              overlayName,
+              local
+            );
+          }
+        })
+      );
+    }
+
+    function restoreChatControls() {
+      return restoreStoredControls('chat');
+    }
+
     function restoreViewersControls() {
-      try {
-        const saved = localStorage.getItem('apex_cfg_viewers');
-        if (!saved) return false;
-        const c = JSON.parse(saved);
-        if (document.getElementById('vw-twitch'))   document.getElementById('vw-twitch').checked   = c.showTwitch !== false;
-        if (document.getElementById('vw-youtube'))  document.getElementById('vw-youtube').checked  = c.showYoutube !== false;
-        if (document.getElementById('vw-facebook')) document.getElementById('vw-facebook').checked = c.showFacebook !== false;
-        if (document.getElementById('vw-total'))    document.getElementById('vw-total').checked    = c.showTotal !== false;
-        if (document.getElementById('vw-bg'))       document.getElementById('vw-bg').checked       = c.showBg !== false;
-        if (document.getElementById('vw-layout') && c.layout)   document.getElementById('vw-layout').value   = c.layout;
-        if (document.getElementById('vw-fontsize') && c.fontSize) document.getElementById('vw-fontsize').value = String(c.fontSize);
-        return true;
-      } catch(e) { return false; }
+      return restoreStoredControls('viewers');
     }
 
     function restoreEventsControls() {
-      try {
-        const saved = localStorage.getItem('apex_cfg_events');
-        if (!saved) return false;
-        const c = JSON.parse(saved);
-        if (document.getElementById('evt-twitch'))   document.getElementById('evt-twitch').checked   = c.showTwitch !== false;
-        if (document.getElementById('evt-youtube'))  document.getElementById('evt-youtube').checked  = c.showYoutube !== false;
-        if (document.getElementById('evt-facebook')) document.getElementById('evt-facebook').checked = c.showFacebook !== false;
-        if (document.getElementById('evt-logos'))    document.getElementById('evt-logos').checked    = c.showLogos !== false;
-        if (document.getElementById('evt-bg'))       document.getElementById('evt-bg').checked       = c.showBg !== false;
-        if (document.getElementById('evt-max') && c.maxItems) document.getElementById('evt-max').value = String(c.maxItems);
-        return true;
-      } catch(e) { return false; }
+      return restoreStoredControls('events');
     }
 
     function restoreAlertsControls() {
-      try {
-        const saved = localStorage.getItem('apex_cfg_alerts');
-        if (!saved) return false;
-        const c = JSON.parse(saved);
-        if (document.getElementById('alt-twitch'))   document.getElementById('alt-twitch').checked   = c.showTwitch !== false;
-        if (document.getElementById('alt-youtube'))  document.getElementById('alt-youtube').checked  = c.showYoutube !== false;
-        if (document.getElementById('alt-facebook')) document.getElementById('alt-facebook').checked = c.showFacebook !== false;
-        if (document.getElementById('alt-sound'))    document.getElementById('alt-sound').checked    = c.playSound !== false;
-        if (document.getElementById('alt-duration') && c.durationSeconds) document.getElementById('alt-duration').value = String(c.durationSeconds);
-        return true;
-      } catch(e) { return false; }
+      return restoreStoredControls('alerts');
+    }
+
+    function restoreStartingControls() {
+      return restoreStoredControls('starting');
     }
 
     function saveChatConfig() {
@@ -777,7 +977,11 @@
         showBg: document.getElementById('chat-bg').checked,
         showBadges: document.getElementById('chat-badges').checked,
         fontSize: Number(document.getElementById('chat-fontsize').value),
-        maxMessages: 50
+        maxMessages: normalizeDashboardMaxPills(
+          document.getElementById(
+            'chat-max-pills'
+          ).value
+        )
       };
       publishConfig('chat', cfg);
     }
@@ -985,10 +1189,8 @@
     });
     window.addEventListener('resize', fitPreviews);
     document.addEventListener('DOMContentLoaded', () => {
-      restoreChatControls();
-      restoreViewersControls();
-      restoreEventsControls();
-      restoreAlertsControls();
+      restoreAllControls();
+      restoreCloudControls();
       updatePublicUrls();
       fitPreviews();
     });
