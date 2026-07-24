@@ -1,6 +1,11 @@
 (function () {
   'use strict';
 
+  const YOUTUBE_BACKEND_BASE = String(
+    window.APEX_YOUTUBE_BACKEND_URL ||
+    window.location.origin
+  ).replace(/\/+$/, '');
+
   const root =
     document.getElementById('youtube-stats');
 
@@ -138,7 +143,7 @@
   async function refresh() {
     try {
       const response = await fetch(
-        '/youtube-status?cb=' + Date.now(),
+        YOUTUBE_BACKEND_BASE + '/youtube-status?cb=' + Date.now(),
         {
           cache: 'no-store',
           headers: {

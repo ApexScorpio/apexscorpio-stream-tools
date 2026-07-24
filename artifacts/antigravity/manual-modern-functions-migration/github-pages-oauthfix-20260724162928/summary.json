@@ -1,0 +1,16 @@
+{
+    "timestampUtc":  "2026-07-24T15:29:28.8044282Z",
+    "operationSucceeded":  true,
+    "testsPassed":  true,
+    "sourceBaseUrl":  "https://apexscorpio.github.io/apexscorpio-stream-tools/",
+    "youtubeBackend":  "https://oauthfix--apexscorpio-youtube-scraper-6e2678f9.netlify.app",
+    "sourceUrlsPreserved":  true,
+    "correctedSources":  [
+                             "chat.html",
+                             "viewers.html",
+                             "events.html",
+                             "alerts.html",
+                             "youtube-stats.html"
+                         ],
+    "progressAfter":  95
+}
