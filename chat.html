@@ -11,7 +11,7 @@
   <script>
     window.APEX_YOUTUBE_BACKEND_URL = 'https://oauthfix--apexscorpio-youtube-scraper-6e2678f9.netlify.app';
   </script>
-  <script src="youtube-live.js?v=4.0"></script>
+  <script src="youtube-live.js?v=4.1"></script>
 </head>
 <body class="chat-page">
   <div class="chat-container has-bg" id="chat-container"></div>
@@ -87,6 +87,7 @@
     const bc = typeof BroadcastChannel !== 'undefined' ? new BroadcastChannel('apex_scorpio_stream_tools') : null;
 
     const _seenIds = new Set();
+    const youtubeEventRelayClients = [];
     function _isDuplicate(type, payload) {
       const key = type + '|' + (payload?.id || '') + '|' + (payload?.username || '') + '|' + (payload?.message || payload?.msg?.message || '');
       if (_seenIds.has(key)) return true;
@@ -149,10 +150,14 @@
       MQTT_BROKERS.forEach(url => {
         try {
           const mqttClient = mqtt.connect(url, {
+            reconnectPeriod: 5000,
             clientId: 'scorpio_chat_' + Math.random().toString(16).substring(2, 8),
             connectTimeout: 4000,
             keepalive: 30
           });
+
+          youtubeEventRelayClients.push(mqttClient);
+
           mqttClient.on('connect', () => {
             mqttClient.subscribe('apexscorpio/streamtools/v1/#');
           });
@@ -360,14 +365,74 @@
       return d.innerHTML;
     }
 
+    function relayYoutubeEvent(event, attempt = 0) {
+      if (!event) return;
+
+      if (attempt === 0) {
+        if (bc) {
+          try {
+            bc.postMessage({
+              type: 'new_event',
+              data: event
+            });
+          } catch (_) {}
+        }
+
+        try {
+          localStorage.setItem(
+            'apex_event_new_event',
+            JSON.stringify({
+              payload: event,
+              timestamp: Date.now()
+            })
+          );
+        } catch (_) {}
+      }
+
+      const packet = JSON.stringify({
+        type: 'new_event',
+        payload: event,
+        timestamp: Date.now()
+      });
+
+      let published = 0;
+
+      youtubeEventRelayClients.forEach(client => {
+        try {
+          if (client.connected) {
+            client.publish(
+              'apexscorpio/streamtools/v1/events',
+              packet,
+              {
+                qos: 1,
+                retain: false
+              }
+            );
+
+            published += 1;
+          }
+        } catch (_) {}
+      });
+
+      if (published === 0 && attempt < 10) {
+        setTimeout(
+          () => relayYoutubeEvent(event, attempt + 1),
+          1000
+        );
+      }
+    }
     loadSavedConfig();
     applyConfig();
 
     // Start YouTube Live Chat (real messages from youtube.com/c/apexscorpio)
     if (typeof YoutubeLive !== 'undefined') {
       YoutubeLive.startChat(
-        (msg) => { if (cfg.showYoutube) addMsg(msg, 'youtube'); },
-        null // events handled by events.html
+        (msg) => {
+          if (cfg.showYoutube) {
+            addMsg(msg, 'youtube');
+          }
+        },
+        relayYoutubeEvent
       );
     }
   </script>

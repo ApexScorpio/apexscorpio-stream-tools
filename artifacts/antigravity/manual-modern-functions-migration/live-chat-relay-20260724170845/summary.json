@@ -1,0 +1,10 @@
+{
+    "timestampUtc":  "2026-07-24T16:08:45.2160947Z",
+    "operationSucceeded":  true,
+    "testsPassed":  true,
+    "youtubeChatPoller":  "chat.html only",
+    "youtubeEventRelay":  "MQTT and local fallback",
+    "mqttReconnectMillis":  5000,
+    "frontendVersion":  "4.1",
+    "progressAfter":  98
+}

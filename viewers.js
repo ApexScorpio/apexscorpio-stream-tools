@@ -259,10 +259,10 @@
     'wss://broker.emqx.io:8084/mqtt'
   ];
   if (typeof mqtt !== 'undefined') {
-    MQTT_BROKERS.slice(0, 1).forEach(url => {
+    MQTT_BROKERS.forEach(url => {
       try {
         const client = mqtt.connect(url, {
-          reconnectPeriod: 0,
+          reconnectPeriod: 5000,
           clientId: `scorpio_viewers_${Math.random().toString(16).slice(2, 8)}`,
           connectTimeout: 4000,
           keepalive: 30

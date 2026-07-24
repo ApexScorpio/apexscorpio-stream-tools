@@ -61,5 +61,5 @@ for (const relativeFile of frontendFiles) {
 }
 
 console.log(
-  'Netlify publish preparado em dist com frontend v4.0.'
+  'Netlify publish preparado em dist com frontend v4.1.'
 );

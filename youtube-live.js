@@ -1,5 +1,5 @@
 /**
- * ApexScorpio YouTube Live Module v4.0
+ * ApexScorpio YouTube Live Module v4.1
  *
  * Sticky live detection:
  * - the official YouTube iframe player is authoritative for online/offline;
