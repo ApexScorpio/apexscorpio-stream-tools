@@ -1,0 +1,319 @@
+<!doctype html>
+<html lang="pt">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Slideshow Halloween – Browser Source</title>
+  <style>
+    :root {
+      --transition-ms: 800;  /* Duração do fade */
+      --slide-ms: 4000;      /* Tempo de cada imagem em ms */
+      --fit: contain;        /* contain | cover */
+      --bg: transparent;     /* Pode ser "#000" se quiser fundo preto */
+    }
+
+    html, body {
+      height: 100%;
+    }
+
+    /* O Streamlabs/OBS usa o tamanho do Browser Source para recorte */
+    body {
+      margin: 0;
+      background: var(--bg);
+      overflow: hidden;
+      font-family: system-ui, -apple-system, Segoe UI, Roboto, Ubuntu, Cantarell, "Helvetica Neue", Arial, "Noto Sans", "Apple Color Emoji", "Segoe UI Emoji";
+    }
+
+    .stage {
+      position: relative;
+      width: 100vw;
+      height: 100vh;
+      isolation: isolate;
+    }
+
+    .slide {
+      position: absolute;
+      inset: 0;
+      display: grid;
+      place-items: center;
+      opacity: 0;
+      transition: opacity var(--transition-ms) linear;
+      will-change: opacity;
+    }
+
+    .slide.active { opacity: 1; }
+
+    .slide img {
+      width: 100%;
+      height: 100%;
+      object-fit: var(--fit); /* 'contain' evita cortes; 'cover' preenche cortando */
+      object-position: center center;
+      image-orientation: from-image;
+      image-rendering: auto;
+      -webkit-user-drag: none;
+      user-select: none;
+    }
+
+    /* Pequeno overlay temático opcional (pode desativar com overlay=false) */
+    .overlay { pointer-events: none; position: absolute; inset: 0; }
+    .overlay svg { position: absolute; opacity: .15; animation: float 12s ease-in-out infinite; }
+    .overlay .bat { top: 8%; left: 6%; width: 120px; }
+    .overlay .pumpkin { right: 4%; bottom: 6%; width: 140px; animation-delay: 2s; }
+    @keyframes float {
+      0% { transform: translateY(0px) rotate(0deg); }
+      50% { transform: translateY(-8px) rotate(-2deg); }
+      100% { transform: translateY(0px) rotate(0deg); }
+    }
+
+    /* Indicadores (ocultáveis: indicators=false) */
+    .dots {
+      position: absolute; left: 50%; bottom: 12px; transform: translateX(-50%);
+      display: flex; gap: 8px; filter: drop-shadow(0 1px 2px rgba(0,0,0,.6));
+    }
+    .dot { width: 8px; height: 8px; border-radius: 999px; background: rgba(255,255,255,.35); }
+    .dot.active { background: rgba(255,255,255,.95); }
+  </style>
+</head>
+<body>
+  <div class="stage" id="stage" aria-label="Slideshow Halloween" role="img">
+    <!-- Slides injetados via JS -->
+    <div class="overlay" id="overlay" aria-hidden="true" hidden>
+      <!-- Morcego -->
+      <svg class="bat" viewBox="0 0 64 32" fill="currentColor">
+        <path d="M19 16c-2-5-9-6-13-3 1-4 0-7-5-9 6-1 10 0 14 5 4-3 10-3 12 2 2-5 8-5 12-2 4-5 8-6 14-5-5 2-6 5-5 9-4-3-11-2-13 3 0 0-2 4-8 4s-8-4-8-4z"/>
+      </svg>
+      <!-- Abóbora -->
+      <svg class="pumpkin" viewBox="0 0 64 64" fill="currentColor">
+        <path d="M32 10c2-5 6-8 10-8-1 4-2 7-4 9 10 1 18 9 18 20 0 12-10 22-24 22S8 43 8 31c0-11 8-19 18-20-2-2-3-5-4-9 4 0 8 3 10 8z"/>
+      </svg>
+    </div>
+  </div>
+  <div class="dots" id="dots" hidden></div>
+
+  <script>
+    // ===================== CONFIG =====================
+    // 1) Edite IMAGES com as suas URLs OU passe via query (?imgs=url1|url2|url3)
+    // 2) Pode configurar: slideMs, transitionMs, fit, bg, shuffle, loop, indicators, overlay
+
+    const DEFAULTS = {
+      images: [
+        "assets/1.png",
+        "assets/2.png",
+        "assets/3.png",
+        "assets/4.png",
+        "assets/5.png",
+        "assets/6.png",
+        "assets/7.png",
+        "assets/8.png",
+        "assets/9.png",
+        "assets/10.png",
+        "assets/11.png",
+        "assets/12.png",
+        "assets/13.png",
+        "assets/14.png",
+        "assets/15.png",
+        "assets/16.png",
+        "assets/17.png",
+        "assets/18.png",
+        "assets/19.png",
+        "assets/20.png",
+        "assets/21.png",
+        "assets/22.png",
+        "assets/23.png",
+        "assets/24.png",
+        "assets/25.png",
+        "assets/26.png",
+        "assets/27.png",
+        "assets/28.png",
+        "assets/29.png",
+        "assets/30.png",
+        "assets/31.png",
+        "assets/32.png",
+        "assets/33.png",
+        "assets/34.png",
+        "assets/35.png",
+        "assets/36.png",
+        "assets/37.png",
+        "assets/38.png",
+        "assets/39.png",
+        "assets/40.png",
+        "assets/41.png",
+        "assets/42.png",
+        "assets/43.png",
+        "assets/44.png",
+        "assets/45.png",
+        "assets/46.png",
+        "assets/47.png",
+        "assets/48.png",
+        "assets/49.png",
+        "assets/50.png",
+        "assets/51.png",
+        "assets/52.png",
+        "assets/53.png",
+        "assets/54.png",
+        "assets/55.png",
+        "assets/56.png",
+        "assets/57.png",
+        "assets/58.png",
+        "assets/59.png",
+        "assets/60.png"
+      ],
+      slideMs: 4000,
+      transitionMs: 1200,
+      fit: 'contain',       // 'contain' ou 'cover'
+      bg: 'transparent',    // ex.: '#000'
+      shuffle: true,
+      loop: true,
+      indicators: true,
+      overlay: true
+    };
+
+    // Lê parâmetros de URL
+    const params = new URLSearchParams(location.search);
+
+    // imgs=url1|url2|url3
+    const urlImgs = params.get('imgs');
+    const IMAGES = urlImgs ? urlImgs.split('|').map(s => s.trim()).filter(Boolean) : DEFAULTS.images;
+
+    const SLIDE_MS = +(params.get('slideMs') ?? DEFAULTS.slideMs);
+    const TRANSITION_MS = +(params.get('transitionMs') ?? DEFAULTS.transitionMs);
+    let FIT = (params.get('fit') ?? DEFAULTS.fit);
+    // Garante que não corta por defeito; pode forçar cover com ?fit=cover
+    if ((params.get('nocrop') ?? 'true') === 'true') FIT = 'contain';
+    const BG = (params.get('bg') ?? DEFAULTS.bg);
+    const SHUFFLE = (params.get('shuffle') ?? String(DEFAULTS.shuffle)) === 'true';
+    const LOOP = (params.get('loop') ?? String(DEFAULTS.loop)) === 'true';
+    const SHOW_INDICATORS = (params.get('indicators') ?? String(DEFAULTS.indicators)) === 'true';
+    const SHOW_OVERLAY = (params.get('overlay') ?? String(DEFAULTS.overlay)) === 'true';
+
+    // Aplica CSS custom de runtime
+    document.documentElement.style.setProperty('--transition-ms', `${TRANSITION_MS}ms`);
+    document.documentElement.style.setProperty('--slide-ms', SLIDE_MS);
+    document.documentElement.style.setProperty('--fit', FIT);
+    document.documentElement.style.setProperty('--bg', BG);
+
+    // Utils
+    const wait = (ms) => new Promise(r => setTimeout(r, ms));
+    const shuffleInPlace = (arr) => {
+      for (let i = arr.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [arr[i], arr[j]] = [arr[j], arr[i]];
+      }
+      return arr;
+    };
+
+    // Estado
+    let current = -1;
+    let playing = true;
+    let timer = null;
+    let slides = [];
+
+    const stage = document.getElementById('stage');
+    const overlayEl = document.getElementById('overlay');
+    const dotsEl = document.getElementById('dots');
+
+    if (SHOW_OVERLAY) overlayEl.hidden = false;
+    if (SHOW_INDICATORS) dotsEl.hidden = false;
+
+    // Validação básica
+    if (!IMAGES.length) {
+      const msg = document.createElement('div');
+      msg.style.cssText = 'position:absolute;inset:0;display:grid;place-items:center;color:#fff;background:#0007;font:600 18px system-ui;';
+      msg.textContent = '⚠️ Sem imagens configuradas. Edite o ficheiro ou use ?imgs=url1|url2|url3';
+      stage.appendChild(msg);
+      throw new Error('No images configured');
+    }
+
+    const sources = SHUFFLE ? shuffleInPlace([...IMAGES]) : [...IMAGES];
+
+    // Preload + criar slides
+    const preloadImage = (src) => new Promise((resolve) => {
+      const img = new Image();
+      img.onload = () => resolve({ ok: true, img });
+      img.onerror = () => resolve({ ok: false, img: null, src });
+      img.src = src;
+    });
+
+    const makeSlide = (img) => {
+      const wrap = document.createElement('div');
+      wrap.className = 'slide';
+      wrap.appendChild(img);
+      return wrap;
+    };
+
+    (async function init() {
+      const results = await Promise.all(sources.map(preloadImage));
+      const okImages = results.filter(r => r.ok).map(r => r.img);
+
+      // Se alguma falhou, ignora e segue
+      const failed = results.filter(r => !r.ok);
+      if (failed.length && console) {
+        console.warn('Algumas imagens falharam e foram ignoradas:', failed.map(f => f.src));
+      }
+
+      // Cria indicadores
+      if (SHOW_INDICATORS) {
+        dotsEl.innerHTML = '';
+        okImages.forEach((_, i) => {
+          const d = document.createElement('div');
+          d.className = 'dot';
+          dotsEl.appendChild(d);
+        });
+      }
+
+      // Injeta slides
+      slides = okImages.map(makeSlide);
+      slides.forEach(s => stage.appendChild(s));
+
+      // Começa
+      nextSlide();
+    })();
+
+    function updateDots() {
+      if (!SHOW_INDICATORS) return;
+      const dots = [...dotsEl.children];
+      dots.forEach((d, i) => d.classList.toggle('active', i === current));
+    }
+
+    function show(index) {
+      slides.forEach((s, i) => s.classList.toggle('active', i === index));
+      current = index;
+      updateDots();
+    }
+
+    function nextSlide() {
+      if (!slides.length) return;
+      const next = (current + 1) % slides.length;
+      show(next);
+      schedule();
+    }
+
+    function prevSlide() {
+      if (!slides.length) return;
+      const prev = (current - 1 + slides.length) % slides.length;
+      show(prev);
+      schedule();
+    }
+
+    function schedule() {
+      clearTimeout(timer);
+      if (!playing) return;
+      if (!LOOP && current === slides.length - 1) return; // Para no fim se loop=false
+      timer = setTimeout(nextSlide, SLIDE_MS);
+    }
+
+    // Controlo por teclado (Stream Deck/HOTKEYS do OBS podem enviar)
+    window.addEventListener('keydown', (e) => {
+      if (e.code === 'Space') { playing = !playing; schedule(); }
+      if (e.code === 'ArrowRight') nextSlide();
+      if (e.code === 'ArrowLeft') prevSlide();
+    });
+
+    // Pausa quando o Browser Source perde foco/visibilidade (opcional)
+    document.addEventListener('visibilitychange', () => {
+      if (document.hidden) { playing = false; clearTimeout(timer); }
+      else { playing = true; schedule(); }
+    });
+  </script>
+</body>
+</html>
