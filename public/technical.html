@@ -5,7 +5,9 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>ApexScorpio - Technical Difficulties</title>
   <link rel="stylesheet" href="css/style.css">
+  <script src="overlay-session.js?v=1"></script>
   <script src="https://cdn.jsdelivr.net/npm/mqtt@5.3.4/dist/mqtt.min.js"></script>
+  <script src="secure-mqtt.js?v=1"></script>
   <style>
     body {
       background: #08080C;
@@ -107,7 +109,7 @@
       'wss://broker.emqx.io:8084/mqtt'
     ];
 
-    if (typeof mqtt !== 'undefined') {
+    if (typeof mqtt !== 'undefined' && window.ApexOverlaySession) {
       MQTT_BROKERS.forEach(url => {
         try {
           const mqttClient = mqtt.connect(url, {
@@ -116,8 +118,8 @@
             keepalive: 30
           });
           mqttClient.on('connect', () => {
-            mqttClient.subscribe('apexscorpio/streamtools/v1/cfg/#');
-            mqttClient.subscribe('apexscorpio/streamtools/v1/events/#');
+            mqttClient.subscribe((window.ApexOverlaySession.topic + '/cfg/#'));
+            mqttClient.subscribe((window.ApexOverlaySession.topic + '/events/#'));
           });
         } catch(e) {}
       });

@@ -7,7 +7,9 @@
   <meta http-equiv="Expires" content="0">
   <title>ApexScorpio - Unified Chat Overlay</title>
   <link rel="stylesheet" href="css/style.css?v=6.2">
+  <script src="overlay-session.js?v=1"></script>
   <script src="https://cdn.jsdelivr.net/npm/mqtt@5.3.4/dist/mqtt.min.js"></script>
+  <script src="secure-mqtt.js?v=1"></script>
   <script>
     window.APEX_BACKEND_URL = 'https://apexscorpio-stream-tools.scorpioapex.workers.dev';
     window.APEX_YOUTUBE_BACKEND_URL = window.APEX_BACKEND_URL;
@@ -165,7 +167,7 @@
       'wss://broker.emqx.io:8084/mqtt'
     ];
 
-    if (typeof mqtt !== 'undefined') {
+    if (typeof mqtt !== 'undefined' && window.ApexOverlaySession) {
       MQTT_BROKERS.forEach(url => {
         try {
           const mqttClient = mqtt.connect(url, {
@@ -178,16 +180,16 @@
           youtubeEventRelayClients.push(mqttClient);
 
           mqttClient.on('connect', () => {
-            mqttClient.subscribe('apexscorpio/streamtools/v1/#');
+            mqttClient.subscribe((window.ApexOverlaySession.topic + '/#'));
           });
           mqttClient.on('message', (topic, message) => {
             try {
               const data = JSON.parse(message.toString());
               const topicStr = String(topic).toLowerCase();
-              const dataStr = JSON.stringify(data).toLowerCase();
+              const command=String(data.type || data.payload?.type || "").toLowerCase();
 
-              if (topicStr.includes('clear') || dataStr.includes('clear')) {
-                doClearChat(data.onlyTests || topicStr.includes('test') || dataStr.includes('test'));
+              if (['clear_chat','clear_chat_test'].includes(command)) {
+                doClearChat(Boolean(data.onlyTests || data.payload?.onlyTests || command==='clear_chat_test'));
                 return;
               }
 
@@ -441,7 +443,7 @@
         try {
           if (client.connected) {
             client.publish(
-              'apexscorpio/streamtools/v1/events',
+              (window.ApexOverlaySession.topic + '/events'),
               packet,
               {
                 qos: 1,

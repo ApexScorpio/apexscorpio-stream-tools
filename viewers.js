@@ -39,7 +39,7 @@
   let realState = {
     twitch: { isLive: false, viewers: null, status: "confirmed" },
     youtube: { isLive: false, viewers: null, status: "confirmed" },
-    facebook: { isLive: false, viewers: null, status: "confirmed" },
+    facebook: { isLive: false, viewers: null, status: "unavailable" },
     totalText: "0"
   };
 
@@ -78,10 +78,12 @@
   function recalculateTotal() {
     let knownSum = 0;
     let hasNullViewerOnLive = false;
+    let unknown=false;
     let anyLive = false;
 
     for (const platform of ['twitch', 'youtube', 'facebook']) {
       const pState = realState[platform];
+      if(['unknown','unavailable','stale'].includes(pState?.status))unknown=true;
       if (pState && pState.isLive) {
         anyLive = true;
         if (pState.viewers !== null && pState.viewers !== undefined && !isNaN(pState.viewers)) {
@@ -93,8 +95,8 @@
     }
 
     if (!anyLive) {
-      realState.totalText = "0";
-    } else if (hasNullViewerOnLive) {
+      realState.totalText = unknown ? "—" : "0";
+    } else if (hasNullViewerOnLive || unknown) {
       realState.totalText = `≥${knownSum}`;
     } else {
       realState.totalText = `${knownSum}`;
@@ -122,7 +124,11 @@
   function renderStatus(state) {
     for (const platform of ['twitch', 'youtube', 'facebook']) {
       const current = state[platform] || { isLive: false, viewers: null };
-      if (!current.isLive) {
+      if(['unknown','unavailable','stale'].includes(current.status)){
+        dots[platform].classList.remove('online');
+        animateCount(counts[platform], '—');
+        pills[platform].title=platform==='facebook'?'Facebook: recolha de dados não ligada':'Dados temporariamente indisponíveis';
+      } else if (!current.isLive) {
         dots[platform].classList.remove('online');
         animateCount(counts[platform], 0);
       } else {
@@ -147,8 +153,10 @@
           variables: { login: 'apexscorpio' }
         })
       });
+      if(!response.ok)throw new Error('Twitch HTTP '+response.status);
       const data = await response.json();
-      const stream = data?.data?.user?.stream;
+      if(data.errors?.length || !data.data?.user || !Object.hasOwn(data.data.user,'stream'))throw new Error('Estado Twitch indisponível');
+      const stream = data.data.user.stream;
       if (stream && stream.type === 'live') {
         const rawCount = stream.viewersCount;
         const parsed = (rawCount !== null && rawCount !== undefined && !isNaN(rawCount)) ? Number(rawCount) : null;
@@ -164,7 +172,7 @@
       recalculateTotal();
       if (!isTestActive) renderStatus(realState);
     } catch (_) {
-      if (Date.now() - lastTwitchFetch > 30000) {
+      if (Date.now() - lastTwitchFetch > 30000 || !lastTwitchFetch) {
         realState.twitch.status = "stale";
         realState.twitch.viewers = null;
       }
@@ -258,7 +266,7 @@
     'wss://broker.hivemq.com:8000/mqtt',
     'wss://broker.emqx.io:8084/mqtt'
   ];
-  if (typeof mqtt !== 'undefined') {
+  if (typeof mqtt !== 'undefined' && window.ApexOverlaySession) {
     MQTT_BROKERS.forEach(url => {
       try {
         const client = mqtt.connect(url, {
@@ -268,8 +276,8 @@
           keepalive: 30
         });
         client.on('connect', () => {
-          client.subscribe('apexscorpio/streamtools/v1/cfg/#');
-          client.subscribe('apexscorpio/streamtools/v1/events/#');
+          client.subscribe((window.ApexOverlaySession.topic + '/cfg/#'));
+          client.subscribe((window.ApexOverlaySession.topic + '/events/#'));
         });
         client.on('message', (topic, message) => {
           try {

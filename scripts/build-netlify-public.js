@@ -17,6 +17,8 @@ const frontendFiles = [
   'viewers.js',
   'youtube-live.js',
   'overlay-relay.js',
+  'overlay-session.js',
+  'secure-mqtt.js',
   'youtube-stats.html',
   'youtube-stats.js'
 ];

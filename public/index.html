@@ -6,9 +6,11 @@
   <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
   <meta http-equiv="Pragma" content="no-cache">
   <meta http-equiv="Expires" content="0">
-  <title>ApexScorpio - Central de Overlays & Opções Avançadas</title>
-  <link rel="stylesheet" href="css/style.css?v=6.0">
+  <title>ApexScorpio - Central de Overlays v7</title><!-- cache-bust:2026-07-22T16 -->
+  <link rel="stylesheet" href="css/style.css?v=7.1">
+  <script src="overlay-session.js?v=1"></script>
   <script src="https://cdn.jsdelivr.net/npm/mqtt@5.3.4/dist/mqtt.min.js"></script>
+  <script src="secure-mqtt.js?v=1"></script>
   <script>
     window.APEX_BACKEND_URL = 'https://apexscorpio-stream-tools.scorpioapex.workers.dev';
     window.APEX_YOUTUBE_BACKEND_URL =
@@ -204,6 +206,7 @@
   </style>
 </head>
 <body>
+<p style="padding:12px;text-align:center;color:#b8c4d5">Ligação privada dos overlays: copia novamente os URLs para o Slobs. Não partilhes estes links. Facebook: chat e viewers ainda sem recolha ligada.</p>
   <div id="toast-notification">✅ Ação Executada!</div>
 
   <div class="dashboard-container">
@@ -212,7 +215,13 @@
         <img src="brandkit/Apex_Scorpio_Brand_Assets/01_Primary/Apex_Scorpio_Primary_Full_Colour.png" alt="Apex Scorpio">
         <span>CENTRAL DE OVERLAYS & STREAMTOOLS</span>
       </div>
-      <div id="cloud-status-badge" style="font-size: 13px; color: #10B981; font-weight: 700;">● CLOUD RELAY ATIVO (Porta 443 WSS)</div>
+      <div id="cloud-status-badge" style="font-size: 13px; color: #10B981; font-weight: 700;">● A LIGAR AO RELAY…</div>
+      <div id="twitch-auth-area" style="display:flex;align-items:center;justify-content:flex-end;gap:8px;flex-wrap:wrap;max-width:760px;">
+        <input id="twitch-client-id" type="text" autocomplete="off" spellcheck="false" placeholder="Twitch Client ID (configuracao unica)" aria-label="Twitch Client ID" style="width:235px;height:34px;border:1px solid rgba(145,70,255,.55);border-radius:7px;background:#11131A;color:#F8FAFC;padding:0 10px;font-size:12px;outline:none;">
+        <div id="twitch-auth-status" style="font-size:12px;color:#94A3B8;font-weight:700;min-width:210px;text-align:right;">Twitch nao ligada</div>
+        <button id="btn-twitch-login" onclick="twitchOAuthLogin()" class="btn" style="background:#9146FF;font-size:12px;padding:7px 14px;">Ligar Twitch</button>
+        <button id="btn-twitch-logout" onclick="twitchOAuthLogout()" class="btn" style="display:none;background:#343746;font-size:12px;padding:7px 14px;">Desligar</button>
+      </div>
     </div>
 
     <!-- CARD 1: CONTADOR DE ESPECTADORES -->
@@ -555,8 +564,10 @@
       'wss://broker.emqx.io:8084/mqtt'
     ];
     let activeClients = [];
+    function updateRelayBadge(){const connected=activeClients.filter(c=>c.connected).length;const badge=document.getElementById('cloud-status-badge');if(badge){badge.style.color=connected?'#10B981':'#f59e0b';badge.innerText=connected?'● RELAY LIGADO ('+connected+' ligações)':'● RELAY SEM LIGAÇÃO';}}
 
-    if (typeof mqtt !== 'undefined') {
+
+    if (typeof mqtt !== 'undefined' && window.ApexOverlaySession) {
       MQTT_BROKERS.forEach(url => {
         try {
           const client = mqtt.connect(url, {
@@ -564,13 +575,7 @@
             connectTimeout: 4000,
             keepalive: 30
           });
-          client.on('connect', () => {
-            const badge = document.getElementById('cloud-status-badge');
-            if (badge) {
-              badge.style.color = '#10B981';
-              badge.innerText = '● CLOUD RELAY ATIVO (Porta 443 WSS)';
-            }
-          });
+          for(const event of ['connect','close','offline','error','reconnect'])client.on(event,updateRelayBadge);
           activeClients.push(client);
         } catch(e) {}
       });
@@ -597,8 +602,8 @@
       const updatedAt = Date.now();
       const versionedConfig = { ...configData, _updatedAt: updatedAt };
 
-      publishCloudMessage(`apexscorpio/streamtools/v1/cfg/${overlayName}`, versionedConfig, { retain: true, qos: 1 });
-      publishCloudMessage('apexscorpio/streamtools/v1/events', { type: 'config_update', payload: { [overlayName]: versionedConfig } });
+      publishCloudMessage(`${window.ApexOverlaySession.topic}/cfg/${overlayName}`, versionedConfig, { retain: true, qos: 1 });
+      publishCloudMessage((window.ApexOverlaySession.topic + '/events'), { type: 'config_update', payload: { [overlayName]: versionedConfig } });
 
       if (bc) {
         try { bc.postMessage({ type: 'config_update', data: { [overlayName]: versionedConfig } }); } catch(e) {}
@@ -608,13 +613,6 @@
         localStorage.setItem(`apex_cfg_${overlayName}`, JSON.stringify(versionedConfig));
         localStorage.setItem('apex_event_config_update', JSON.stringify({ payload: { [overlayName]: versionedConfig }, timestamp: updatedAt }));
       } catch(e) {}
-
-      if (window.ApexOverlayRelay) {
-        window.ApexOverlayRelay.save(
-          overlayName,
-          versionedConfig
-        );
-      }
 
       const iframeMap = {
         viewers: 'iframe-viewers',
@@ -635,7 +633,7 @@
     function broadcastEvent(type, payload) {
       const data = { type, payload, timestamp: Date.now() };
 
-      publishCloudMessage('apexscorpio/streamtools/v1/events', data);
+      publishCloudMessage((window.ApexOverlaySession.topic + '/events'), data);
 
       if (bc) {
         try { bc.postMessage({ type, data: payload }); } catch(e) {}
@@ -698,6 +696,7 @@
 
       document.getElementById('url-ending').value =
         baseUrl + 'ending.html';
+      if(window.ApexOverlaySession)document.querySelectorAll('.url-box').forEach(input=>{input.value=window.ApexOverlaySession.url(input.value);});
     }
 
     function toggleDrawer(id) {
@@ -715,6 +714,7 @@
         layout: document.getElementById('vw-layout').value,
         fontSize: Number(document.getElementById('vw-fontsize').value)
       };
+      try { localStorage.setItem('apex_cfg_viewers', JSON.stringify(cfg)); } catch(e) {}
       publishConfig('viewers', cfg);
     }
 
@@ -995,6 +995,7 @@
         showBg: document.getElementById('evt-bg').checked,
         maxItems: Number(document.getElementById('evt-max').value)
       };
+      try { localStorage.setItem('apex_cfg_events', JSON.stringify(cfg)); } catch(e) {}
       publishConfig('events', cfg);
     }
 
@@ -1006,6 +1007,7 @@
         playSound: document.getElementById('alt-sound').checked,
         durationSeconds: Number(document.getElementById('alt-duration').value)
       };
+      try { localStorage.setItem('apex_cfg_alerts', JSON.stringify(cfg)); } catch(e) {}
       publishConfig('alerts', cfg);
     }
 
@@ -1200,5 +1202,6 @@
       setTimeout(fitPreviews, 100);
     }
   </script>
+  <script src="twitch-eventsub.js"></script>
 </body>
 </html>

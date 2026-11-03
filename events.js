@@ -249,7 +249,7 @@
     'wss://broker.hivemq.com:8000/mqtt',
     'wss://broker.emqx.io:8084/mqtt'
   ];
-  if (typeof mqtt !== 'undefined') {
+  if (typeof mqtt !== 'undefined' && window.ApexOverlaySession) {
     MQTT_BROKERS.forEach(url => {
       try {
         const client = mqtt.connect(url, {
@@ -258,7 +258,7 @@
           connectTimeout: 4000,
           keepalive: 30
         });
-        client.on('connect', () => client.subscribe('apexscorpio/streamtools/v1/#'));
+        client.on('connect', () => client.subscribe((window.ApexOverlaySession.topic + '/#')));
         client.on('message', (topic, message) => {
           try {
             const data = JSON.parse(message.toString());

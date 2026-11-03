@@ -5,7 +5,7 @@ const path = require('path');
 class StreamRelayer {
   constructor() {
     this.ffmpegProc = null;
-    this.restreamKey = "re_6344942_f58550f8fef50c6e6ba1";
+    this.restreamKey = process.env.RESTREAM_STREAM_KEY || "";
     this.facebookKey = "";
     this.isRelaying = false;
   }

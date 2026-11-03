@@ -7,8 +7,11 @@
     'https://apexscorpio-stream-tools.scorpioapex.workers.dev'
   ).replace(/\/+$/, '');
 
-  const ENDPOINT =
-    BACKEND_BASE_URL + '/overlay-config';
+  const session=global.ApexOverlaySession;
+  if(!session)return;
+  const ENDPOINT = BACKEND_BASE_URL + '/overlay-config';
+  const namespace=global.crypto.subtle.digest('SHA-256',new TextEncoder().encode(session.key)).then(hash=>Array.from(new Uint8Array(hash),x=>x.toString(16).padStart(2,'0')).join('').slice(0,32));
+  async function privateOverlayName(name){return (await namespace)+'-'+name;}
 
   const activePollers = new Map();
 
@@ -31,7 +34,7 @@
       const response = await fetch(
         ENDPOINT +
           '?overlay=' +
-          encodeURIComponent(overlayName),
+          encodeURIComponent(await privateOverlayName(overlayName)),
         {
           method: 'POST',
           headers: {
@@ -58,7 +61,7 @@
       const response = await fetch(
         ENDPOINT +
           '?overlay=' +
-          encodeURIComponent(overlayName) +
+          encodeURIComponent(await privateOverlayName(overlayName)) +
           '&cb=' +
           Date.now(),
         {
@@ -111,7 +114,7 @@
         const response = await fetch(
           ENDPOINT +
             '?overlay=' +
-            encodeURIComponent(overlayName) +
+            encodeURIComponent(await privateOverlayName(overlayName)) +
             '&cb=' +
             Date.now(),
           {

@@ -7,8 +7,15 @@
   <meta http-equiv="Expires" content="0">
   <title>ApexScorpio - Unified Chat Overlay</title>
   <link rel="stylesheet" href="css/style.css?v=6.2">
+  <script src="overlay-session.js?v=1"></script>
   <script src="https://cdn.jsdelivr.net/npm/mqtt@5.3.4/dist/mqtt.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/tmi.js@1.8.5/dist/tmi.min.js"></script>
+  <script src="secure-mqtt.js?v=1"></script>
+  <script>
+    window.APEX_BACKEND_URL = 'https://apexscorpio-stream-tools.scorpioapex.workers.dev';
+    window.APEX_YOUTUBE_BACKEND_URL = window.APEX_BACKEND_URL;
+  </script>
+  <script src="youtube-live.js?v=4.4"></script>
+  <script defer src="overlay-relay.js?v=1.2"></script>
 </head>
 <body class="chat-page">
   <div class="chat-container has-bg" id="chat-container"></div>
@@ -27,6 +34,19 @@
     function normalizeFadeSeconds(value) {
       const seconds = Number(value);
       return Number.isFinite(seconds) && seconds > 0 ? seconds : 0;
+    }
+
+    function normalizeMaxMessages(value) {
+      const parsed = Math.floor(Number(value));
+
+      if (!Number.isFinite(parsed)) {
+        return 50;
+      }
+
+      return Math.max(
+        1,
+        Math.min(50, parsed)
+      );
     }
 
     function cancelMessageExpiry(element) {
@@ -48,6 +68,7 @@
       if (updatedAt > 0) lastConfigUpdatedAt = updatedAt;
       cfg = { ...cfg, ...config };
       cfg.fadeSeconds = normalizeFadeSeconds(cfg.fadeSeconds);
+      cfg.maxMessages = normalizeMaxMessages(cfg.maxMessages);
       applyConfig();
     }
 
@@ -70,7 +91,10 @@
       if (p.has('bg')) cfg.showBg = p.get('bg') === '1' || p.get('bg') === 'true';
       if (p.has('bdg')) cfg.showBadges = p.get('bdg') === '1' || p.get('bdg') === 'true';
       if (p.has('fs')) cfg.fontSize = Number(p.get('fs')) || 14;
-      if (p.has('max')) cfg.maxMessages = Number(p.get('max')) || 50;
+      if (p.has('max')) {
+        cfg.maxMessages =
+          normalizeMaxMessages(p.get('max'));
+      }
     }
 
     const icons = {
@@ -84,6 +108,7 @@
     const bc = typeof BroadcastChannel !== 'undefined' ? new BroadcastChannel('apex_scorpio_stream_tools') : null;
 
     const _seenIds = new Set();
+    const youtubeEventRelayClients = [];
     function _isDuplicate(type, payload) {
       const key = type + '|' + (payload?.id || '') + '|' + (payload?.username || '') + '|' + (payload?.message || payload?.msg?.message || '');
       if (_seenIds.has(key)) return true;
@@ -142,25 +167,29 @@
       'wss://broker.emqx.io:8084/mqtt'
     ];
 
-    if (typeof mqtt !== 'undefined') {
+    if (typeof mqtt !== 'undefined' && window.ApexOverlaySession) {
       MQTT_BROKERS.forEach(url => {
         try {
           const mqttClient = mqtt.connect(url, {
+            reconnectPeriod: 5000,
             clientId: 'scorpio_chat_' + Math.random().toString(16).substring(2, 8),
             connectTimeout: 4000,
             keepalive: 30
           });
+
+          youtubeEventRelayClients.push(mqttClient);
+
           mqttClient.on('connect', () => {
-            mqttClient.subscribe('apexscorpio/streamtools/v1/#');
+            mqttClient.subscribe((window.ApexOverlaySession.topic + '/#'));
           });
           mqttClient.on('message', (topic, message) => {
             try {
               const data = JSON.parse(message.toString());
               const topicStr = String(topic).toLowerCase();
-              const dataStr = JSON.stringify(data).toLowerCase();
+              const command=String(data.type || data.payload?.type || "").toLowerCase();
 
-              if (topicStr.includes('clear') || dataStr.includes('clear')) {
-                doClearChat(data.onlyTests || topicStr.includes('test') || dataStr.includes('test'));
+              if (['clear_chat','clear_chat_test'].includes(command)) {
+                doClearChat(Boolean(data.onlyTests || data.payload?.onlyTests || command==='clear_chat_test'));
                 return;
               }
 
@@ -195,38 +224,98 @@
       }
     });
 
-    // Real Twitch IRC Client via TMI.js (Client-Side) for channel apexscorpio
-    if (typeof tmi !== 'undefined') {
-      try {
-        const tmiClient = new tmi.Client({
-          connection: { secure: true, reconnect: true },
-          channels: ['apexscorpio']
-        });
-        tmiClient.connect().catch(() => {});
-        tmiClient.on('message', (channel, tags, message, self) => {
-          if (self) return;
-          const realMsg = {
-            id: tags.id || `tw-${Date.now()}`,
-            platform: 'twitch',
-            username: tags['display-name'] || tags.username || 'User',
-            userColor: tags.color || '#9146FF',
-            message: message,
-            badges: {
-              broadcaster: !!tags.badges?.broadcaster,
-              mod: !!tags.mod,
-              subscriber: !!tags.subscriber
-            },
-            isTest: false,
-            timestamp: new Date().toISOString()
+    // Real Twitch IRC via direct WebSocket (no tmi.js dependency)
+    (function connectTwitchChat() {
+      const TWITCH_CHANNEL = 'apexscorpio';
+      let twitchWs = null;
+      let twitchReconnectTimer = null;
+      let twitchConnected = false;
+
+      function twitchConnect() {
+        try {
+          if (twitchWs) { try { twitchWs.close(); } catch(e) {} }
+          twitchWs = new WebSocket('wss://irc-ws.chat.twitch.tv:443');
+
+          twitchWs.onopen = () => {
+            twitchConnected = true;
+            twitchWs.send('PASS SCHMOOPIIE');
+            twitchWs.send('NICK justinfan' + Math.floor(Math.random() * 99999));
+            twitchWs.send('CAP REQ :twitch.tv/tags twitch.tv/commands twitch.tv/membership');
+            twitchWs.send('JOIN #' + TWITCH_CHANNEL);
           };
-          addMsg(realMsg, 'twitch');
-        });
-      } catch(e) {}
-    }
+
+          twitchWs.onmessage = (event) => {
+            const lines = event.data.split('\r\n').filter(Boolean);
+            lines.forEach(line => {
+              if (line.startsWith('PING')) {
+                twitchWs.send('PONG :tmi.twitch.tv');
+                return;
+              }
+              if (!line.includes('PRIVMSG')) return;
+
+              // Parse IRC tags
+              let tagStr = '', rest = line;
+              if (line.startsWith('@')) {
+                const spaceIdx = line.indexOf(' ');
+                tagStr = line.substring(1, spaceIdx);
+                rest = line.substring(spaceIdx + 1);
+              }
+              const tags = {};
+              tagStr.split(';').forEach(pair => {
+                const [k, v] = pair.split('=');
+                if (k) tags[k] = v || '';
+              });
+
+              // Extract username and message
+              const nickMatch = rest.match(/^:([^!]+)!/);
+              const msgMatch = rest.match(/PRIVMSG #[^ ]+ :(.*)$/);
+              if (!nickMatch || !msgMatch) return;
+
+              const username = tags['display-name'] || nickMatch[1];
+              const message  = msgMatch[1];
+              const color    = tags['color'] || '#9146FF';
+              const isBroadcaster = (tags['badges'] || '').includes('broadcaster');
+              const isMod         = tags['mod'] === '1';
+              const isSub         = (tags['badges'] || '').includes('subscriber');
+
+              if (!cfg.showTwitch) return;
+
+              addMsg({
+                id: tags['id'] || `tw-${Date.now()}`,
+                platform: 'twitch',
+                username,
+                userColor: color,
+                message,
+                badges: { broadcaster: isBroadcaster, mod: isMod, subscriber: isSub },
+                isTest: false,
+                timestamp: new Date().toISOString()
+              }, 'twitch');
+            });
+          };
+
+          twitchWs.onclose = () => {
+            twitchConnected = false;
+            // Reconnect after 5 seconds
+            if (twitchReconnectTimer) clearTimeout(twitchReconnectTimer);
+            twitchReconnectTimer = setTimeout(twitchConnect, 5000);
+          };
+
+          twitchWs.onerror = () => {
+            twitchConnected = false;
+          };
+        } catch(e) {}
+      }
+
+      twitchConnect();
+    })();
 
     function applyConfig() {
       cfg.fadeSeconds = normalizeFadeSeconds(cfg.fadeSeconds);
-      if (cfg.fadeSeconds === 0) cancelAllMessageExpiries();
+      cfg.maxMessages = normalizeMaxMessages(cfg.maxMessages);
+
+      if (cfg.fadeSeconds === 0) {
+        cancelAllMessageExpiries();
+      }
 
       if (cfg.showBg) {
         chatContainer.classList.add('has-bg');
@@ -242,8 +331,22 @@
         msg.classList.toggle('mode-compact', cfg.displayMode === 'compact');
       });
       chatContainer.querySelectorAll('.chat-text').forEach(el => {
-        el.style.fontSize = (cfg.fontSize || 14) + 'px';
+        el.style.fontSize =
+          (cfg.fontSize || 14) + 'px';
       });
+
+      while (
+        chatContainer.children.length >
+        cfg.maxMessages
+      ) {
+        cancelMessageExpiry(
+          chatContainer.firstChild
+        );
+
+        chatContainer.removeChild(
+          chatContainer.firstChild
+        );
+      }
     }
 
     function addMsg(msg, platform) {
@@ -275,12 +378,15 @@
       chatContainer.appendChild(el);
       chatContainer.scrollTop = chatContainer.scrollHeight;
 
-      while (chatContainer.children.length > (cfg.maxMessages || 50)) {
+      while (
+        chatContainer.children.length >
+        normalizeMaxMessages(cfg.maxMessages)
+      ) {
         cancelMessageExpiry(chatContainer.firstChild);
         chatContainer.removeChild(chatContainer.firstChild);
       }
 
-      // Permanent means permanent for both real and test messages.
+      // Permanent means permanent — only set timer if fadeSeconds > 0
       const fadeDur = normalizeFadeSeconds(cfg.fadeSeconds);
       if (fadeDur > 0) {
         const expiryTimer = setTimeout(() => {
@@ -292,6 +398,7 @@
         }, fadeDur * 1000);
         expiryTimers.set(el, expiryTimer);
       }
+      // fadeDur === 0 → message stays on screen permanently, no timer set.
     }
 
     function esc(str) {
@@ -300,8 +407,76 @@
       return d.innerHTML;
     }
 
+    function relayYoutubeEvent(event, attempt = 0) {
+      if (!event) return;
+
+      if (attempt === 0) {
+        if (bc) {
+          try {
+            bc.postMessage({
+              type: 'new_event',
+              data: event
+            });
+          } catch (_) {}
+        }
+
+        try {
+          localStorage.setItem(
+            'apex_event_new_event',
+            JSON.stringify({
+              payload: event,
+              timestamp: Date.now()
+            })
+          );
+        } catch (_) {}
+      }
+
+      const packet = JSON.stringify({
+        type: 'new_event',
+        payload: event,
+        timestamp: Date.now()
+      });
+
+      let published = 0;
+
+      youtubeEventRelayClients.forEach(client => {
+        try {
+          if (client.connected) {
+            client.publish(
+              (window.ApexOverlaySession.topic + '/events'),
+              packet,
+              {
+                qos: 1,
+                retain: false
+              }
+            );
+
+            published += 1;
+          }
+        } catch (_) {}
+      });
+
+      if (published === 0 && attempt < 10) {
+        setTimeout(
+          () => relayYoutubeEvent(event, attempt + 1),
+          1000
+        );
+      }
+    }
     loadSavedConfig();
     applyConfig();
+
+    // Start YouTube Live Chat (real messages from youtube.com/c/apexscorpio)
+    if (typeof YoutubeLive !== 'undefined') {
+      YoutubeLive.startChat(
+        (msg) => {
+          if (cfg.showYoutube) {
+            addMsg(msg, 'youtube');
+          }
+        },
+        relayYoutubeEvent
+      );
+    }
   </script>
 </body>
 </html>
