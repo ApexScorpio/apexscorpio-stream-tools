@@ -159,10 +159,12 @@
   async function checkPublicTwitchLive() {
     if(isTestActive || twitchFetchInFlight)return;
     twitchFetchInFlight=true;
+    const controller=typeof AbortController==='function'?new AbortController():null;
+    const timeout=controller?setTimeout(()=>controller.abort(),8000):null;
     try {
       const response=await fetch('https://gql.twitch.tv/gql',{
         method:'POST',
-        signal:typeof AbortSignal!=='undefined' && AbortSignal.timeout ? AbortSignal.timeout(8000):undefined,
+        signal:controller?.signal,
         headers:{'Client-ID':'kimne78kx3ncx6brgo4mv6wki5h1ko','Content-Type':'application/json'},
         body:JSON.stringify({query:'query ChannelShell($login: String!) { user(login: $login) { stream { viewersCount type } } }',variables:{login:'apexscorpio'}})
       });
@@ -177,7 +179,7 @@
         recalculateTotal();
       }
       if(!isTestActive)renderStatus(realState);
-    }finally{twitchFetchInFlight=false;}
+    }finally{if(timeout!==null)clearTimeout(timeout);twitchFetchInFlight=false;}
   }
 
   async function checkNetlifyYoutubeStatus() {
