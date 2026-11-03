@@ -268,8 +268,8 @@
   });
 
   const MQTT_BROKERS = [
-    'wss://broker.emqx.io:443/mqtt',
-    'wss://broker.hivemq.com:8000/mqtt',
+    
+    'wss://broker.hivemq.com:8884/mqtt',
     'wss://broker.emqx.io:8084/mqtt'
   ];
   if (typeof mqtt !== 'undefined' && window.ApexOverlaySession) {
