@@ -310,17 +310,13 @@
   setInterval(checkPublicTwitchLive, 5000);
   setInterval(checkNetlifyYoutubeStatus, 15000);
 
-  if (window.YoutubeLive) {
-    window.YoutubeLive.subscribeState(ytState => {
-      if (ytState && ytState.isLive) {
-        realState.youtube = {
-          isLive: true,
-          viewers: (ytState.viewers !== null && ytState.viewers !== undefined) ? Number(ytState.viewers) : realState.youtube.viewers,
-          videoId: ytState.videoId || realState.youtube.videoId
-        };
-        recalculateTotal();
-        if (!isTestActive) renderStatus(realState);
-      }
-    });
+  function applyYoutubeLiveState(ytState) {
+    if(!ytState || typeof ytState.isLive!=='boolean')return;
+    const value=ytState.viewers;
+    const count=value!==null && value!==undefined && value!=='' && Number.isFinite(Number(value)) && Number(value)>=0 ? Number(value) : null;
+    realState.youtube={isLive:ytState.isLive,viewers:ytState.isLive?count:null,videoId:ytState.videoId || null,status:ytState.isLive && count===null?'unknown':'confirmed'};
+    recalculateTotal();
+    if(!isTestActive)renderStatus(realState);
   }
+  if(window.YoutubeLive)window.YoutubeLive.subscribeState(applyYoutubeLiveState);
 })();

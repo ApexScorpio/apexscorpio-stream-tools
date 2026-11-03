@@ -416,9 +416,7 @@
 
     publishState({
       isLive: true,
-      viewers: details.concurrentViewers == null
-        ? normalizeViewers(state.viewers, null)
-        : normalizeViewers(details.concurrentViewers, null),
+      viewers: normalizeViewers(details.concurrentViewers, null),
       videoId: video.id,
       liveChatId: details.activeLiveChatId || null,
       title: video?.snippet?.title || state.title || '',
@@ -596,18 +594,8 @@
         normalizeVideoId(data?.videoId);
 
       if (data?.isLive === true) {
-        const sameVideo = Boolean(
-          backendVideoId &&
-          state.videoId === backendVideoId
-        );
-
-        const backendViewers =
-          normalizeViewers(
-            data?.viewers,
-            sameVideo
-              ? normalizeViewers(state.viewers, null)
-              : null
-          );
+        // Unknown is not the old count. Explicit zero and one are valid.
+        const backendViewers=normalizeViewers(data?.viewers,null);
 
         if (backendVideoId) {
           savePlayerLock(backendVideoId);
