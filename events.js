@@ -62,6 +62,7 @@
       amount: String(raw.amount || ''),
       message: String(raw.message || ''),
       source: String(raw.source || ''),
+      reaction: String(raw.reaction || ''),
       isTest: Boolean(raw.isTest)
     };
   }
@@ -111,6 +112,7 @@
   function actionText(event) {
     const platform = { twitch: 'Twitch', youtube: 'YouTube', facebook: 'Facebook' }[event.platform] || event.platform;
     switch (event.type) {
+      case 'reaction': return `reagiu ${event.reaction || ''} à live no ${platform}`;
       case 'subscriber': return `tornou-se subscritor/membro no ${platform}`;
       case 'gift_subscriber': return `ofereceu ${event.giftCount || ''} subscrições no ${platform}`.replace('  ', ' ');
       case 'membership': return event.months ? `celebrou ${event.months} meses como membro` : `partilhou uma mensagem de membro`;
@@ -123,7 +125,7 @@
 
   function eventEmoji(type) {
     return {
-      follower: '🔔', subscriber: '⭐', gift_subscriber: '🎁', membership: '💎',
+      reaction: '❤️', follower: '🔔', subscriber: '⭐', gift_subscriber: '🎁', membership: '💎',
       raid: '🚀', donation: '💰', cheer: '💠'
     }[type] || '🔔';
   }

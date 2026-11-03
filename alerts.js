@@ -43,6 +43,7 @@
   function copy(event){
     const platform=String(event.platform||'twitch').toLowerCase();const platformName={twitch:'Twitch',youtube:'YouTube',facebook:'Facebook'}[platform]||platform;
     const username=`@${event.username||'Viewer'}`;
+    if(event.type==='reaction')return['NOVA REAÇÃO!',username,`Reagiu ${event.reaction||''} à live no ${platformName}!`,'#1877F2'];
     if(event.type==='subscriber')return['NOVO SUBSCRITOR!',username,`Tornou-se subscritor/membro no ${platformName}!`,'#F59E0B'];
     if(event.type==='gift_subscriber')return['SUBSCRIÇÕES OFERECIDAS!',username,`Ofereceu ${event.giftCount||''} subscrições no ${platformName}!`.replace('  ',' '),'#F59E0B'];
     if(event.type==='membership')return['MENSAGEM DE MEMBRO!',username,event.months?`${event.months} meses como membro!`:'Partilhou uma mensagem de membro!','#F59E0B'];

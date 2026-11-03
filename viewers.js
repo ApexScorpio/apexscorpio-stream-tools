@@ -47,6 +47,7 @@
   let testTimer = null;
   let lastTwitchFetch = 0;
   let lastYoutubeFetch=0;
+  let lastFacebookUpdate=0;
 
   function loadSavedConfig() {
     const params = new URLSearchParams(location.search);
@@ -227,6 +228,16 @@
       resetToRealState();
       return;
     }
+    if (type === 'facebook_status') {
+      const incoming=payload?.payload || payload;
+      if(!incoming || typeof incoming.isLive!=='boolean')return;
+      const observedAt=Number(incoming.observedAt);
+      if(!Number.isFinite(observedAt)||Date.now()-observedAt>30000||observedAt>Date.now()+5000)return;
+      const value=incoming.viewers;
+      const valid=(typeof value==='number'||typeof value==='string'&&/^\d+$/.test(value))&&Number.isSafeInteger(Number(value))&&Number(value)>=0;
+      realState.facebook={isLive:incoming.isLive,viewers:valid?Number(value):null,status:incoming.status==='confirmed'&&(!incoming.isLive||valid)?'confirmed':incoming.status==='unavailable'?'unavailable':'unknown'};
+      lastFacebookUpdate=observedAt;recalculateTotal();if(!isTestActive)renderStatus(realState);return;
+    }
     if (type === 'status_update') {
       const incoming = payload?.state || payload;
       if (incoming?.isTest) {
@@ -306,6 +317,7 @@
   renderStatus(realState);
   checkPublicTwitchLive();
   checkNetlifyYoutubeStatus();
+  setInterval(()=>{if(lastFacebookUpdate && Date.now()-lastFacebookUpdate>30000){realState.facebook={isLive:realState.facebook.isLive,viewers:null,status:'stale'};recalculateTotal();if(!isTestActive)renderStatus(realState);}},5000);
   setInterval(checkPublicTwitchLive, 5000);
   setInterval(checkNetlifyYoutubeStatus, 15000);
 

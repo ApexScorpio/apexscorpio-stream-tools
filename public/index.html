@@ -204,8 +204,21 @@
       animation: fadeIn 0.3s ease;
     }
   </style>
-</head>
-<body>
+<script defer src="facebook-live.js?v=1"></script></head>
+<body><section class="card" style="margin:18px 0;padding:20px;border:1px solid #1877f2;border-radius:12px">
+<h2>🔵 Facebook Live · ApexScorpio</h2>
+<p>Leitura dos comentários, espectadores em simultâneo e reações da live da página. Mantém este painel aberto enquanto usas a ligação.</p>
+<form id="facebook-live-form">
+<label for="facebook-live-url">Link direto da live (vazio procura a live ativa da página)</label>
+<input class="url-box" id="facebook-live-url" type="url" value="https://www.facebook.com/Apexscorpio/videos/3814929425312096/">
+<label for="facebook-page-token">Token de acesso à página Meta (não é a chave de transmissão)</label>
+<input class="url-box" id="facebook-page-token" type="password" autocomplete="off" placeholder="Só fica na memória deste separador">
+<button class="btn btn-facebook" type="submit">Ligar Facebook</button>
+<button class="btn" id="facebook-disconnect" type="button">Desligar leitura</button>
+</form>
+<p id="facebook-live-status" role="status">Por ligar: requer autorização da API Meta para a página.</p>
+<p>O token só é enviado à API oficial da Meta; não entra nos URLs das sources nem no relay. Os comentários recebidos são enviados aos teus overlays pelo canal cifrado existente. Seguidores, partilhas e Estrelas não são inferidos a partir de reações.</p>
+</section>
 <p style="padding:12px;text-align:center;color:#b8c4d5">Ligação privada dos overlays: copia novamente os URLs para o Slobs. Não partilhes estes links. Facebook: chat e viewers ainda sem recolha ligada.</p>
   <div id="toast-notification">✅ Ação Executada!</div>
 
