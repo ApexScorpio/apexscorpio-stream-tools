@@ -37,8 +37,8 @@
   };
 
   let realState = {
-    twitch: { isLive: false, viewers: null, status: "confirmed" },
-    youtube: { isLive: false, viewers: null, status: "confirmed" },
+    twitch: { isLive: false, viewers: null, status: "unknown" },
+    youtube: { isLive: false, viewers: null, status: "unknown" },
     facebook: { isLive: false, viewers: null, status: "unavailable" },
     totalText: "0"
   };
@@ -46,6 +46,7 @@
   let isTestActive = false;
   let testTimer = null;
   let lastTwitchFetch = 0;
+  let lastYoutubeFetch=0;
 
   function loadSavedConfig() {
     const params = new URLSearchParams(location.search);
@@ -82,6 +83,8 @@
     let anyLive = false;
 
     for (const platform of ['twitch', 'youtube', 'facebook']) {
+      const enabled={twitch:cfg.showTwitch,youtube:cfg.showYoutube,facebook:cfg.showFacebook};
+      if(enabled[platform]===false)continue;
       const pState = realState[platform];
       if(['unknown','unavailable','stale'].includes(pState?.status))unknown=true;
       if (pState && pState.isLive) {
@@ -184,8 +187,11 @@
     if (isTestActive) return;
     try {
       const res = await fetch(YOUTUBE_BACKEND_BASE + '/youtube-status?cb=' + Date.now());
+      if(!res.ok)throw new Error('YouTube HTTP '+res.status);
       if (res.ok) {
         const data = await res.json();
+        if(data.error || typeof data.isLive!=='boolean')throw new Error('Estado YouTube indisponível');
+        lastYoutubeFetch=Date.now();
         realState.youtube = {
           isLive: Boolean(data.isLive),
           viewers: data.isLive ? (data.viewers !== null && data.viewers !== undefined ? Number(data.viewers) : null) : null,
@@ -196,7 +202,7 @@
         recalculateTotal();
         if (!isTestActive) renderStatus(realState);
       }
-    } catch (_) {}
+    } catch (_) {if(!lastYoutubeFetch || Date.now()-lastYoutubeFetch>45000){realState.youtube.status='stale';realState.youtube.viewers=null;recalculateTotal();if(!isTestActive)renderStatus(realState);}}
   }
 
   function resetToRealState() {
