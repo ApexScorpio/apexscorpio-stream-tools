@@ -128,13 +128,15 @@
     for (const platform of ['twitch', 'youtube', 'facebook']) {
       const current = state[platform] || { isLive: false, viewers: null };
       if(['unknown','unavailable','stale'].includes(current.status)){
-        dots[platform].classList.remove('online');
+        dots[platform].classList.toggle('online',Boolean(current.isLive));
         animateCount(counts[platform], '—');
         pills[platform].title=platform==='facebook'?'Facebook: recolha de dados não ligada':'Dados temporariamente indisponíveis';
       } else if (!current.isLive) {
+        pills[platform].title='Canal offline';
         dots[platform].classList.remove('online');
         animateCount(counts[platform], 0);
       } else {
+        pills[platform].title='Live: '+current.viewers+' espectadores';
         dots[platform].classList.add('online');
         animateCount(counts[platform], current.viewers !== null ? current.viewers : '—');
       }
@@ -142,45 +144,40 @@
     animateCount(counts.total, state.totalText || "0");
   }
 
+  function readTwitchViewerState(data) {
+    const user=data?.data?.user;
+    if(data?.errors?.length || !user || !Object.hasOwn(user,'stream'))throw new Error('Estado Twitch indisponível');
+    if(user.stream===null)return {isLive:false,viewers:null,status:'confirmed'};
+    const stream=user.stream;
+    if(!stream || stream.type!=='live')throw new Error('Resposta Twitch incompleta');
+    const value=stream.viewersCount;
+    const numeric=(typeof value==='number' || (typeof value==='string' && /^\d+$/.test(value)))?Number(value):null;
+    const count=Number.isSafeInteger(numeric) && numeric>=0?numeric:null;
+    return {isLive:true,viewers:count,status:count===null?'unknown':'confirmed'};
+  }
+  let twitchFetchInFlight=false;
   async function checkPublicTwitchLive() {
-    if (isTestActive) return;
+    if(isTestActive || twitchFetchInFlight)return;
+    twitchFetchInFlight=true;
     try {
-      const response = await fetch('https://gql.twitch.tv/gql', {
-        method: 'POST',
-        headers: {
-          'Client-ID': 'kimne78kx3ncx6brgo4mv6wki5h1ko',
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          query: 'query ChannelShell($login: String!) { user(login: $login) { stream { viewersCount type } } }',
-          variables: { login: 'apexscorpio' }
-        })
+      const response=await fetch('https://gql.twitch.tv/gql',{
+        method:'POST',
+        signal:typeof AbortSignal!=='undefined' && AbortSignal.timeout ? AbortSignal.timeout(8000):undefined,
+        headers:{'Client-ID':'kimne78kx3ncx6brgo4mv6wki5h1ko','Content-Type':'application/json'},
+        body:JSON.stringify({query:'query ChannelShell($login: String!) { user(login: $login) { stream { viewersCount type } } }',variables:{login:'apexscorpio'}})
       });
       if(!response.ok)throw new Error('Twitch HTTP '+response.status);
-      const data = await response.json();
-      if(data.errors?.length || !data.data?.user || !Object.hasOwn(data.data.user,'stream'))throw new Error('Estado Twitch indisponível');
-      const stream = data.data.user.stream;
-      if (stream && stream.type === 'live') {
-        const rawCount = stream.viewersCount;
-        const parsed = (rawCount !== null && rawCount !== undefined && !isNaN(rawCount)) ? Number(rawCount) : null;
-        realState.twitch = {
-          isLive: true,
-          viewers: parsed,
-          status: parsed !== null ? "confirmed" : "unknown"
-        };
-      } else {
-        realState.twitch = { isLive: false, viewers: null, status: "confirmed" };
-      }
-      lastTwitchFetch = Date.now();
+      realState.twitch=readTwitchViewerState(await response.json());
+      lastTwitchFetch=Date.now();
       recalculateTotal();
-      if (!isTestActive) renderStatus(realState);
-    } catch (_) {
-      if (Date.now() - lastTwitchFetch > 30000 || !lastTwitchFetch) {
-        realState.twitch.status = "stale";
-        realState.twitch.viewers = null;
+      if(!isTestActive)renderStatus(realState);
+    }catch(_){
+      if(!lastTwitchFetch || Date.now()-lastTwitchFetch>30000){
+        realState.twitch.status='stale';realState.twitch.viewers=null;
+        recalculateTotal();
       }
-      if (!isTestActive) renderStatus(realState);
-    }
+      if(!isTestActive)renderStatus(realState);
+    }finally{twitchFetchInFlight=false;}
   }
 
   async function checkNetlifyYoutubeStatus() {
