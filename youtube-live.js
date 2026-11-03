@@ -89,6 +89,8 @@
   let activeVideoId = safeGet(VIDEO_KEY) || null;
   let activeChatId = null;
   let liveChatPageToken = null;
+  let chatInFlight=false;
+  let chatPollingVideoId=null;
   let lastPlayerVideoAt = 0;
   let consecutivePlayerMisses = 0;
   let state = loadState();
@@ -1311,7 +1313,21 @@
     scheduleChatPoll(0);
   }
 
+  function reportChatStatus(status, detail='') {
+    if(typeof global.CustomEvent==='function')global.dispatchEvent(new global.CustomEvent('apex-youtube-chat-status',{detail:{status,detail,at:Date.now()}}));
+  }
+  async function resolveChatVideoId() {
+    const known=normalizeVideoId(state.videoId || activeVideoId);
+    if(known)return known;
+    // Public chat discovery can fail independently of live detection. Resolve once via the status service.
+    const latest=await backendGet(STATUS_ENDPOINT);
+    const discovered=normalizeVideoId(latest?.videoId);
+    if(latest?.isLive===true && discovered){activeVideoId=discovered;return discovered;}
+    return null;
+  }
+
   async function pollChat() {
+    if(chatInFlight)return;
     if (
       !chatLeader ||
       !hasChatDemand()
@@ -1319,13 +1335,12 @@
       return;
     }
 
+    chatInFlight=true;
     try {
       const params = {};
-
-      const chatVideoId = normalizeVideoId(
-        state.videoId ||
-        activeVideoId
-      );
+      const chatVideoId=await resolveChatVideoId();
+      if(!chatVideoId){reportChatStatus('waiting','À espera de uma live YouTube identificada');scheduleChatPoll(5000);return;}
+      if(chatPollingVideoId!==chatVideoId){liveChatPageToken=null;chatPollingVideoId=chatVideoId;}
 
       if (chatVideoId) {
         params.videoId = chatVideoId;
@@ -1348,6 +1363,7 @@
         null;
 
       if (data?.chatAvailable !== true) {
+        reportChatStatus('waiting','Live encontrada, chat ainda indisponível');
         liveChatPageToken = null;
         scheduleChatPoll(
           Number(
@@ -1363,6 +1379,7 @@
         data?.nextPageToken ||
         null;
 
+      reportChatStatus('connected', 'Chat YouTube ligado · atualização a cada '+Math.round(Number(data.pollingIntervalMillis || 5000)/1000)+' s');
       for (const item of data?.items || []) {
         if (
           !item?.id ||
@@ -1406,6 +1423,7 @@
 
       scheduleChatPoll(delay);
     } catch (error) {
+      reportChatStatus('error','Sem leitura do chat YouTube: '+error.message);
       if (!chatLeader) return;
 
       activeChatId = null;
@@ -1424,7 +1442,7 @@
       } else {
         scheduleChatPoll(10000);
       }
-    }
+    } finally {chatInFlight=false;}
   }
 
   function start() {

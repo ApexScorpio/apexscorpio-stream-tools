@@ -299,6 +299,7 @@
       </h2>
       <p class="card-desc">Chat em direto com retenção permanente e animações Cyberpunk. <strong>Resolução recomendada para o Streamlabs OBS: 440 px de Largura x 580 px de Altura.</strong></p>
 
+      <p id="youtube-chat-status" role="status" style="font-size:13px;color:#b8c4d5">A verificar ligação ao chat real do YouTube…</p>
       <div class="options-drawer" id="drawer-chat">
         <div style="font-weight: 800; font-size: 15px; margin-bottom: 14px; color: #E8181F;">⚙️ Personalização do Chat Unificado:</div>
         <div style="background: rgba(56, 189, 248, 0.15); border: 1px solid #38BDF8; padding: 10px 14px; border-radius: 8px; margin-bottom: 16px; color: #38BDF8; font-weight: 800; font-size: 14px;">
@@ -557,6 +558,7 @@
   </div>
 
   <script>
+    window.addEventListener('message',event=>{if(event.origin!==window.location.origin || event.source!==document.getElementById('iframe-chat')?.contentWindow || event.data?.type!=='youtube_chat_status')return;const box=document.getElementById('youtube-chat-status');if(box){box.textContent=event.data.status.detail;box.style.color=event.data.status.status==='connected'?'#10B981':'#f59e0b';}});
     // Multi-Broker Redundancy over Port 443 / 8000
     const MQTT_BROKERS = [
       

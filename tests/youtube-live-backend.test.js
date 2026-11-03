@@ -80,7 +80,7 @@ test('9. Viewers desconhecidos nÃ£o sÃ£o inventados como zero', () => {
   );
 });
 
-test('10. Todos os HTML usam youtube-live.js v4.4', () => {
+test('10. Todos os HTML usam youtube-live.js v4.5', () => {
   const files = execFileSync(
     'git',
     ['ls-files', '*.html'],
@@ -104,7 +104,7 @@ test('10. Todos os HTML usam youtube-live.js v4.4', () => {
 
     assert.match(
       html,
-      /youtube-live\.js\?v=4\.4/,
+      /youtube-live\.js\?v=4\.5/,
       file
     );
   }
