@@ -17,7 +17,6 @@ const frontendFiles = [
   'viewers.js',
   'youtube-live.js',
   'facebook-live.js',
-  'facebook-browser.js',
   'overlay-relay.js',
   'overlay-session.js',
   'secure-mqtt.js',
