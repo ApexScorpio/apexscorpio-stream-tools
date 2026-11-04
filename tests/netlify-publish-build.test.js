@@ -119,6 +119,11 @@ test(
           'utf8'
         );
 
+        if(htmlFile==='viewers.html') {
+          assert.match(html,/viewers\.js\?v=4\.6/);
+          assert.doesNotMatch(html,/src="youtube-live\.js/);
+          continue;
+        }
         assert.match(
           html,
           /youtube-live\.js\?v=4\.6/
