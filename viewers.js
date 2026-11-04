@@ -183,26 +183,36 @@
     }finally{if(timeout!==null)clearTimeout(timeout);twitchFetchInFlight=false;}
   }
 
+  let youtubeFetchInFlight=false;
   async function checkNetlifyYoutubeStatus() {
-    if (isTestActive) return;
+    if (isTestActive || youtubeFetchInFlight) return;
+    youtubeFetchInFlight=true;
     try {
-      const res = await fetch(YOUTUBE_BACKEND_BASE + '/youtube-status?cb=' + Date.now());
-      if(!res.ok)throw new Error('YouTube HTTP '+res.status);
-      if (res.ok) {
-        const data = await res.json();
-        if(data.error || typeof data.isLive!=='boolean')throw new Error('Estado YouTube indisponível');
+      let data=null;
+      const bases=[YOUTUBE_BACKEND_BASE,'https://apexscorpio-youtube-scraper-6e2678f9.netlify.app'];
+      for(const base of [...new Set(bases)]) {
+        try {
+          const response=await fetch(base+'/youtube-status?cb='+Date.now(),{cache:'no-store',signal:AbortSignal.timeout(8000)});
+          if(!response.ok)throw Error('YouTube HTTP '+response.status);
+          const candidate=await response.json();
+          if(candidate.error || typeof candidate.isLive!=='boolean')throw Error('Estado YouTube indisponível');
+          data=candidate;break;
+        }catch(_){}
+      }
+      if(!data)throw Error('Contagem YouTube indisponível');
         lastYoutubeFetch=Date.now();
         realState.youtube = {
           isLive: Boolean(data.isLive),
-          viewers: data.isLive ? (data.viewers !== null && data.viewers !== undefined ? Number(data.viewers) : null) : null,
+          viewers: data.isLive && data.viewers!==null && data.viewers!==undefined && data.viewers!=='' && Number.isSafeInteger(Number(data.viewers)) && Number(data.viewers)>=0 ? Number(data.viewers) : null,
+          status:data.isLive && (data.viewers===null || data.viewers===undefined || data.viewers==='' || !Number.isSafeInteger(Number(data.viewers)) || Number(data.viewers)<0)?'unknown':'confirmed',
           videoId: data.videoId,
           confidence: data.confidence || "none",
           viewerState: data.viewerState || "unknown"
         };
         recalculateTotal();
         if (!isTestActive) renderStatus(realState);
-      }
-    } catch (_) {if(!lastYoutubeFetch || Date.now()-lastYoutubeFetch>45000){realState.youtube.status='stale';realState.youtube.viewers=null;recalculateTotal();if(!isTestActive)renderStatus(realState);}}
+    } catch (_) {if(!lastYoutubeFetch || Date.now()-lastYoutubeFetch>30000){realState.youtube.status='stale';realState.youtube.viewers=null;recalculateTotal();if(!isTestActive)renderStatus(realState);}}
+    finally{youtubeFetchInFlight=false;}
   }
 
   function resetToRealState() {
@@ -320,11 +330,24 @@
   setInterval(()=>{if(lastFacebookUpdate && Date.now()-lastFacebookUpdate>30000){realState.facebook={isLive:realState.facebook.isLive,viewers:null,status:'stale'};recalculateTotal();if(!isTestActive)renderStatus(realState);}},5000);
   setInterval(checkPublicTwitchLive, 5000);
   setInterval(checkNetlifyYoutubeStatus, 15000);
+  setInterval(()=>{
+    if(isTestActive)return;
+    const now=Date.now();
+    for(const [platform,observedAt] of [['twitch',lastTwitchFetch],['youtube',lastYoutubeFetch]]) {
+      if(observedAt && now-observedAt>30000){realState[platform].status='stale';realState[platform].viewers=null;}
+    }
+    recalculateTotal();renderStatus(realState);
+  },5000);
 
   function applyYoutubeLiveState(ytState) {
     if(!ytState || typeof ytState.isLive!=='boolean')return;
+    // Player heartbeats confirm liveness, not a fresh viewer count.
+    // Counts come from our status request, with its independent expiry timer.
+    if(lastYoutubeFetch && Date.now()-lastYoutubeFetch<=30000)return;
     const value=ytState.viewers;
-    const count=value!==null && value!==undefined && value!=='' && Number.isFinite(Number(value)) && Number(value)>=0 ? Number(value) : null;
+    const observedAt=Number(ytState.viewersObservedAt);
+    const fresh=!ytState.error && Number.isFinite(observedAt) && observedAt<=Date.now()+5000 && Date.now()-observedAt<=30000;
+    const count=fresh && value!==null && value!==undefined && value!=='' && Number.isSafeInteger(Number(value)) && Number(value)>=0 ? Number(value) : null;
     realState.youtube={isLive:ytState.isLive,viewers:ytState.isLive?count:null,videoId:ytState.videoId || null,status:ytState.isLive && count===null?'unknown':'confirmed'};
     recalculateTotal();
     if(!isTestActive)renderStatus(realState);
