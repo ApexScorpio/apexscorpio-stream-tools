@@ -113,7 +113,9 @@
       const key = type + '|' + (payload?.id || '') + '|' + (payload?.username || '') + '|' + (payload?.message || payload?.msg?.message || '');
       if (_seenIds.has(key)) return true;
       _seenIds.add(key);
-      setTimeout(() => _seenIds.delete(key), 3000);
+      if (payload?.id) {
+        if (_seenIds.size > 5000) _seenIds.delete(_seenIds.values().next().value);
+      } else setTimeout(() => _seenIds.delete(key), 3000);
       return false;
     }
 
