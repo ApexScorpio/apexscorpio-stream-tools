@@ -1,4 +1,4 @@
-(function (global) {
+﻿(function (global) {
   'use strict';
 
   const BACKEND_BASE_URL = String(
@@ -154,14 +154,19 @@
       } catch (_) {}
     }
 
+    // Carrega a configuração inicial imediatamente ao iniciar
     poll();
+
+    // Fallback espaçado (5 minutos) para proteger a cota do Cloudflare Workers.
+    // Atualizações em tempo real chegam instantaneamente via MQTT e BroadcastChannel.
+    const pollInterval = Math.max(
+      60000,
+      Number(intervalMs || 300000)
+    );
 
     const timer = global.setInterval(
       poll,
-      Math.max(
-        1000,
-        Number(intervalMs || 2000)
-      )
+      pollInterval
     );
 
     activePollers.set(overlayName, timer);
@@ -195,6 +200,6 @@
   const inferredOverlay = inferOverlayName();
 
   if (inferredOverlay) {
-    start(inferredOverlay, 2000);
+    start(inferredOverlay, 300000);
   }
 })(window);
