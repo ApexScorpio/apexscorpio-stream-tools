@@ -64,7 +64,8 @@
             id = '';
           }
         } else {
-          state({isLive:true,viewers:null,status:'unknown'});
+          id = '';
+          state({isLive:false,viewers:null,status:'unknown'});
         }
         if(comments.status==='fulfilled'){
           const items=(comments.value.data||[]).slice().sort((a,b)=>Date.parse(a.created_time)-Date.parse(b.created_time));
