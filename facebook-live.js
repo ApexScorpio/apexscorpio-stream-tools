@@ -49,7 +49,7 @@
         if(comments.status==='fulfilled'){
           const items=(comments.value.data||[]).slice().sort((a,b)=>Date.parse(a.created_time)-Date.parse(b.created_time));
           for(const item of items){if(!item.id||seen.has(item.id))continue;seen.add(item.id);
-            if(!baseline&&Date.parse(item.created_time)<sessionStartedAt)continue;
+            if(!baseline&&Date.parse(item.created_time)<sessionStartedAt-7200000)continue;
             if(typeof item.message!=='string'||!item.message.trim())continue;
             emit('chat_message',{id:'facebook-comment-'+id+'-'+item.id,platform:'facebook',username:item.from?.name||'Utilizador Facebook',text:item.message,message:item.message,timestamp:item.created_time,color:'#1877F2'});
           }
