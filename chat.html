@@ -311,6 +311,42 @@
       twitchConnect();
     })();
 
+    // Multi-source Facebook Live Chat reader (Local server + Cloudflare Durable Object)
+    (function initFacebookChatPolling() {
+      let isPolling = false;
+      async function poll() {
+        if (isPolling) return;
+        isPolling = true;
+        try {
+          const endpoints = [
+            'http://localhost:3000/api/chat/recent?cb=' + Date.now(),
+            'http://127.0.0.1:3000/api/chat/recent?cb=' + Date.now(),
+            (window.APEX_BACKEND_URL || 'https://apexscorpio-stream-tools.scorpioapex.workers.dev') + '/overlay-config?overlay=facebook-comments&cb=' + Date.now()
+          ];
+          for (const url of endpoints) {
+            try {
+              const res = await fetch(url, { cache: 'no-store', signal: AbortSignal.timeout(3000) });
+              if (!res.ok) continue;
+              const data = await res.json();
+              const list = data.messages || data.config?.messages || (data.config?.message ? [data.config.message] : []);
+              if (Array.isArray(list) && list.length > 0) {
+                list.forEach(msg => {
+                  if (msg && (msg.platform || '').toLowerCase() === 'facebook') {
+                    handleIncomingData('chat_message', msg);
+                  }
+                });
+                break;
+              }
+            } catch (_) {}
+          }
+        } finally {
+          isPolling = false;
+        }
+      }
+      setInterval(poll, 2500);
+      poll();
+    })();
+
     function applyConfig() {
       cfg.fadeSeconds = normalizeFadeSeconds(cfg.fadeSeconds);
       cfg.maxMessages = normalizeMaxMessages(cfg.maxMessages);

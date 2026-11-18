@@ -125,9 +125,21 @@ const recentEvents = {
   lastRaid: '@StreamMaster (25 espectadores)'
 };
 
+const recentChatMessages = [];
+
 function handleChatMessage(msg) {
   console.log(`[Unified Chat] [${msg.platform.toUpperCase()}] ${msg.username}: ${msg.message}`);
+  recentChatMessages.push(msg);
+  if (recentChatMessages.length > 100) recentChatMessages.shift();
   io.emit('chat_message', msg);
+
+  if (msg.platform === 'facebook') {
+    fetch('https://apexscorpio-stream-tools.scorpioapex.workers.dev/overlay-config?overlay=facebook-comments', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ config: { messages: recentChatMessages.filter(m => m.platform === 'facebook'), latest: msg, _updatedAt: Date.now() } })
+    }).catch(() => {});
+  }
 }
 
 function handleStatusUpdate(update) {
@@ -240,6 +252,10 @@ app.get('/api/facebook/status', (req, res) => {
     viewers: facebookService.viewers,
     pageId: facebookService.pageId
   });
+});
+
+app.get('/api/chat/recent', (req, res) => {
+  res.json({ messages: recentChatMessages });
 });
 
 app.post('/api/trigger-alert', (req, res) => {
