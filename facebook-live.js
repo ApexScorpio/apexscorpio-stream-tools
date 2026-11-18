@@ -45,7 +45,11 @@
           graph(id+'/reactions','id,name,type',ctrl.signal)
         ]);
         if(run!==generation)return;
-        if(metadata.status==='fulfilled')state(viewerState(metadata.value));else state({isLive:false,viewers:null,status:'unavailable'});
+        if(metadata.status==='fulfilled') {
+          state(viewerState(metadata.value));
+        } else {
+          state({isLive:Boolean(id),viewers:null,status:'unavailable'});
+        }
         if(comments.status==='fulfilled'){
           const items=(comments.value.data||[]).slice().sort((a,b)=>Date.parse(a.created_time)-Date.parse(b.created_time));
           for(const item of items){if(!item.id||seen.has(item.id))continue;seen.add(item.id);
@@ -60,7 +64,7 @@
         if(seen.size>5000)seen=new Set([...seen].slice(-3000));if(seenReactions.size>5000)seenReactions=new Set([...seenReactions].slice(-3000));
         const issues=[];if(metadata.status==='rejected')issues.push('espectadores indisponíveis');if(comments.status==='rejected')issues.push('comentários sem acesso');if(reactions.status==='rejected')issues.push('reações sem acesso');
         report(issues.length?'Facebook: '+issues.join(' · '):'Facebook ligado: comentários, espectadores e reações.');
-      }catch(error){if(run===generation){state({isLive:false,viewers:null,status:'unavailable'});report(error.name==='AbortError'?'Facebook: leitura demorou demasiado; nova tentativa automática.':error.message);}}
+      }catch(error){if(run===generation){state({isLive:Boolean(id),viewers:null,status:'unavailable'});report(error.name==='AbortError'?'Facebook: leitura demorou demasiado; nova tentativa automática.':error.message);}}
       finally{clearTimeout(timeout);if(controller===ctrl)controller=null;busy=false;}
     }
     function stop(){generation++;token='';if(timer)clearInterval(timer);timer=null;controller?.abort();state({isLive:false,viewers:null,status:'unavailable'});report('Facebook desligado.');}

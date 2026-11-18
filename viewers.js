@@ -277,10 +277,11 @@
         lastFacebookUpdate = Date.now();
         const value = data.viewers;
         const valid = (typeof value === 'number' || typeof value === 'string' && /^\d+$/.test(value)) && Number.isSafeInteger(Number(value)) && Number(value) >= 0;
+        const isLive = Boolean(data.isLive) || (data.status === 'unavailable' && Boolean(realState.facebook.isLive));
         realState.facebook = {
-          isLive: Boolean(data.isLive),
-          viewers: valid ? Number(value) : (data.isLive ? 0 : null),
-          status: 'confirmed'
+          isLive,
+          viewers: valid ? Number(value) : (isLive ? (realState.facebook.viewers || 0) : null),
+          status: data.status || 'confirmed'
         };
         recalculateTotal();
         if (!isTestActive) renderStatus(realState);

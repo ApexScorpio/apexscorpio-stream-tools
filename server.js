@@ -166,12 +166,23 @@ function handleStatusUpdate(update) {
       body: JSON.stringify({ config: { isLive: update.isLive, viewers: update.viewers, videoId: update.videoId || null, status: 'confirmed', _updatedAt: Date.now() } })
     }).catch(() => {});
   } else if (update.platform === 'facebook') {
-    streamState.facebook.isLive = update.isLive;
-    streamState.facebook.viewers = update.viewers;
+    if (update.status !== 'unavailable' || !streamState.facebook.isLive) {
+      streamState.facebook.isLive = update.isLive;
+    }
+    if (update.viewers !== null && update.viewers !== undefined) {
+      streamState.facebook.viewers = update.viewers;
+    }
     fetch('https://apexscorpio-stream-tools.scorpioapex.workers.dev/overlay-config?overlay=facebook-status', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ config: { isLive: update.isLive, viewers: update.viewers, status: 'confirmed', _updatedAt: Date.now() } })
+      body: JSON.stringify({
+        config: {
+          isLive: streamState.facebook.isLive,
+          viewers: streamState.facebook.viewers,
+          status: update.status || 'confirmed',
+          _updatedAt: Date.now()
+        }
+      })
     }).catch(() => {});
   }
   broadcastStatus();

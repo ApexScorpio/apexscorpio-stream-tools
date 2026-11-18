@@ -49,12 +49,17 @@ class FacebookService {
         if (type === 'chat_message' && this.onChatMessage) {
           this.onChatMessage(payload);
         } else if (type === 'facebook_status' && this.onStatusUpdate) {
-          this.isLive = Boolean(payload.isLive);
-          this.viewers = payload.viewers || 0;
+          if (payload.status !== 'unavailable' || !this.isLive) {
+            this.isLive = Boolean(payload.isLive);
+          }
+          if (payload.viewers !== null && payload.viewers !== undefined) {
+            this.viewers = payload.viewers;
+          }
           this.onStatusUpdate({
             platform: 'facebook',
             isLive: this.isLive,
-            viewers: this.viewers
+            viewers: this.viewers,
+            status: payload.status
           });
         } else if (type === 'new_event' && this.onNewEvent) {
           this.onNewEvent(payload);
