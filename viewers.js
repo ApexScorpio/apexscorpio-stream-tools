@@ -39,7 +39,7 @@
   let realState = {
     twitch: { isLive: false, viewers: null, status: "confirmed" },
     youtube: { isLive: false, viewers: null, status: "confirmed" },
-    facebook: { isLive: true, viewers: null, status: "confirmed" },
+    facebook: { isLive: false, viewers: null, status: "confirmed" },
     totalText: "0"
   };
 
@@ -259,7 +259,7 @@
         }
         if (token) {
           try {
-            const res = await fetch('https://graph.facebook.com/v26.0/111315703596465/live_videos?fields=id,status,live_views&limit=5&access_token=' + token, { cache: 'no-store', signal: AbortSignal.timeout(5000) });
+            const res = await fetch('https://graph.facebook.com/v21.0/111315703596465/live_videos?fields=id,status,live_views&limit=5&access_token=' + token, { cache: 'no-store', signal: AbortSignal.timeout(5000) });
             if (res.ok) {
               const body = await res.json();
               const live = body.data?.find(item => item.status === 'LIVE');
@@ -277,7 +277,7 @@
         lastFacebookUpdate = Date.now();
         const value = data.viewers;
         const valid = (typeof value === 'number' || typeof value === 'string' && /^\d+$/.test(value)) && Number.isSafeInteger(Number(value)) && Number(value) >= 0;
-        const isLive = Boolean(data.isLive) || (data.status === 'unavailable' && Boolean(realState.facebook.isLive));
+        const isLive = Boolean(data.isLive);
         realState.facebook = {
           isLive,
           viewers: valid ? Number(value) : (isLive ? (realState.facebook.viewers || 0) : null),

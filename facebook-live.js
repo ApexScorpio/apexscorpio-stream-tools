@@ -28,7 +28,7 @@
       }catch(_){}
     }
     async function graph(resource,fields,signal) {
-      const u=new URL('https://graph.facebook.com/v26.0/'+resource);u.searchParams.set('fields',fields);u.searchParams.set('limit','100');if(resource.endsWith('/comments')){u.searchParams.set('order','reverse_chronological');u.searchParams.set('filter','stream');}
+      const u=new URL('https://graph.facebook.com/v21.0/'+resource);u.searchParams.set('fields',fields);u.searchParams.set('limit','100');if(resource.endsWith('/comments')){u.searchParams.set('order','reverse_chronological');u.searchParams.set('filter','stream');}
       const r=await request(u.href,{headers:{Authorization:'Bearer '+token},cache:'no-store',signal});
       const body=await r.json();if(!r.ok||body.error){const error=new Error(body.error?.code===190?'A autorização Meta expirou. Volta a ligar a página.':'A Meta não permitiu esta leitura. Verifica as permissões da aplicação e da página.');error.code=body.error?.code;throw error;}
       return body;
@@ -44,16 +44,10 @@
             if(live) id=String(live.id);
             else { state({isLive:false,viewers:null,status:'confirmed'}); report('Sem live ativa na página.'); return; }
           } catch (_) {
-            try {
-              const cfgPath = typeof require !== 'undefined' ? require('path').join(__dirname, '..', 'apex-facebook-publisher', 'data', 'config.json') : null;
-              if (cfgPath && require('fs').existsSync(cfgPath)) {
-                const cfg = JSON.parse(require('fs').readFileSync(cfgPath, 'utf8'));
-                const link = cfg.platforms?.facebook?.link;
-                const match = link && link.match(/\/videos\/(\d+)/);
-                if (match) id = match[1];
-              }
-            } catch (_) {}
-            if (!id) id = '2203285567066168';
+            if(run!==generation)return;
+            state({isLive:false,viewers:null,status:'unknown'});
+            report('A aguardar transmissão ativa na página…');
+            return;
           }
         }
         // Independent requests: a missing viewer metric must never disable chat.
@@ -64,9 +58,13 @@
         ]);
         if(run!==generation)return;
         if(metadata.status==='fulfilled') {
-          state(viewerState(metadata.value));
+          const vs = viewerState(metadata.value);
+          state(vs);
+          if (!vs.isLive) {
+            id = '';
+          }
         } else {
-          state({isLive:true,viewers:1,status:'confirmed'});
+          state({isLive:true,viewers:null,status:'unknown'});
         }
         if(comments.status==='fulfilled'){
           const items=(comments.value.data||[]).slice().sort((a,b)=>Date.parse(a.created_time)-Date.parse(b.created_time));
@@ -82,7 +80,7 @@
         if(seen.size>5000)seen=new Set([...seen].slice(-3000));if(seenReactions.size>5000)seenReactions=new Set([...seenReactions].slice(-3000));
         const issues=[];if(metadata.status==='rejected')issues.push('espectadores indisponíveis');if(comments.status==='rejected')issues.push('comentários sem acesso');if(reactions.status==='rejected')issues.push('reações sem acesso');
         report(issues.length?'Facebook: '+issues.join(' · '):'Facebook ligado: comentários, espectadores e reações.');
-      }catch(error){if(run===generation){state({isLive:true,viewers:1,status:'confirmed'});report(error.name==='AbortError'?'Facebook: leitura demorou demasiado; nova tentativa automática.':error.message);}}
+      }catch(error){if(run===generation){state({isLive:false,viewers:null,status:'unknown'});report(error.name==='AbortError'?'Facebook: leitura demorou demasiado; nova tentativa automática.':error.message);}}
       finally{clearTimeout(timeout);if(controller===ctrl)controller=null;busy=false;}
     }
     function stop(){generation++;token='';if(timer)clearInterval(timer);timer=null;controller?.abort();}
