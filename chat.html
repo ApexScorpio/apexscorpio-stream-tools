@@ -108,14 +108,31 @@
     const bc = typeof BroadcastChannel !== 'undefined' ? new BroadcastChannel('apex_scorpio_stream_tools') : null;
 
     const _seenIds = new Set();
+    const _seenSignatures = new Map();
     const youtubeEventRelayClients = [];
     function _isDuplicate(type, payload) {
-      const key = type + '|' + (payload?.id || '') + '|' + (payload?.username || '') + '|' + (payload?.message || payload?.msg?.message || '');
-      if (_seenIds.has(key)) return true;
-      _seenIds.add(key);
-      if (payload?.id) {
+      const msg = payload?.msg || payload;
+      const id = String(msg?.id || payload?.id || '').trim();
+      const user = String(msg?.username || payload?.username || '').trim().toLowerCase();
+      const text = String(msg?.message || msg?.text || payload?.message || payload?.text || '').trim();
+
+      if (id) {
+        if (_seenIds.has(id)) return true;
+        _seenIds.add(id);
         if (_seenIds.size > 5000) _seenIds.delete(_seenIds.values().next().value);
-      } else setTimeout(() => _seenIds.delete(key), 3000);
+      }
+
+      const sig = (msg?.platform || payload?.platform || 'chat') + '|' + user + '|' + text;
+      const now = Date.now();
+      if (_seenSignatures.has(sig) && (now - _seenSignatures.get(sig)) < 15000) {
+        return true;
+      }
+      _seenSignatures.set(sig, now);
+      if (_seenSignatures.size > 1000) {
+        for (const [k, time] of _seenSignatures) {
+          if (now - time > 30000) _seenSignatures.delete(k);
+        }
+      }
       return false;
     }
 
@@ -138,6 +155,7 @@
         }
       }
       _seenIds.clear();
+      _seenSignatures.clear();
     }
 
     function handleIncomingData(type, payload) {
@@ -389,7 +407,15 @@
     }
 
     function addMsg(msg, platform) {
+      if (msg.id) {
+        const cleanId = 'msg-' + String(msg.id).replace(/[^a-zA-Z0-9_-]/g, '_');
+        if (document.getElementById(cleanId)) return;
+      }
+
       const el = document.createElement('div');
+      if (msg.id) {
+        el.id = 'msg-' + String(msg.id).replace(/[^a-zA-Z0-9_-]/g, '_');
+      }
       const mode = cfg.displayMode === 'compact' ? 'mode-compact' : 'mode-pill';
       const isTestClass = msg.isTest ? 'is-test-msg' : 'is-real-msg';
       el.className = `chat-message ${platform} ${mode} ${isTestClass}`;
