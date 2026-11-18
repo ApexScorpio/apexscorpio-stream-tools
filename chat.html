@@ -108,14 +108,33 @@
     const bc = typeof BroadcastChannel !== 'undefined' ? new BroadcastChannel('apex_scorpio_stream_tools') : null;
 
     const _seenIds = new Set();
+    const _seenSignatures = new Map();
     const youtubeEventRelayClients = [];
     function _isDuplicate(type, payload) {
-      const key = type + '|' + (payload?.id || '') + '|' + (payload?.username || '') + '|' + (payload?.message || payload?.msg?.message || '');
-      if (_seenIds.has(key)) return true;
-      _seenIds.add(key);
-      if (payload?.id) {
+      const msg = payload?.msg || payload;
+      if (msg?.isTest) return false;
+      const id = String(msg?.id || payload?.id || '').trim();
+      const user = String(msg?.username || payload?.username || '').trim().toLowerCase();
+      const text = String(msg?.message || msg?.text || payload?.message || payload?.text || '').trim();
+
+      if (id) {
+        if (_seenIds.has(id)) return true;
+        _seenIds.add(id);
         if (_seenIds.size > 5000) _seenIds.delete(_seenIds.values().next().value);
-      } else setTimeout(() => _seenIds.delete(key), 3000);
+        return false;
+      }
+
+      const sig = (msg?.platform || payload?.platform || 'chat') + '|' + user + '|' + text;
+      const now = Date.now();
+      if (_seenSignatures.has(sig) && (now - _seenSignatures.get(sig)) < 3000) {
+        return true;
+      }
+      _seenSignatures.set(sig, now);
+      if (_seenSignatures.size > 1000) {
+        for (const [k, time] of _seenSignatures) {
+          if (now - time > 10000) _seenSignatures.delete(k);
+        }
+      }
       return false;
     }
 
@@ -138,6 +157,7 @@
         }
       }
       _seenIds.clear();
+      _seenSignatures.clear();
     }
 
     function handleIncomingData(type, payload) {
@@ -311,6 +331,42 @@
       twitchConnect();
     })();
 
+    // Multi-source Facebook Live Chat reader (Local server + Cloudflare Durable Object)
+    (function initFacebookChatPolling() {
+      let isPolling = false;
+      async function poll() {
+        if (isPolling) return;
+        isPolling = true;
+        try {
+          const endpoints = [
+            (window.APEX_BACKEND_URL || 'https://apexscorpio-stream-tools.scorpioapex.workers.dev') + '/overlay-config?overlay=facebook-comments&cb=' + Date.now(),
+            'http://localhost:3000/api/chat/recent?cb=' + Date.now(),
+            'http://127.0.0.1:3000/api/chat/recent?cb=' + Date.now()
+          ];
+          for (const url of endpoints) {
+            try {
+              const res = await fetch(url, { cache: 'no-store', signal: AbortSignal.timeout(3000) });
+              if (!res.ok) continue;
+              const data = await res.json();
+              const list = data.messages || data.config?.messages || (data.config?.message ? [data.config.message] : []);
+              if (Array.isArray(list) && list.length > 0) {
+                list.forEach(msg => {
+                  if (msg && (msg.platform || '').toLowerCase() === 'facebook') {
+                    handleIncomingData('chat_message', msg);
+                  }
+                });
+                break;
+              }
+            } catch (_) {}
+          }
+        } finally {
+          isPolling = false;
+        }
+      }
+      setInterval(poll, 2500);
+      poll();
+    })();
+
     function applyConfig() {
       cfg.fadeSeconds = normalizeFadeSeconds(cfg.fadeSeconds);
       cfg.maxMessages = normalizeMaxMessages(cfg.maxMessages);
@@ -352,7 +408,17 @@
     }
 
     function addMsg(msg, platform) {
+      if (!msg) return;
+      const msgId = msg.id || (msg.isTest ? `test-${Date.now()}-${Math.random().toString(36).slice(2, 6)}` : null);
+      if (msgId) {
+        const cleanId = 'msg-' + String(msgId).replace(/[^a-zA-Z0-9_-]/g, '_');
+        if (document.getElementById(cleanId)) return;
+      }
+
       const el = document.createElement('div');
+      if (msgId) {
+        el.id = 'msg-' + String(msgId).replace(/[^a-zA-Z0-9_-]/g, '_');
+      }
       const mode = cfg.displayMode === 'compact' ? 'mode-compact' : 'mode-pill';
       const isTestClass = msg.isTest ? 'is-test-msg' : 'is-real-msg';
       el.className = `chat-message ${platform} ${mode} ${isTestClass}`;
@@ -369,12 +435,13 @@
       }
 
       const color = msg.userColor || platformColors[platform] || '#FFF';
+      const messageContent = msg.message || msg.text || '';
       el.innerHTML = `
         <div class="chat-header">
           ${badgesHtml}
-          <span class="user-name" style="color:${color}">${msg.username}</span>
+          <span class="user-name" style="color:${color}">${msg.username || 'Utilizador'}</span>
         </div>
-        <div class="chat-text" style="font-size:${cfg.fontSize || 14}px">${esc(msg.message)}</div>
+        <div class="chat-text" style="font-size:${cfg.fontSize || 14}px">${esc(messageContent)}</div>
       `;
 
       chatContainer.appendChild(el);

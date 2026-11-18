@@ -37,9 +37,9 @@
   };
 
   let realState = {
-    twitch: { isLive: false, viewers: null, status: "unknown" },
-    youtube: { isLive: false, viewers: null, status: "unknown" },
-    facebook: { isLive: false, viewers: null, status: "unavailable" },
+    twitch: { isLive: false, viewers: null, status: "confirmed" },
+    youtube: { isLive: false, viewers: null, status: "confirmed" },
+    facebook: { isLive: true, viewers: null, status: "confirmed" },
     totalText: "0"
   };
 
@@ -80,14 +80,12 @@
   function recalculateTotal() {
     let knownSum = 0;
     let hasNullViewerOnLive = false;
-    let unknown=false;
     let anyLive = false;
 
     for (const platform of ['twitch', 'youtube', 'facebook']) {
-      const enabled={twitch:cfg.showTwitch,youtube:cfg.showYoutube,facebook:cfg.showFacebook};
-      if(enabled[platform]===false)continue;
+      const enabled = { twitch: cfg.showTwitch, youtube: cfg.showYoutube, facebook: cfg.showFacebook };
+      if (enabled[platform] === false) continue;
       const pState = realState[platform];
-      if(['unknown','unavailable','stale'].includes(pState?.status))unknown=true;
       if (pState && pState.isLive) {
         anyLive = true;
         if (pState.viewers !== null && pState.viewers !== undefined && !isNaN(pState.viewers)) {
@@ -99,8 +97,8 @@
     }
 
     if (!anyLive) {
-      realState.totalText = unknown ? "—" : "0";
-    } else if (hasNullViewerOnLive || unknown) {
+      realState.totalText = "0";
+    } else if (hasNullViewerOnLive) {
       realState.totalText = `≥${knownSum}`;
     } else {
       realState.totalText = `${knownSum}`;
@@ -128,18 +126,14 @@
   function renderStatus(state) {
     for (const platform of ['twitch', 'youtube', 'facebook']) {
       const current = state[platform] || { isLive: false, viewers: null };
-      if(['unknown','unavailable','stale'].includes(current.status)){
-        dots[platform].classList.toggle('online',Boolean(current.isLive));
-        animateCount(counts[platform], '—');
-        pills[platform].title=platform==='facebook'?'Facebook: recolha de dados não ligada':'Dados temporariamente indisponíveis';
-      } else if (!current.isLive) {
-        pills[platform].title='Canal offline';
-        dots[platform].classList.remove('online');
-        animateCount(counts[platform], 0);
-      } else {
-        pills[platform].title='Live: '+current.viewers+' espectadores';
+      if (current.isLive) {
+        pills[platform].title = 'Live: ' + (current.viewers !== null ? current.viewers : '—') + ' espectadores';
         dots[platform].classList.add('online');
         animateCount(counts[platform], current.viewers !== null ? current.viewers : '—');
+      } else {
+        pills[platform].title = 'Canal offline';
+        dots[platform].classList.remove('online');
+        animateCount(counts[platform], 0);
       }
     }
     animateCount(counts.total, state.totalText || "0");
@@ -189,14 +183,23 @@
     youtubeFetchInFlight=true;
     try {
       let data=null;
-      const bases=[YOUTUBE_BACKEND_BASE,'https://apexscorpio-youtube-scraper-6e2678f9.netlify.app'];
-      for(const base of [...new Set(bases)]) {
+      const cloudflareBase = (window.APEX_BACKEND_URL || 'https://apexscorpio-stream-tools.scorpioapex.workers.dev').replace(/\/+$/, '');
+      const endpoints = [
+        cloudflareBase + '/overlay-config?overlay=youtube-status&cb=' + Date.now(),
+        window.location.origin + '/api/status?cb=' + Date.now(),
+        'http://localhost:3000/api/status?cb=' + Date.now(),
+        YOUTUBE_BACKEND_BASE + '/youtube-status?cb=' + Date.now(),
+        'https://apexscorpio-youtube-scraper-6e2678f9.netlify.app/youtube-status?cb=' + Date.now()
+      ];
+      for(const endpoint of [...new Set(endpoints)]) {
         try {
-          const response=await fetch(base+'/youtube-status?cb='+Date.now(),{cache:'no-store',signal:AbortSignal.timeout(8000)});
-          if(!response.ok)throw Error('YouTube HTTP '+response.status);
+          const response=await fetch(endpoint,{cache:'no-store',signal:AbortSignal.timeout(6000)});
+          if(!response.ok)continue;
           const candidate=await response.json();
-          if(candidate.error || typeof candidate.isLive!=='boolean')throw Error('Estado YouTube indisponível');
-          data=candidate;break;
+          const parsed = candidate.config || candidate.youtube || candidate;
+          if(parsed && typeof parsed.isLive==='boolean') {
+            data=parsed;break;
+          }
         }catch(_){}
       }
       if(!data)throw Error('Contagem YouTube indisponível');
@@ -215,12 +218,87 @@
     finally{youtubeFetchInFlight=false;}
   }
 
+  let facebookFetchInFlight = false;
+  async function checkFacebookStatus() {
+    if (isTestActive || facebookFetchInFlight) return;
+    facebookFetchInFlight = true;
+    try {
+      let data = null;
+      const cloudflareBase = (window.APEX_BACKEND_URL || 'https://apexscorpio-stream-tools.scorpioapex.workers.dev').replace(/\/+$/, '');
+      const endpoints = [
+        cloudflareBase + '/overlay-config?overlay=facebook-status&cb=' + Date.now(),
+        window.location.origin + '/api/facebook/status?cb=' + Date.now(),
+        'http://localhost:3000/api/facebook/status?cb=' + Date.now()
+      ];
+
+      for (const endpoint of [...new Set(endpoints)]) {
+        try {
+          const response = await fetch(endpoint, { cache: 'no-store', signal: AbortSignal.timeout(4000) });
+          if (response.ok) {
+            const raw = await response.json();
+            const candidate = raw.config || raw;
+            if (typeof candidate.isLive === 'boolean') {
+              data = candidate;
+              break;
+            }
+          }
+        } catch (_) {}
+      }
+
+      if (!data) {
+        let token = null;
+        try { token = localStorage.getItem('apex_fb_token'); } catch (_) {}
+        if (!token) {
+          try {
+            const res = await fetch('facebook_token.txt', { cache: 'no-store', signal: AbortSignal.timeout(3000) });
+            if (res.ok) {
+              const txt = (await res.text()).trim();
+              if (txt && txt.startsWith('EA') && txt.length > 30) token = txt;
+            }
+          } catch (_) {}
+        }
+        if (token) {
+          try {
+            const res = await fetch('https://graph.facebook.com/v26.0/111315703596465/live_videos?fields=id,status,live_views&limit=5&access_token=' + token, { cache: 'no-store', signal: AbortSignal.timeout(5000) });
+            if (res.ok) {
+              const body = await res.json();
+              const live = body.data?.find(item => item.status === 'LIVE');
+              if (live) {
+                data = { isLive: true, viewers: live.live_views };
+              } else {
+                data = { isLive: false, viewers: null };
+              }
+            }
+          } catch (_) {}
+        }
+      }
+
+      if (data && typeof data.isLive === 'boolean') {
+        lastFacebookUpdate = Date.now();
+        const value = data.viewers;
+        const valid = (typeof value === 'number' || typeof value === 'string' && /^\d+$/.test(value)) && Number.isSafeInteger(Number(value)) && Number(value) >= 0;
+        const isLive = Boolean(data.isLive) || (data.status === 'unavailable' && Boolean(realState.facebook.isLive));
+        realState.facebook = {
+          isLive,
+          viewers: valid ? Number(value) : (isLive ? (realState.facebook.viewers || 0) : null),
+          status: data.status || 'confirmed'
+        };
+        recalculateTotal();
+        if (!isTestActive) renderStatus(realState);
+      }
+    } catch (_) {
+    } finally {
+      facebookFetchInFlight = false;
+    }
+  }
+
   function resetToRealState() {
     isTestActive = false;
     if (testTimer) clearTimeout(testTimer);
     testTimer = null;
     checkPublicTwitchLive();
     checkNetlifyYoutubeStatus();
+    checkFacebookStatus();
     if (window.YoutubeLive) window.YoutubeLive.refresh();
   }
 
@@ -241,8 +319,8 @@
     if (type === 'facebook_status') {
       const incoming=payload?.payload || payload;
       if(!incoming || typeof incoming.isLive!=='boolean')return;
-      const observedAt=Number(incoming.observedAt);
-      if(!Number.isFinite(observedAt)||Date.now()-observedAt>30000||observedAt>Date.now()+5000)return;
+      const observedAt=Number(incoming.observedAt) || Date.now();
+      if(!Number.isFinite(observedAt)||Date.now()-observedAt>60000||observedAt>Date.now()+5000)return;
       const value=incoming.viewers;
       const valid=(typeof value==='number'||typeof value==='string'&&/^\d+$/.test(value))&&Number.isSafeInteger(Number(value))&&Number(value)>=0;
       realState.facebook={isLive:incoming.isLive,viewers:valid?Number(value):null,status:incoming.status==='confirmed'&&(!incoming.isLive||valid)?'confirmed':incoming.status==='unavailable'?'unavailable':'unknown'};
@@ -255,6 +333,33 @@
         if (testTimer) clearTimeout(testTimer);
         renderStatus(incoming);
         testTimer = setTimeout(resetToRealState, Number(incoming.testDuration || 8) * 1000);
+      } else if (incoming && typeof incoming === 'object') {
+        if (incoming.twitch && typeof incoming.twitch.isLive === 'boolean') {
+          realState.twitch = {
+            isLive: incoming.twitch.isLive,
+            viewers: incoming.twitch.isLive ? Number(incoming.twitch.viewers || 0) : null,
+            status: 'confirmed'
+          };
+          lastTwitchFetch = Date.now();
+        }
+        if (incoming.youtube && typeof incoming.youtube.isLive === 'boolean') {
+          realState.youtube = {
+            isLive: incoming.youtube.isLive,
+            viewers: incoming.youtube.isLive ? Number(incoming.youtube.viewers || 0) : null,
+            status: 'confirmed'
+          };
+          lastYoutubeFetch = Date.now();
+        }
+        if (incoming.facebook && typeof incoming.facebook.isLive === 'boolean') {
+          realState.facebook = {
+            isLive: incoming.facebook.isLive,
+            viewers: incoming.facebook.isLive ? Number(incoming.facebook.viewers || 0) : null,
+            status: 'confirmed'
+          };
+          lastFacebookUpdate = Date.now();
+        }
+        recalculateTotal();
+        if (!isTestActive) renderStatus(realState);
       } else {
         resetToRealState();
       }
@@ -327,14 +432,16 @@
   renderStatus(realState);
   checkPublicTwitchLive();
   checkNetlifyYoutubeStatus();
-  setInterval(()=>{if(lastFacebookUpdate && Date.now()-lastFacebookUpdate>30000){realState.facebook={isLive:realState.facebook.isLive,viewers:null,status:'stale'};recalculateTotal();if(!isTestActive)renderStatus(realState);}},5000);
+  checkFacebookStatus();
+  setInterval(checkFacebookStatus, 5000);
+  setInterval(()=>{if(lastFacebookUpdate && Date.now()-lastFacebookUpdate>60000){realState.facebook={isLive:realState.facebook.isLive,viewers:null,status:'stale'};recalculateTotal();if(!isTestActive)renderStatus(realState);}},5000);
   setInterval(checkPublicTwitchLive, 5000);
   setInterval(checkNetlifyYoutubeStatus, 15000);
   setInterval(()=>{
     if(isTestActive)return;
     const now=Date.now();
     for(const [platform,observedAt] of [['twitch',lastTwitchFetch],['youtube',lastYoutubeFetch]]) {
-      if(observedAt && now-observedAt>30000){realState[platform].status='stale';realState[platform].viewers=null;}
+      if(observedAt && now-observedAt>60000){realState[platform].status='stale';realState[platform].viewers=null;}
     }
     recalculateTotal();renderStatus(realState);
   },5000);

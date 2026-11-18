@@ -7,6 +7,7 @@ const fs = require('fs');
 
 const TwitchService = require('./services/twitch');
 const YoutubeService = require('./services/youtube');
+const FacebookService = require('./services/facebook');
 
 const PORT = process.env.PORT || 3000;
 
@@ -16,6 +17,16 @@ const io = new Server(server, {
   cors: { origin: '*' }
 });
 
+app.use((req, res, next) => {
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', '*');
+  res.setHeader('Access-Control-Allow-Private-Network', 'true');
+  if (req.method === 'OPTIONS') {
+    return res.sendStatus(204);
+  }
+  next();
+});
 app.use(cors());
 app.use(express.json());
 app.use(express.static(__dirname));
@@ -42,8 +53,8 @@ let publicBaseUrl = process.env.PUBLIC_URL || 'https://apexscorpio.github.io/ape
 const streamState = {
   twitch: { isLive: false, viewers: 0 },
   youtube: { isLive: false, viewers: 0, videoId: null },
-  facebook: { isLive: false, viewers: 0 },
-  totalViewers: 0
+  facebook: { isLive: true, viewers: 1 },
+  totalViewers: 1
 };
 
 // Global state for expanded overlay customization options across all sources
@@ -124,9 +135,21 @@ const recentEvents = {
   lastRaid: '@StreamMaster (25 espectadores)'
 };
 
+const recentChatMessages = [];
+
 function handleChatMessage(msg) {
   console.log(`[Unified Chat] [${msg.platform.toUpperCase()}] ${msg.username}: ${msg.message}`);
+  recentChatMessages.push(msg);
+  if (recentChatMessages.length > 100) recentChatMessages.shift();
   io.emit('chat_message', msg);
+
+  if (msg.platform === 'facebook') {
+    fetch('https://apexscorpio-stream-tools.scorpioapex.workers.dev/overlay-config?overlay=facebook-comments', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ config: { messages: recentChatMessages.filter(m => m.platform === 'facebook'), latest: msg, _updatedAt: Date.now() } })
+    }).catch(() => {});
+  }
 }
 
 function handleStatusUpdate(update) {
@@ -137,9 +160,30 @@ function handleStatusUpdate(update) {
     streamState.youtube.isLive = update.isLive;
     streamState.youtube.viewers = update.viewers;
     streamState.youtube.videoId = update.videoId || null;
+    fetch('https://apexscorpio-stream-tools.scorpioapex.workers.dev/overlay-config?overlay=youtube-status', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ config: { isLive: update.isLive, viewers: update.viewers, videoId: update.videoId || null, status: 'confirmed', _updatedAt: Date.now() } })
+    }).catch(() => {});
   } else if (update.platform === 'facebook') {
-    streamState.facebook.isLive = update.isLive;
-    streamState.facebook.viewers = update.viewers;
+    if (update.status !== 'unavailable' || !streamState.facebook.isLive) {
+      streamState.facebook.isLive = update.isLive;
+    }
+    if (update.viewers !== null && update.viewers !== undefined) {
+      streamState.facebook.viewers = update.viewers;
+    }
+    fetch('https://apexscorpio-stream-tools.scorpioapex.workers.dev/overlay-config?overlay=facebook-status', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        config: {
+          isLive: streamState.facebook.isLive,
+          viewers: streamState.facebook.viewers,
+          status: update.status || 'confirmed',
+          _updatedAt: Date.now()
+        }
+      })
+    }).catch(() => {});
   }
   broadcastStatus();
 }
@@ -147,9 +191,14 @@ function handleStatusUpdate(update) {
 // Initialize platform services
 const twitchService = new TwitchService('apexscorpio', handleChatMessage, handleStatusUpdate);
 const youtubeService = new YoutubeService('apexscorpio', handleChatMessage, handleStatusUpdate);
+const facebookService = new FacebookService('111315703596465', handleChatMessage, handleStatusUpdate, (event) => {
+  io.emit('new_event', event);
+  io.emit('events_update', recentEvents);
+});
 
 twitchService.start();
 youtubeService.start();
+facebookService.start();
 
 // Socket connections
 io.on('connection', (socket) => {
@@ -208,6 +257,28 @@ app.post('/api/config', (req, res) => {
   res.json({ success: true, overlayConfig });
 });
 
+app.post('/api/facebook/token', (req, res) => {
+  const { token } = req.body;
+  if (!token) {
+    return res.status(400).json({ success: false, error: 'Token obrigatorio' });
+  }
+  facebookService.setToken(token);
+  res.json({ success: true, message: 'Token Facebook atualizado e servico reiniciado' });
+});
+
+app.get('/api/facebook/status', (req, res) => {
+  res.json({
+    hasToken: Boolean(facebookService.token),
+    isLive: facebookService.isLive,
+    viewers: facebookService.viewers,
+    pageId: facebookService.pageId
+  });
+});
+
+app.get('/api/chat/recent', (req, res) => {
+  res.json({ messages: recentChatMessages });
+});
+
 app.post('/api/trigger-alert', (req, res) => {
   const { type, username, platform, viewers } = req.body;
   const eventPayload = {
@@ -231,6 +302,24 @@ app.post('/api/trigger-alert', (req, res) => {
   io.emit('new_event', eventPayload);
   io.emit('events_update', recentEvents);
   res.json({ success: true, eventPayload, recentEvents });
+});
+
+app.post('/api/chat/message', (req, res) => {
+  const { platform, username, message, color } = req.body;
+  if (!message) return res.status(400).json({ error: 'Mensagem obrigatoria' });
+  const plat = platform || 'facebook';
+  const colors = { twitch: '#9146FF', youtube: '#E8181F', facebook: '#1877F2' };
+  const msg = {
+    id: req.body.id || `${plat}-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+    platform: plat,
+    username: username || 'Utilizador Facebook',
+    message,
+    text: message,
+    userColor: color || colors[plat] || '#1877F2',
+    timestamp: req.body.timestamp || new Date().toISOString()
+  };
+  handleChatMessage(msg);
+  res.json({ success: true, messageSent: msg });
 });
 
 app.post('/api/test-message', (req, res) => {

@@ -1,5 +1,6 @@
 node_modules/
 *.log
+facebook_token.txt
 apexscorpio-stream-tools.zip
 
 # Local Netlify folder
