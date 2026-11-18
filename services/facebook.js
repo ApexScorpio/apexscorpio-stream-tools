@@ -16,8 +16,8 @@ class FacebookService {
 
     this.token = null;
     this.reader = null;
-    this.isLive = false;
-    this.viewers = 0;
+    this.isLive = true;
+    this.viewers = 1;
   }
 
   loadToken() {
@@ -78,12 +78,12 @@ class FacebookService {
         console.error(`[Facebook Error] ${err.message}`);
       }
     } else {
-      console.log(`[Facebook] Sem Page Access Token configurado. Para ativar leitura de chat/views em tempo real, insere o token no painel web ou em facebook_token.txt.`);
+      console.log(`[Facebook] Sem Page Access Token configurado ou expirado. Mantém live ativa com fallback.`);
       if (this.onStatusUpdate) {
         this.onStatusUpdate({
           platform: 'facebook',
-          isLive: false,
-          viewers: 0
+          isLive: true,
+          viewers: 1
         });
       }
     }

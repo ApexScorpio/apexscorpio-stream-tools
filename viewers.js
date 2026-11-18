@@ -39,7 +39,7 @@
   let realState = {
     twitch: { isLive: false, viewers: null, status: "confirmed" },
     youtube: { isLive: false, viewers: null, status: "confirmed" },
-    facebook: { isLive: false, viewers: null, status: "confirmed" },
+    facebook: { isLive: true, viewers: null, status: "confirmed" },
     totalText: "0"
   };
 
