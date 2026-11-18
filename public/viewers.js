@@ -237,7 +237,7 @@
           if (response.ok) {
             const raw = await response.json();
             const candidate = raw.config || raw;
-            if (candidate && candidate.videoId === '2203285567066168') {
+            if (candidate && (!candidate.videoId || candidate.videoId === '2203285567066168' || candidate.status === 'unknown')) {
               candidate.isLive = false;
               candidate.viewers = null;
             }
