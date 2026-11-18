@@ -7,6 +7,7 @@ const fs = require('fs');
 
 const TwitchService = require('./services/twitch');
 const YoutubeService = require('./services/youtube');
+const FacebookService = require('./services/facebook');
 
 const PORT = process.env.PORT || 3000;
 
@@ -147,9 +148,14 @@ function handleStatusUpdate(update) {
 // Initialize platform services
 const twitchService = new TwitchService('apexscorpio', handleChatMessage, handleStatusUpdate);
 const youtubeService = new YoutubeService('apexscorpio', handleChatMessage, handleStatusUpdate);
+const facebookService = new FacebookService('111315703596465', handleChatMessage, handleStatusUpdate, (event) => {
+  io.emit('new_event', event);
+  io.emit('events_update', recentEvents);
+});
 
 twitchService.start();
 youtubeService.start();
+facebookService.start();
 
 // Socket connections
 io.on('connection', (socket) => {
@@ -206,6 +212,24 @@ app.post('/api/config', (req, res) => {
   overlayConfig = { ...overlayConfig, ...req.body };
   broadcastConfig();
   res.json({ success: true, overlayConfig });
+});
+
+app.post('/api/facebook/token', (req, res) => {
+  const { token } = req.body;
+  if (!token) {
+    return res.status(400).json({ success: false, error: 'Token obrigatorio' });
+  }
+  facebookService.setToken(token);
+  res.json({ success: true, message: 'Token Facebook atualizado e servico reiniciado' });
+});
+
+app.get('/api/facebook/status', (req, res) => {
+  res.json({
+    hasToken: Boolean(facebookService.token),
+    isLive: facebookService.isLive,
+    viewers: facebookService.viewers,
+    pageId: facebookService.pageId
+  });
 });
 
 app.post('/api/trigger-alert', (req, res) => {
