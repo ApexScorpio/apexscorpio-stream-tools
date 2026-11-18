@@ -219,8 +219,10 @@
   }
 
   let facebookFetchInFlight = false;
+  let lastMqttFacebookUpdate = 0;
   async function checkFacebookStatus() {
     if (isTestActive || facebookFetchInFlight) return;
+    if (Date.now() - lastMqttFacebookUpdate < 15000) return;
     facebookFetchInFlight = true;
     try {
       let data = null;
@@ -237,7 +239,7 @@
           if (response.ok) {
             const raw = await response.json();
             const candidate = raw.config || raw;
-            if (candidate && (!candidate.videoId || candidate.videoId === '2203285567066168' || candidate.status === 'unknown')) {
+            if (candidate && (candidate.videoId === '2203285567066168' || candidate.status === 'unknown')) {
               candidate.isLive = false;
               candidate.viewers = null;
             }
@@ -328,7 +330,7 @@
       const value=incoming.viewers;
       const valid=(typeof value==='number'||typeof value==='string'&&/^\d+$/.test(value))&&Number.isSafeInteger(Number(value))&&Number(value)>=0;
       realState.facebook={isLive:incoming.isLive,viewers:valid?Number(value):null,status:incoming.status==='confirmed'&&(!incoming.isLive||valid)?'confirmed':incoming.status==='unavailable'?'unavailable':'unknown'};
-      lastFacebookUpdate=observedAt;recalculateTotal();if(!isTestActive)renderStatus(realState);return;
+      lastFacebookUpdate=observedAt;lastMqttFacebookUpdate=Date.now();recalculateTotal();if(!isTestActive)renderStatus(realState);return;
     }
     if (type === 'status_update') {
       const incoming = payload?.state || payload;
