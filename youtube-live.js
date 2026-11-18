@@ -23,6 +23,9 @@
       return true;
     }
   })();
+  const IS_OBS_OVERLAY =
+    /\b(OBS|SLD|Streamlabs)\b/i.test(global.navigator?.userAgent || '') ||
+    /\/(chat|events|viewers|alerts)\.html$/i.test(global.location?.pathname || '');
   const STATUS_ENDPOINT = '/youtube-status';
   const CHAT_ENDPOINT = '/youtube-chat';
   const CHANNEL_ID = 'UCF3aydfOlV88XVqW8vpdKEw';
@@ -732,6 +735,7 @@
   }
 
   function probePlayer() {
+    if (IS_OBS_OVERLAY) return null;
     if (!stateLeader) return;
 
     const signal = readPlayerSignal();
@@ -779,6 +783,7 @@
   }
 
   function createHiddenPlayerIframe() {
+    if (IS_OBS_OVERLAY) return null;
     const existing = document.getElementById('apex-youtube-live-probe');
     if (existing) return existing;
 
@@ -845,6 +850,7 @@
   }
 
   function loadIframeApi() {
+    if (IS_OBS_OVERLAY) return null;
     if (!stateLeader) return;
 
     if (global.YT?.Player) {
