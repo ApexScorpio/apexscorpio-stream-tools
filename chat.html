@@ -319,10 +319,11 @@
         isPolling = true;
         try {
           const endpoints = [
-            'http://localhost:3000/api/chat/recent?cb=' + Date.now(),
-            'http://127.0.0.1:3000/api/chat/recent?cb=' + Date.now(),
             (window.APEX_BACKEND_URL || 'https://apexscorpio-stream-tools.scorpioapex.workers.dev') + '/overlay-config?overlay=facebook-comments&cb=' + Date.now()
           ];
+          if (['localhost', '127.0.0.1'].includes(window.location.hostname)) {
+            endpoints.push('http://localhost:3000/api/chat/recent?cb=' + Date.now());
+          }
           for (const url of endpoints) {
             try {
               const res = await fetch(url, { cache: 'no-store', signal: AbortSignal.timeout(3000) });
