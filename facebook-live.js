@@ -44,7 +44,16 @@
             if(live) id=String(live.id);
             else { state({isLive:false,viewers:null,status:'confirmed'}); report('Sem live ativa na página.'); return; }
           } catch (_) {
-            id = '1557810022824459';
+            try {
+              const cfgPath = typeof require !== 'undefined' ? require('path').join(__dirname, '..', 'apex-facebook-publisher', 'data', 'config.json') : null;
+              if (cfgPath && require('fs').existsSync(cfgPath)) {
+                const cfg = JSON.parse(require('fs').readFileSync(cfgPath, 'utf8'));
+                const link = cfg.platforms?.facebook?.link;
+                const match = link && link.match(/\/videos\/(\d+)/);
+                if (match) id = match[1];
+              }
+            } catch (_) {}
+            if (!id) id = '2203285567066168';
           }
         }
         // Independent requests: a missing viewer metric must never disable chat.

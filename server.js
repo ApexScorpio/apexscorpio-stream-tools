@@ -304,6 +304,24 @@ app.post('/api/trigger-alert', (req, res) => {
   res.json({ success: true, eventPayload, recentEvents });
 });
 
+app.post('/api/chat/message', (req, res) => {
+  const { platform, username, message, color } = req.body;
+  if (!message) return res.status(400).json({ error: 'Mensagem obrigatoria' });
+  const plat = platform || 'facebook';
+  const colors = { twitch: '#9146FF', youtube: '#E8181F', facebook: '#1877F2' };
+  const msg = {
+    id: req.body.id || `${plat}-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+    platform: plat,
+    username: username || 'Utilizador Facebook',
+    message,
+    text: message,
+    userColor: color || colors[plat] || '#1877F2',
+    timestamp: req.body.timestamp || new Date().toISOString()
+  };
+  handleChatMessage(msg);
+  res.json({ success: true, messageSent: msg });
+});
+
 app.post('/api/test-message', (req, res) => {
   const { platform, username, message } = req.body;
   const plat = platform || 'twitch';
