@@ -407,6 +407,7 @@
     }
 
     function addMsg(msg, platform) {
+      if (!msg) return;
       if (msg.id) {
         const cleanId = 'msg-' + String(msg.id).replace(/[^a-zA-Z0-9_-]/g, '_');
         if (document.getElementById(cleanId)) return;
@@ -432,12 +433,13 @@
       }
 
       const color = msg.userColor || platformColors[platform] || '#FFF';
+      const messageContent = msg.message || msg.text || '';
       el.innerHTML = `
         <div class="chat-header">
           ${badgesHtml}
-          <span class="user-name" style="color:${color}">${msg.username}</span>
+          <span class="user-name" style="color:${color}">${msg.username || 'Utilizador'}</span>
         </div>
-        <div class="chat-text" style="font-size:${cfg.fontSize || 14}px">${esc(msg.message)}</div>
+        <div class="chat-text" style="font-size:${cfg.fontSize || 14}px">${esc(messageContent)}</div>
       `;
 
       chatContainer.appendChild(el);
