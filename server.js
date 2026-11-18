@@ -138,6 +138,11 @@ function handleStatusUpdate(update) {
     streamState.youtube.isLive = update.isLive;
     streamState.youtube.viewers = update.viewers;
     streamState.youtube.videoId = update.videoId || null;
+    fetch('https://apexscorpio-stream-tools.scorpioapex.workers.dev/overlay-config?overlay=youtube-status', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ config: { isLive: update.isLive, viewers: update.viewers, videoId: update.videoId || null, status: 'confirmed', _updatedAt: Date.now() } })
+    }).catch(() => {});
   } else if (update.platform === 'facebook') {
     streamState.facebook.isLive = update.isLive;
     streamState.facebook.viewers = update.viewers;

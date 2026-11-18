@@ -183,14 +183,23 @@
     youtubeFetchInFlight=true;
     try {
       let data=null;
-      const bases=[YOUTUBE_BACKEND_BASE,'https://apexscorpio-youtube-scraper-6e2678f9.netlify.app'];
-      for(const base of [...new Set(bases)]) {
+      const cloudflareBase = (window.APEX_BACKEND_URL || 'https://apexscorpio-stream-tools.scorpioapex.workers.dev').replace(/\/+$/, '');
+      const endpoints = [
+        cloudflareBase + '/overlay-config?overlay=youtube-status&cb=' + Date.now(),
+        window.location.origin + '/api/status?cb=' + Date.now(),
+        'http://localhost:3000/api/status?cb=' + Date.now(),
+        YOUTUBE_BACKEND_BASE + '/youtube-status?cb=' + Date.now(),
+        'https://apexscorpio-youtube-scraper-6e2678f9.netlify.app/youtube-status?cb=' + Date.now()
+      ];
+      for(const endpoint of [...new Set(endpoints)]) {
         try {
-          const response=await fetch(base+'/youtube-status?cb='+Date.now(),{cache:'no-store',signal:AbortSignal.timeout(15000)});
-          if(!response.ok)throw Error('YouTube HTTP '+response.status);
+          const response=await fetch(endpoint,{cache:'no-store',signal:AbortSignal.timeout(6000)});
+          if(!response.ok)continue;
           const candidate=await response.json();
-          if(candidate.error || typeof candidate.isLive!=='boolean')throw Error('Estado YouTube indisponível');
-          data=candidate;break;
+          const parsed = candidate.config || candidate.youtube || candidate;
+          if(parsed && typeof parsed.isLive==='boolean') {
+            data=parsed;break;
+          }
         }catch(_){}
       }
       if(!data)throw Error('Contagem YouTube indisponível');
