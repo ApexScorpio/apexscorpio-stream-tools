@@ -18,7 +18,15 @@
     const request=options.fetch||root.fetch?.bind(root),emit=options.emit||(()=>{}),report=options.report||(()=>{});
     let token='',id='',timer=null,generation=0,busy=false,baseline=false,seen=new Set(),seenReactions=new Set(),controller=null;
     let sessionStartedAt=0;
-    function state(s){emit('facebook_status',{...s,videoId:id||null,observedAt:Date.now()});}
+    function state(s){
+      emit('facebook_status',{...s,videoId:id||null,observedAt:Date.now()});
+      try{
+        (root.fetch||fetch)('https://apexscorpio-stream-tools.scorpioapex.workers.dev/overlay-config?overlay=facebook-status',{
+          method:'POST',headers:{'Content-Type':'application/json'},
+          body:JSON.stringify({config:{...s,videoId:id||null,observedAt:Date.now()}})
+        }).catch(()=>{});
+      }catch(_){}
+    }
     async function graph(resource,fields,signal) {
       const u=new URL('https://graph.facebook.com/v26.0/'+resource);u.searchParams.set('fields',fields);u.searchParams.set('limit','100');if(resource.endsWith('/comments')){u.searchParams.set('order','reverse_chronological');u.searchParams.set('filter','stream');}
       const r=await request(u.href,{headers:{Authorization:'Bearer '+token},cache:'no-store',signal});
@@ -64,11 +72,38 @@
   }
   const api={videoId,count,viewerState,createReader};
   if(typeof module!=='undefined'&&module.exports)module.exports=api;
-  if(root.document){root.ApexFacebookLive=api;root.addEventListener('DOMContentLoaded',()=>{
+  if(root.document){root.ApexFacebookLive=api;root.addEventListener('DOMContentLoaded',async()=>{
     const form=root.document.getElementById('facebook-live-form');if(!form)return;
     const status=root.document.getElementById('facebook-live-status');
+    const tokenInput=root.document.getElementById('facebook-page-token');
+    const urlInput=root.document.getElementById('facebook-live-url');
+    const disconnectBtn=root.document.getElementById('facebook-disconnect');
     const reader=createReader({emit:(type,payload)=>root.broadcastEvent(type,payload),report:text=>{status.textContent=text;}});
-    form.addEventListener('submit',e=>{e.preventDefault();const input=root.document.getElementById('facebook-page-token');const secret=input.value;input.value='';try{reader.start(secret,root.document.getElementById('facebook-live-url').value);}catch(error){status.textContent=error.message;}});
-    root.document.getElementById('facebook-disconnect').onclick=()=>reader.stop();root.addEventListener('pagehide',()=>reader.stop());
+    function tryStart(tokenVal,urlVal){
+      if(!tokenVal)return;
+      try{
+        reader.start(tokenVal,urlVal||'');
+        try{localStorage.setItem('apex_fb_token',tokenVal);}catch(_){}
+        if(tokenInput)tokenInput.value='';
+      }catch(error){status.textContent=error.message;}
+    }
+    form.addEventListener('submit',e=>{e.preventDefault();tryStart(tokenInput?.value,urlInput?.value);});
+    if(disconnectBtn)disconnectBtn.onclick=()=>{try{localStorage.removeItem('apex_fb_token');}catch(_){}reader.stop();};
+    root.addEventListener('pagehide',()=>reader.stop());
+    let savedToken=null;
+    try{savedToken=localStorage.getItem('apex_fb_token');}catch(_){}
+    if(!savedToken){
+      try{
+        const res=await(root.fetch||fetch)('facebook_token.txt',{cache:'no-store'});
+        if(res.ok){
+          const txt=(await res.text()).trim();
+          if(txt&&txt.startsWith('EA')&&txt.length>30)savedToken=txt;
+        }
+      }catch(_){}
+    }
+    if(savedToken){
+      if(status)status.textContent='Token Meta detetado. A ligar automaticamente…';
+      tryStart(savedToken,urlInput?.value);
+    }
   });}
 })(typeof window!=='undefined'?window:globalThis);

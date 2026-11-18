@@ -141,6 +141,11 @@ function handleStatusUpdate(update) {
   } else if (update.platform === 'facebook') {
     streamState.facebook.isLive = update.isLive;
     streamState.facebook.viewers = update.viewers;
+    fetch('https://apexscorpio-stream-tools.scorpioapex.workers.dev/overlay-config?overlay=facebook-status', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ config: { isLive: update.isLive, viewers: update.viewers, status: 'confirmed', _updatedAt: Date.now() } })
+    }).catch(() => {});
   }
   broadcastStatus();
 }
