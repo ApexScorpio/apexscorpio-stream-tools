@@ -16,8 +16,8 @@ class FacebookService {
 
     this.token = null;
     this.reader = null;
-    this.isLive = true;
-    this.viewers = 1;
+    this.isLive = false;
+    this.viewers = 0;
   }
 
   loadToken() {
@@ -78,12 +78,12 @@ class FacebookService {
         console.error(`[Facebook Error] ${err.message}`);
       }
     } else {
-      console.log(`[Facebook] Sem Page Access Token configurado ou expirado. Mantém live ativa com fallback.`);
+      console.log(`[Facebook] Sem Page Access Token configurado ou expirado.`);
       if (this.onStatusUpdate) {
         this.onStatusUpdate({
           platform: 'facebook',
-          isLive: true,
-          viewers: 1
+          isLive: false,
+          viewers: 0
         });
       }
     }

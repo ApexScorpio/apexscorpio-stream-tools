@@ -53,8 +53,8 @@ let publicBaseUrl = process.env.PUBLIC_URL || 'https://apexscorpio.github.io/ape
 const streamState = {
   twitch: { isLive: false, viewers: 0 },
   youtube: { isLive: false, viewers: 0, videoId: null },
-  facebook: { isLive: true, viewers: 1 },
-  totalViewers: 1
+  facebook: { isLive: false, viewers: 0 },
+  totalViewers: 0
 };
 
 // Global state for expanded overlay customization options across all sources
