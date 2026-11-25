@@ -38,7 +38,7 @@
 
   let realState = {
     twitch: { isLive: false, viewers: null, status: "confirmed" },
-    youtube: { isLive: false, viewers: null, status: "confirmed" },
+    youtube: { isLive: false, viewers: null, status: "unknown" },
     facebook: { isLive: false, viewers: null, status: "confirmed" },
     totalText: "0"
   };
@@ -126,6 +126,12 @@
   function renderStatus(state) {
     for (const platform of ['twitch', 'youtube', 'facebook']) {
       const current = state[platform] || { isLive: false, viewers: null };
+      if (platform === 'youtube' && ['unknown', 'stale', 'unavailable'].includes(current.status) && !current.isLive) {
+        pills[platform].title = 'Estado YouTube indisponível';
+        dots[platform].classList.remove('online');
+        animateCount(counts[platform], '—');
+        continue;
+      }
       if (current.isLive) {
         pills[platform].title = 'Live: ' + (current.viewers !== null ? current.viewers : '—') + ' espectadores';
         dots[platform].classList.add('online');
@@ -178,6 +184,19 @@
   }
 
   let youtubeFetchInFlight=false;
+  // Receiving a cached response now does not make its observation fresh.
+  function readYoutubeStatus(candidate) {
+    const data = candidate?.config || candidate?.youtube || candidate;
+    if (!data || typeof data.isLive !== 'boolean' || data.error) return null;
+    const rawTime = data.updatedAt ?? data._updatedAt ?? data.observedAt;
+    const observedAt = typeof rawTime === 'number' ? rawTime : Date.parse(rawTime);
+    const now = Date.now();
+    if (!Number.isFinite(observedAt) || observedAt > now + 5000 || now - observedAt > 60000) return null;
+    if (['unknown', 'stale', 'unavailable'].includes(data.status) && !data.isLive) return null;
+    const value = data.viewers;
+    const validCount = (typeof value === 'number' || typeof value === 'string' && /^\d+$/.test(value)) && Number.isSafeInteger(Number(value)) && Number(value) >= 0;
+    return { ...data, observedAt, viewers: data.isLive && validCount ? Number(value) : null };
+  }
   async function checkNetlifyYoutubeStatus() {
     if (isTestActive || youtubeFetchInFlight) return;
     youtubeFetchInFlight=true;
@@ -185,25 +204,23 @@
       let data=null;
       const cloudflareBase = (window.APEX_BACKEND_URL || 'https://apexscorpio-stream-tools.scorpioapex.workers.dev').replace(/\/+$/, '');
       const endpoints = [
-        cloudflareBase + '/overlay-config?overlay=youtube-status&cb=' + Date.now(),
-        window.location.origin + '/api/status?cb=' + Date.now(),
-        'http://localhost:3000/api/status?cb=' + Date.now(),
         YOUTUBE_BACKEND_BASE + '/youtube-status?cb=' + Date.now(),
-        'https://apexscorpio-youtube-scraper-6e2678f9.netlify.app/youtube-status?cb=' + Date.now()
+        'https://apexscorpio-youtube-scraper-6e2678f9.netlify.app/youtube-status?cb=' + Date.now(),
+        cloudflareBase + '/overlay-config?overlay=youtube-status&cb=' + Date.now()
       ];
       for(const endpoint of [...new Set(endpoints)]) {
         try {
           const response=await fetch(endpoint,{cache:'no-store',signal:AbortSignal.timeout(6000)});
           if(!response.ok)continue;
           const candidate=await response.json();
-          const parsed = candidate.config || candidate.youtube || candidate;
-          if(parsed && typeof parsed.isLive==='boolean') {
+          const parsed = readYoutubeStatus(candidate);
+          if(parsed && parsed.observedAt >= lastYoutubeFetch) {
             data=parsed;break;
           }
         }catch(_){}
       }
       if(!data)throw Error('Contagem YouTube indisponível');
-        lastYoutubeFetch=Date.now();
+        lastYoutubeFetch=data.observedAt;
         realState.youtube = {
           isLive: Boolean(data.isLive),
           viewers: data.isLive && data.viewers!==null && data.viewers!==undefined && data.viewers!=='' && Number.isSafeInteger(Number(data.viewers)) && Number(data.viewers)>=0 ? Number(data.viewers) : null,
@@ -348,13 +365,14 @@
           };
           lastTwitchFetch = Date.now();
         }
-        if (incoming.youtube && typeof incoming.youtube.isLive === 'boolean') {
+        const youtubeStatus = readYoutubeStatus(incoming.youtube);
+        if (youtubeStatus && youtubeStatus.observedAt > lastYoutubeFetch) {
           realState.youtube = {
-            isLive: incoming.youtube.isLive,
-            viewers: incoming.youtube.isLive ? Number(incoming.youtube.viewers || 0) : null,
-            status: 'confirmed'
+            isLive: youtubeStatus.isLive,
+            viewers: youtubeStatus.viewers,
+            status: youtubeStatus.isLive && youtubeStatus.viewers === null ? 'unknown' : 'confirmed'
           };
-          lastYoutubeFetch = Date.now();
+          lastYoutubeFetch = youtubeStatus.observedAt;
         }
         if (incoming.facebook && typeof incoming.facebook.isLive === 'boolean') {
           realState.facebook = {

@@ -18,3 +18,11 @@ A antiga chave Restream embutida foi retirada. Como esteve publicada no históri
 ## Validação
 
 Suite existente e seis testes de regressão offline para limpeza de chat, erros Twitch, emparelhamento, encriptação, configurações privadas e carregamento das sources. As contagens reais exigem uma live para validação final.
+
+## 2026-11-25 — YouTube bloqueado em offline por snapshot antigo
+- A fonte /overlay-config devolvia offline de 22/11 enquanto /youtube-status identificava a live atual. viewers.js aceitava o primeiro booleano sem validar a data.
+- Consultar /youtube-status primeiro; snapshots guardados só como último recurso público. Aceitar apenas observações com data válida, até 60 segundos de idade e sem retroceder relativamente ao estado já observado.
+- Mensagens do painel sem data ou mais antigas não substituem a leitura atual. Sem confirmação, mostrar estado indisponível em vez de afirmar offline. Zero espectadores continua a ser uma live online.
+- Atualizada versão do script para 5.3 nos dois HTML. Suite viewer-freshness integrada no comando test, com casos de snapshot antigo, indisponibilidade, fallback, zero e fim confirmado da live.
+- Verificação real antes de publicação: navegador com código corrigido e backend público mostrou YouTube online, 1 espectador. 21 testes de fiabilidade e frescura passaram.
+- A suite completa tem falhas preexistentes fora desta alteração: youtube-live-backend exige v4.6 mas os HTML atuais usam v4.7. Sem alterações às sessões ou autenticação.
