@@ -17,7 +17,8 @@
 
     body {
       display: grid;
-      grid-template-rows: clamp(54px, 23vh, 170px) minmax(0, 1fr);
+      grid-template-rows: clamp(54px, 12.5vw, 240px) auto;
+      align-content: start;
     }
 
     .title-band {
@@ -36,14 +37,14 @@
       margin: 0;
       color: #fff;
       text-align: center;
-      font-size: clamp(16px, min(5.5vw, 8vh), 56px);
+      font-size: clamp(16px, 4vw, 56px);
       line-height: 1.15;
       font-weight: 700;
     }
 
     .video-stage {
       position: relative;
-      container-type: size;
+      aspect-ratio: 16 / 9;
       min-width: 0;
     }
 
@@ -61,9 +62,8 @@
 
     #player iframe {
       display: block;
-      width: min(100cqw, calc(100cqh * 16 / 9));
-      height: auto;
-      aspect-ratio: 16 / 9;
+      width: 100%;
+      height: 100%;
       border: 0;
     }
 
