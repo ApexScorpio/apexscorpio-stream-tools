@@ -22,7 +22,7 @@ function choose(g){
  let pool=g.ids.filter(v=>!g.bad.has(v)&&(!cfg.avoidRepeats||!g.used.has(v)));
  if(!pool.length&&cfg.loop){g.used.clear();pool=g.ids.filter(v=>!g.bad.has(v))}
  if(!pool.length){g.done=true;return false}
- const id=cfg.shuffle?pool[Math.floor(Math.random()*pool.length)]:pool[g.position++%pool.length];
+ const id=cfg.shuffle?pool[Math.floor(Math.random()*pool.length)]:pool[cfg.avoidRepeats?0:g.position++%pool.length];
  g.used.add(id);g.current=id;if(!cfg.loop&&g.used.size>=g.ids.length)g.done=true;
  phase='loading';show('A carregar vídeo…');watch();player.loadVideoById(id);return true;
 }
@@ -40,7 +40,7 @@ window.onYouTubeIframeAPIReady=()=>{
 };
 async function init(){try{
  const res=await fetch('./video-playlist.json',{cache:'no-store'});if(!res.ok)throw Error('HTTP '+res.status);const data=await res.json();
- cfg={loop:q.has('loop')?q.get('loop')==='1':data.loop!==false,shuffle:q.has('shuffle')?q.get('shuffle')==='1':data.shuffle!==false,avoidRepeats:q.has('unique')?q.get('unique')==='1':data.avoidRepeats!==false,volume:Math.max(0,Math.min(100,Number(q.get('volume')??data.volume??70))),mute:data.mute===true};
+ cfg={loop:q.has('loop')?q.get('loop')==='1':data.loop!==false,shuffle:q.has('shuffle')?q.get('shuffle')==='1':data.shuffle!==false,avoidRepeats:q.has('unique')?q.get('unique')==='1':data.avoidRepeats!==false,volume:Math.max(0,Math.min(100,Number(q.get('volume')??data.volume??70))),mute:q.has('volume')?q.get('volume')==='0':data.mute===true};
  if(!Number.isFinite(cfg.volume))cfg.volume=70;
  if(!cfg.loop)cfg.avoidRepeats=true;
  const lists=(q.has('lists')?q.get('lists').split(','):Array.isArray(data.playlists)?data.playlists:[]).map(playlistId).filter(Boolean);
