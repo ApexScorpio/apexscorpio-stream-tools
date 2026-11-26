@@ -1,9 +1,11 @@
 {
+  "playlists": [],
   "videos": [
     "M7lc1UVf-VE"
   ],
   "loop": true,
-  "shuffle": false,
+  "shuffle": true,
+  "avoidRepeats": true,
   "mute": false,
   "volume": 70
 }
