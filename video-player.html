@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang="pt-PT"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="referrer" content="strict-origin-when-cross-origin"><title>Stream Tools — Video Player</title>
+<style>html,body{margin:0;width:100%;height:100%;background:#000;color:#eee;font:16px system-ui}#player,iframe{width:100%;height:100%;border:0}#status{position:absolute;inset:0;display:grid;place-content:center;text-align:center;padding:20px;pointer-events:none}#status[hidden]{display:none}a{color:#9cf}</style></head><body><div id="player"></div><div id="status" role="status">A carregar configuração…</div>
+<script>
+'use strict';
+const statusEl=document.getElementById('status');
+const show=s=>{statusEl.textContent=s;statusEl.hidden=!s};
+const q=new URLSearchParams(location.search);
+let ids=[], player, current=0, failures=0, cfg;
+function valid(s){return typeof s==='string'&&/^[\w-]{11}$/.test(s)}
+function advance(failed=false){
+ if(failed&&++failures>=ids.length){show('Nenhum vídeo disponível. Verifica a lista e as permissões de incorporação.');return;}
+ if(!cfg.loop&&current===ids.length-1){show('Fim da lista.');return;}
+ current=(current+1)%ids.length;player.loadVideoById(ids[current]);
+}
+window.onYouTubeIframeAPIReady=function(){
+ const frame=document.createElement('iframe');frame.id='yt-frame';frame.title='YouTube';frame.allow='autoplay; encrypted-media; picture-in-picture; fullscreen';frame.allowFullscreen=true;frame.referrerPolicy='strict-origin-when-cross-origin';
+ const p=new URLSearchParams({enablejsapi:'1',origin:location.origin,autoplay:'1',controls:'1',playsinline:'1',rel:'0'});
+ frame.src='https://www.youtube.com/embed/'+ids[0]+'?'+p;
+ document.getElementById('player').append(frame);
+ player=new YT.Player(frame,{events:{
+ onReady:e=>{e.target.setVolume(cfg.volume);if(cfg.mute)e.target.mute();e.target.playVideo();},
+ onStateChange:e=>{if(e.data===YT.PlayerState.PLAYING){failures=0;show('')}else if(e.data===YT.PlayerState.ENDED)advance()},
+ onError:e=>{if(e.data===153){show('YouTube erro 153: identificação do leitor em falta.');return;}advance(true)},
+ onAutoplayBlocked:()=>show('Reprodução automática bloqueada. Usa Interact e carrega em Play.')
+ }});
+};
+async function init(){
+ try{
+ const response=await fetch('./video-playlist.json',{cache:'no-store'});if(!response.ok)throw Error('HTTP '+response.status);const data=await response.json();
+ cfg={loop:data.loop!==false,mute:data.mute===true,volume:Number.isFinite(data.volume)?Math.max(0,Math.min(100,data.volume)):70};
+ ids=(q.has('ids')?q.get('ids').split(','):Array.isArray(data.videos)?data.videos:[]).filter(valid);
+ if(!ids.length){show('Lista vazia. Configura video-playlist.json.');return;}
+ if(data.shuffle===true){for(let i=ids.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[ids[i],ids[j]]=[ids[j],ids[i]];}}
+ show('A carregar YouTube…');const script=document.createElement('script');script.src='https://www.youtube.com/iframe_api';script.onerror=()=>show('Não foi possível carregar a API YouTube.');document.head.append(script);
+ }catch(e){show('Erro de configuração: '+e.message)}
+}
+init();
+</script></body></html>
